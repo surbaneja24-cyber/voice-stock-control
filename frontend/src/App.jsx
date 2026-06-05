@@ -1,122 +1,109 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useState, useRef } from 'react';
+import './App.css';
+import { Mic } from "lucide-react";
 
 function App() {
-  const [count, setCount] = useState(0)
+  // ==========================================
+  // 1. EL MOTOR (Lógica de estado y grabación)
+  // ==========================================
+  const [grabando, setGrabando] = useState(false);
+  const [textoModal, setTextoModal] = useState("Waiting for voice input...");
+  
+  const mediaRecorderRef = useRef(null);
+  const fragmentosDeAudio = useRef([]);
 
+  const iniciarGrabacion = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      fragmentosDeAudio.current = [];
+
+      mediaRecorder.ondataavailable = (evento) => {
+        if (evento.data.size > 0) fragmentosDeAudio.current.push(evento.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(fragmentosDeAudio.current, { type: 'audio/webm' });
+        
+        setTextoModal("Procesando audio con IA...");
+        
+        const formData = new FormData();
+        formData.append("audio", audioBlob, "orden_operario.webm");
+
+        try {
+          const respuesta = await fetch("http://localhost:5001/api/transcribir", {
+            method: "POST",
+            body: formData
+          });
+          
+          const datos = await respuesta.json();
+          
+          if (respuesta.ok) {
+            setTextoModal(datos.texto);
+          } else {
+            setTextoModal("Error de la IA: " + datos.error);
+          }
+
+        } catch (error) {
+          console.error("Error de conexión:", error);
+          setTextoModal("Error: Verifica que api_voz.py esté encendido.");
+        }
+        
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorder.start();
+      setGrabando(true);
+
+    } catch (error) {
+      console.error("Detalle del error:", error);
+      alert("Error: No se pudo acceder al micrófono.");
+    }
+  };
+
+  const detenerGrabacion = () => {
+    if (mediaRecorderRef.current && grabando) {
+      mediaRecorderRef.current.stop();
+      setGrabando(false);
+    }
+  };
+
+  // ==========================================
+  // 2. LA INTERFAZ (Tu nuevo diseño visual)
+  // ==========================================
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
+    <div className="app">
+        <div className="header">
+        <span className="badge">Beta 1.0</span> {/* <--- Esto es nuevo */}
+        <h1>VoxStock</h1>
+        <p>Intelligent inventory management through voice commands</p>
+      </div>
+
+      <div className="voice-container">
+        <button 
+          className={`mic-button ${grabando ? 'grabando' : ''}`}
+          onMouseDown={iniciarGrabacion}
+          onMouseUp={detenerGrabacion}
+          onMouseLeave={detenerGrabacion}
+          onTouchStart={iniciarGrabacion}
+          onTouchEnd={detenerGrabacion}
         >
-          Count is {count}
+          {/* El icono cambia de color si está grabando para dar feedback visual */}
+          <Mic size={70} strokeWidth={1.5} color={grabando ? "white" : "currentColor"} />
         </button>
-      </section>
 
-      <div className="ticks"></div>
+        <span className="status">
+          {grabando ? "Escuchando... (Suelta para enviar)" : "Mantén presionado para hablar"}
+        </span>
+      </div>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+      <div className="result-card">
+        <h3>Recognized Command</h3>
+        <p>{textoModal}</p>
+      </div>
+    </div>
+  );
 }
 
-export default App
+export default App;

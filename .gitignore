@@ -1,0 +1,13 @@
+# Dependencias de Python
+venv/
+__pycache__/
+*.sqlite3
+database.db
+
+# Dependencias de React/Node
+node_modules/
+dist/
+
+# Variables de entorno y SO
+.env
+.DS_Store
