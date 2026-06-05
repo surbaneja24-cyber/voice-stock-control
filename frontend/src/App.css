@@ -1,0 +1,295 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+}
+
+
+html,
+body,
+#root{
+  width:100%;
+  min-height:100vh;
+}
+
+
+body{
+  font-family:'Plus Jakarta Sans',sans-serif;
+  color:white;
+  overflow-x:hidden;
+
+
+  background:
+    radial-gradient(
+      circle at top,
+      #1e293b 0%,
+      #0f172a 35%,
+      #020617 100%
+    );
+}
+
+
+.app{
+  min-height:100vh;
+
+
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+
+
+  gap:48px;
+
+
+  padding:40px 20px;
+}
+
+
+/* ---------- HEADER ---------- */
+
+
+.header{
+  text-align:center;
+
+
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+
+
+  gap:14px;
+}
+
+
+.badge{
+  padding:8px 18px;
+
+
+  border-radius:999px;
+
+
+  background:rgba(255,255,255,.04);
+
+
+  border:1px solid rgba(255,255,255,.08);
+
+
+  color:#94a3b8;
+
+
+  font-size:.85rem;
+  font-weight:500;
+
+
+  backdrop-filter:blur(20px);
+}
+
+
+.header h1{
+  font-size:clamp(4rem,8vw,6rem);
+
+
+  font-weight:800;
+
+
+  letter-spacing:-6px;
+
+
+  line-height:1;
+
+
+  background:linear-gradient(
+    to bottom,
+    #ffffff,
+    #d6d6d6
+  );
+
+
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+}
+
+
+.header p{
+  max-width:650px;
+
+
+  color:#94a3b8;
+
+
+  font-size:1.1rem;
+
+
+  line-height:1.7;
+}
+
+
+/* ---------- MICRO ---------- */
+
+
+.voice-container{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+
+
+  gap:24px;
+}
+
+
+.mic-button{
+  width:220px;
+  height:220px;
+
+
+  border:none;
+  border-radius:50%;
+
+
+  cursor:pointer;
+
+
+  display:flex;
+  justify-content:center;
+  align-items:center;
+
+
+  color:white;
+
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255,255,255,.08),
+      rgba(255,255,255,.02)
+    );
+
+
+  border:1px solid rgba(255,255,255,.08);
+
+
+  backdrop-filter:blur(30px);
+
+
+  box-shadow:
+    0 0 80px rgba(255,255,255,.04),
+    inset 0 0 30px rgba(255,255,255,.03);
+
+
+  transition:.35s ease;
+}
+
+
+.mic-button:hover{
+  transform:scale(1.05);
+
+
+  box-shadow:
+    0 0 120px rgba(255,255,255,.08),
+    inset 0 0 40px rgba(255,255,255,.05);
+}
+
+
+.status{
+  color:#94a3b8;
+  font-size:.95rem;
+}
+
+
+/* ---------- CARD ---------- */
+
+
+.result-card{
+  width:650px;
+  max-width:95%;
+
+
+  padding:28px;
+
+
+  border-radius:28px;
+
+
+  background:
+    rgba(255,255,255,.04);
+
+
+  border:
+    1px solid rgba(255,255,255,.08);
+
+
+  backdrop-filter:blur(25px);
+}
+
+
+.result-card h3{
+  font-size:1rem;
+  font-weight:600;
+
+
+  margin-bottom:12px;
+}
+
+
+.result-card p{
+  color:#cbd5e1;
+
+
+  line-height:1.7;
+}
+
+
+/* ---------- MOBILE ---------- */
+
+
+@media (max-width:768px){
+
+
+  .app{
+    gap:32px;
+    padding:24px;
+  }
+
+
+  .header h1{
+    font-size:3rem;
+    letter-spacing:-3px;
+  }
+
+
+  .header p{
+    font-size:.95rem;
+  }
+
+
+  .mic-button{
+    width:160px;
+    height:160px;
+  }
+
+
+  .result-card{
+    width:100%;
+    padding:20px;
+  }
+}
+
+.mic-button.grabando {
+  transform: scale(0.92);
+  
+  background: linear-gradient(
+    145deg,
+    rgba(239, 68, 68, 0.2),
+    rgba(220, 38, 38, 0.1)
+  );
+  
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  
+  box-shadow:
+    0 0 80px rgba(239, 68, 68, 0.15),
+    inset 0 0 30px rgba(239, 68, 68, 0.1);
+}
