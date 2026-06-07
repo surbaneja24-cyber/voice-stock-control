@@ -32,7 +32,7 @@ function App() {
         formData.append("audio", audioBlob, "orden_operario.webm");
 
         try {
-          const respuesta = await fetch("http://localhost:5001/api/transcribir", {
+          const respuesta = await fetch("https://potential-engine-wrqp7jgppxr429r7j-5001.app.github.dev/api/transcribir", {
             method: "POST",
             body: formData
           });
