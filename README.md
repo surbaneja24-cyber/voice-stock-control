@@ -112,7 +112,7 @@ python api_voz.py
 Ve a la pestaña PUERTOS en la parte inferior de VS Code.
 
 Busca el puerto 5173 (el del frontend).
-¡IMPORTANTE! CAMBIAR EL PUERTO 5001 de "Private" a "Public"
+
 Haz clic en el icono del mundo (Abrir en el navegador) para empezar a usar la interfaz y el micrófono.
 
 👥 Equipo de Desarrollo
