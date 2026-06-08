@@ -40,7 +40,7 @@ El proyecto sigue una arquitectura Full-Stack desacoplada:
 
 ---
 
-## 🚀 Instalación y Despliegue Local
+## 🚀 Instalación y despliegue en Local (Desde cero)
 
 Sigue estos pasos para levantar el entorno de desarrollo en tu máquina.
 
@@ -77,6 +77,43 @@ npm run dev
 ```
 
 El panel de control estará disponible en http://localhost:5173.
+
+## 🚀 Instalación y despliegue en GitHub Codespaces (Desde cero)
+
+Sigue estos pasos exactos para arrancar el proyecto en un Codespace nuevo, evitando errores de memoria o librerías faltantes.
+
+### 1. Levantar el Frontend (Diseño en React)
+Abre una terminal y ejecuta estos comandos en orden:
+
+```Bash
+cd frontend
+npm install
+npm run dev
+```
+(Deja esta terminal corriendo).
+
+### 2. Preparar el Backend e IA de Voz
+Abre una nueva terminal (dejando la otra activa) y ejecuta:
+
+```Bash
+cd backend
+python -m venv venv
+source venv/bin/activate
+pip install Flask Flask-Cors faster-whisper requests
+```
+
+### 3. Encender el Motor de IA
+En la terminal del backend (con el (venv) activado), arranca el servidor:
+
+```Bash
+python api_voz.py
+```
+### 4. Abrir la Aplicación
+Ve a la pestaña PUERTOS en la parte inferior de VS Code.
+
+Busca el puerto 5173 (el del frontend).
+
+Haz clic en el icono del mundo (Abrir en el navegador) para empezar a usar la interfaz y el micrófono.
 
 👥 Equipo de Desarrollo
 Este sistema ha sido diseñado y construido por:
