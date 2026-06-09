@@ -13,7 +13,7 @@ function Login() {
     e.preventDefault();
 
     try {
-      const response = await fetch("http://127.0.0.1:5000/login", {
+      const response = await fetch("https://redesigned-space-doodle-5g7gw7vg76qw2pvpv-5000.app.github.dev/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -46,7 +46,7 @@ function Login() {
 
       // Enviar al backend
       const response = await fetch(
-        "http://127.0.0.1:5000/google-login",
+        "https://redesigned-space-doodle-5g7gw7vg76qw2pvpv-5000.app.github.dev/google-login",
         {
           method: "POST",
           headers: {
@@ -69,12 +69,7 @@ function Login() {
 
       localStorage.setItem(
         "user",
-        JSON.stringify({
-          email: user.email,
-          name: user.displayName,
-          photo: user.photoURL,
-          uid: user.uid,
-        })
+        JSON.stringify(data)
       );
 
       navigate("/dashboard");
