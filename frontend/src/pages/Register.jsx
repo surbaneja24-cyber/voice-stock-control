@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { FaGoogle, FaApple } from "react-icons/fa";
+import { signInWithPopup } from "firebase/auth";
+import { auth, googleProvider } from "../firebase";
 
 function Register() {
   const navigate = useNavigate();
@@ -17,28 +20,78 @@ function Register() {
     }
 
     try {
-      const response = await fetch("http://127.0.0.1:5000/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          email,
-          password
-        })
-      });
+      const response = await fetch(
+        "http://127.0.0.1:5000/register",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email,
+            password,
+          }),
+        }
+      );
 
       const data = await response.json();
 
-      if (response.ok) {
-        alert("Account created successfully");
-        navigate("/login");
-      } else {
+      if (!response.ok) {
         alert(data.msg);
+        return;
       }
+
+      localStorage.setItem(
+        "user",
+        JSON.stringify(data)
+      );
+
+      navigate("/dashboard");
     } catch (error) {
       console.error(error);
       alert("Server connection error");
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      const result = await signInWithPopup(
+        auth,
+        googleProvider
+      );
+
+      const user = result.user;
+
+      const response = await fetch(
+        "http://127.0.0.1:5000/google-login",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: user.email,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.msg || "Google login failed"
+        );
+      }
+
+      localStorage.setItem(
+        "user",
+        JSON.stringify(data)
+      );
+
+      navigate("/dashboard");
+    } catch (error) {
+      console.error(error);
+      alert("Google login failed");
     }
   };
 
@@ -46,7 +99,10 @@ function Register() {
     <div className="auth-page">
       <div className="auth-card">
         <h1>Create your account</h1>
-        <p>Join VoxStock and manage inventory with your voice.</p>
+        <p>
+          Join VoxStock and manage inventory with
+          your voice.
+        </p>
 
         <form onSubmit={handleRegister}>
           <input
@@ -54,7 +110,10 @@ function Register() {
             type="email"
             placeholder="Email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) =>
+              setEmail(e.target.value)
+            }
+            required
           />
 
           <input
@@ -62,7 +121,10 @@ function Register() {
             type="password"
             placeholder="Password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) =>
+              setPassword(e.target.value)
+            }
+            required
           />
 
           <input
@@ -70,16 +132,50 @@ function Register() {
             type="password"
             placeholder="Confirm Password"
             value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
+            onChange={(e) =>
+              setConfirmPassword(
+                e.target.value
+              )
+            }
+            required
           />
 
-          <button className="auth-button" type="submit">
+          <button
+            className="auth-button"
+            type="submit"
+          >
             Create Account
+          </button>
+
+          <div className="divider">
+            <span>or continue with</span>
+          </div>
+
+          <button
+            className="google-btn"
+            type="button"
+            onClick={handleGoogleLogin}
+          >
+            <FaGoogle />
+            Continue with Google
+          </button>
+
+          <button
+            className="apple-btn"
+            type="button"
+            disabled
+            style={{ opacity: 0.6, cursor: "not-allowed" }}
+          >
+            <FaApple />
+            Apple Sign In (Coming Soon)
           </button>
         </form>
 
         <p className="auth-footer">
-          Already have an account? <Link to="/login">Sign In</Link>
+          Already have an account?{" "}
+          <Link to="/login">
+            Sign In
+          </Link>
         </p>
       </div>
     </div>
