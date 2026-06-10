@@ -96,7 +96,7 @@ function Register() {
   };
 
   return (
-    <div className="auth-page">
+    <div className="auth-page fade-page">
       <div className="auth-card">
         <h1>Create your account</h1>
         <p>
