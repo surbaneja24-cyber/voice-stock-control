@@ -1,47 +1,88 @@
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+
 
 function Home() {
+  const { t, i18n } = useTranslation();
+
   return (
-    <div className="home">
+    <div className="home fade-page">
       <div className="hero">
-        <span className="badge">🚀 Beta 1.0</span>
+        <div className="top-bar">
+          <span className="badge">
+            🚀 Beta 1.0
+          </span>
 
-        <h1>
-          Control your inventory
-          <br />
-          with your voice
-        </h1>
+          <button
+            className="flag-btn"
+            onClick={() => i18n.changeLanguage("en")}
+          >
+            <img
+              src="https://flagcdn.com/w40/gb.png"
+              alt="English"
+            />
+          </button>
 
-        <p>
-          VoxStock transforms voice commands into inventory actions,
-          making warehouse management faster and smarter.
-        </p>
+          <button
+            className="flag-btn"
+            onClick={() => i18n.changeLanguage("es")}
+          >
+            <img
+              src="https://flagcdn.com/w40/es.png"
+              alt="Español"
+            />
+          </button>
+
+          <button
+            className="flag-btn"
+            onClick={() => i18n.changeLanguage("fr")}
+          >
+            <img
+              src="https://flagcdn.com/w40/fr.png"
+              alt="Français"
+            />
+          </button>
+
+          <button
+            className="flag-btn"
+            onClick={() => i18n.changeLanguage("de")}
+          >
+            <img
+              src="https://flagcdn.com/w40/de.png"
+              alt="Deutsch"
+            />
+          </button>
+        </div>
+
+        <h1>{t("homeTitle")}</h1>
+
+        <p>{t("homeDescription")}</p>
 
         <div className="hero-buttons">
           <Link to="/login">
             <button className="btn-primary">
-              Sign In
+              {t("signIn")}
             </button>
           </Link>
 
           <Link to="/register">
             <button className="btn-secondary">
-              Create Account
+              {t("createAccount")}
             </button>
           </Link>
         </div>
 
         <div className="features">
           <div className="feature-card">
-            🎙️ Voice Commands
+            🎙️ {t("voiceCommands")}
           </div>
 
           <div className="feature-card">
-            ⚡ Real-Time Processing
+            ⚡ {t("realTimeProcessing")}
           </div>
 
           <div className="feature-card">
-            📦 Inventory Tracking
+            📦 {t("inventoryTracking")}
           </div>
         </div>
       </div>

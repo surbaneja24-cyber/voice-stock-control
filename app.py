@@ -13,7 +13,16 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 # Extensiones
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
-CORS(app)
+CORS(
+    app,
+    resources={
+        r"/*": {
+            "origins": [
+                "https://redesigned-space-doodle-5g7gw7vg76qw2pvpv-5173.app.github.dev"
+            ]
+        }
+    }
+)
 
 
 # =========================
@@ -85,7 +94,11 @@ def register():
     db.session.add(user)
     db.session.commit()
 
-    return jsonify({"msg": "Usuario registrado"}), 201
+    return jsonify({
+    "msg": "Usuario registrado",
+    "id": user.id,
+    "email": user.email
+}), 201
 
 
 @app.route("/login", methods=["POST"])
@@ -109,6 +122,40 @@ def login():
         "email": user.email
     })
 
+
+# =========================
+# GOOGLE LOGIN
+# =========================
+
+@app.route("/google-login", methods=["POST"])
+def google_login():
+    data = request.get_json()
+
+    email = data.get("email")
+
+    if not email:
+        return jsonify({"msg": "Email requerido"}), 400
+
+    user = User.query.filter_by(email=email).first()
+
+    if not user:
+        google_password = bcrypt.generate_password_hash(
+            "google_auth_user"
+        ).decode("utf-8")
+
+        user = User(
+            email=email,
+            password=google_password
+        )
+
+        db.session.add(user)
+        db.session.commit()
+
+    return jsonify({
+        "msg": "Google login correcto",
+        "id": user.id,
+        "email": user.email
+    }), 200
 
 # =========================
 # PRODUCTOS

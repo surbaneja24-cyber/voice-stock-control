@@ -8,9 +8,11 @@ function Login() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setLoading(true);
 
     try {
       const response = await fetch("https://redesigned-space-doodle-5g7gw7vg76qw2pvpv-5000.app.github.dev/login", {
@@ -30,15 +32,19 @@ function Login() {
         localStorage.setItem("user", JSON.stringify(data));
         navigate("/dashboard");
       } else {
+        setLoading(false);
         alert(data.msg);
       }
     } catch (error) {
       console.error(error);
+      setLoading(false);
       alert("Server connection error");
     }
   };
 
   const handleGoogleLogin = async () => {
+    setLoading(true);
+
     try {
       const result = await signInWithPopup(auth, googleProvider);
 
@@ -75,12 +81,13 @@ function Login() {
       navigate("/dashboard");
     } catch (error) {
       console.error(error);
+      setLoading(false);
       alert(error.message || "Google login failed");
     }
   };
 
   return (
-    <div className="auth-page">
+    <div className="auth-page fade-page">
       <div className="auth-card">
         <h1>Welcome back</h1>
         <p>Sign in to continue to VoxStock.</p>
@@ -102,8 +109,12 @@ function Login() {
             onChange={(e) => setPassword(e.target.value)}
           />
 
-          <button className="auth-button" type="submit">
-            Sign In
+          <button
+            className="auth-button"
+            type="submit"
+            disabled={loading}
+          >
+            {loading ? "Signing in..." : "Sign In"}
           </button>
         </form>
 
@@ -115,13 +126,17 @@ function Login() {
           className="google-btn"
           type="button"
           onClick={handleGoogleLogin}
+          disabled={loading}
         >
           <img
             src="https://www.svgrepo.com/show/475656/google-color.svg"
             alt="Google"
             width="20"
           />
-          Continue with Google
+
+          {loading
+            ? "⏳ Signing in..."
+            : "Continue with Google"}
         </button>
 
         <button

@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import "../App.css";
 import { Mic, Info } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 function Dashboard() {
   // ==========================================
@@ -9,6 +10,7 @@ function Dashboard() {
   // ==========================================
 
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
 
   const user = JSON.parse(localStorage.getItem("user"));
 
@@ -22,6 +24,7 @@ function Dashboard() {
   // ==========================================
 
   const [grabando, setGrabando] = useState(false);
+  const [estadoIA, setEstadoIA] = useState("ready");
   const [showInstructions, setShowInstructions] = useState(true);
 
   const [textoModal, setTextoModal] = useState(
@@ -79,10 +82,12 @@ function Dashboard() {
 
           if (respuesta.ok) {
             setTextoModal(datos.texto);
+            setEstadoIA("ready");
           } else {
             setTextoModal(
               "Error de la IA: " + datos.error
             );
+            setEstadoIA("error");
           }
         } catch (error) {
           console.error(
@@ -93,6 +98,7 @@ function Dashboard() {
           setTextoModal(
             "Error: Verifica que api_voz.py esté encendido."
           );
+          setEstadoIA("error");
         }
 
         stream
@@ -101,7 +107,9 @@ function Dashboard() {
       };
 
       mediaRecorder.start();
+
       setGrabando(true);
+      setEstadoIA("listening");
     } catch (error) {
       console.error(
         "Detalle del error:",
@@ -117,7 +125,9 @@ function Dashboard() {
   const detenerGrabacion = () => {
     if (mediaRecorderRef.current && grabando) {
       mediaRecorderRef.current.stop();
+
       setGrabando(false);
+      setEstadoIA("processing");
     }
   };
 
@@ -127,9 +137,51 @@ function Dashboard() {
 
   return (
     <div className="app">
-      <span className="badge">
-        🚀 Beta 1.0
-      </span>
+      <div className="top-bar">
+        <span className="badge">
+          🚀 Beta 1.0
+        </span>
+
+        <button
+          className="flag-btn"
+          onClick={() => i18n.changeLanguage("en")}
+        >
+          <img
+            src="https://flagcdn.com/w40/us.png"
+            alt="English"
+          />
+        </button>
+
+        <button
+          className="flag-btn"
+          onClick={() => i18n.changeLanguage("es")}
+        >
+          <img
+            src="https://flagcdn.com/w40/es.png"
+            alt="Español"
+          />
+        </button>
+
+        <button
+          className="flag-btn"
+          onClick={() => i18n.changeLanguage("fr")}
+        >
+          <img
+            src="https://flagcdn.com/w40/fr.png"
+            alt="Français"
+          />
+        </button>
+
+        <button
+          className="flag-btn"
+          onClick={() => i18n.changeLanguage("de")}
+        >
+          <img
+            src="https://flagcdn.com/w40/de.png"
+            alt="Deutsch"
+          />
+        </button>
+      </div>
 
       <h1 className="logo-title">
         Vox<span>Stock</span>
@@ -153,7 +205,7 @@ function Dashboard() {
             className="logout-btn"
             onClick={handleLogout}
           >
-            Exit
+            {t("exit")}
           </button>
         </div>
 
@@ -167,39 +219,37 @@ function Dashboard() {
                 ✕
               </button>
 
-              <h2>Getting Started</h2>
+              <h2>{t("gettingStarted")}</h2>
 
               <p className="modal-subtitle">
-                Welcome to VoxStock. Follow these quick steps to start using voice commands.
+                {t("instructionsSubtitle")}
               </p>
 
               <div className="instruction-item">
-                🎙️ Allow microphone access when your browser requests permission.
+                🎙️ {t("step1")}
               </div>
 
               <div className="instruction-item">
-                👆 Press and hold the microphone button while speaking.
+                👆 {t("step2")}
               </div>
 
               <div className="instruction-item">
-                🗣️ Speak naturally and clearly for better recognition.
+                🗣️ {t("step3")}
               </div>
 
               <div className="instruction-item">
-                🚀 Release the button to send your command to the AI.
+                🚀 {t("step4")}
               </div>
 
               <div className="instruction-item">
-                📦 Your recognized command will appear instantly below.
+                📦 {t("step5")}
               </div>
             </div>
           </div>
         )}
       </div>
 
-      <p>
-        Intelligent inventory management through voice commands
-      </p>
+      <p>{t("inventory")}</p>
 
       <div className="voice-container">
         <button
@@ -224,13 +274,26 @@ function Dashboard() {
 
         <span className="status">
           {grabando
-            ? "Escuchando... (Suelta para enviar)"
-            : "Mantén presionado para hablar"}
+            ? t("listening")
+            : t("holdSpeak")}
         </span>
+        <div className={`ai-status ${estadoIA}`}>
+          {estadoIA === "ready" &&
+            `🟢 ${t("ready")}`}
+
+          {estadoIA === "listening" &&
+            `🎙️ ${t("listeningStatus")}`}
+
+          {estadoIA === "processing" &&
+            `⚡ ${t("processing")}`}
+
+          {estadoIA === "error" &&
+            `❌ ${t("connectionError")}`}
+        </div>
       </div>
 
       <div className="result-card">
-        <h3>Recognized Command</h3>
+        <h3>{t("recognizedCommand")}</h3>
         <p>{textoModal}</p>
       </div>
     </div>
