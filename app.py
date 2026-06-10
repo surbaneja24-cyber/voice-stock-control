@@ -3,8 +3,16 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from flask_cors import CORS
 from datetime import datetime
+from dotenv import load_dotenv
+import google.generativeai as genai
+import os
 
 app = Flask(__name__)
+
+load_dotenv()
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+
+modelo = genai.GenerativeModel("gemini-2.5-flash")
 
 # Configuración
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///users.db"
@@ -298,9 +306,36 @@ with app.app_context():
     db.create_all()
 
 
+@app.route("/chat", methods=["POST"])
+def chat():
+    try:
+        data = request.get_json()
+
+        mensaje = data.get("message", "")
+
+        respuesta = modelo.generate_content(
+            f"""
+            You are VoxStock Assistant.
+
+            You help users use the VoxStock application.
+
+            User message:
+            {mensaje}
+            """
+        )
+
+        return jsonify({
+            "response": respuesta.text
+        })
+
+    except Exception as e:
+        return jsonify({
+            "error": str(e)
+        }), 500
+    
 # =========================
 # INICIO
 # =========================
-
+    
 if __name__ == "__main__":
     app.run(debug=True)

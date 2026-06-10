@@ -15,7 +15,10 @@ function Home() {
 
           <button
             className="flag-btn"
-            onClick={() => i18n.changeLanguage("en")}
+            onClick={() => {
+              i18n.changeLanguage("en");
+              localStorage.setItem("language", "en");
+            }}
           >
             <img
               src="https://flagcdn.com/w40/gb.png"
@@ -25,7 +28,10 @@ function Home() {
 
           <button
             className="flag-btn"
-            onClick={() => i18n.changeLanguage("es")}
+            onClick={() => {
+              i18n.changeLanguage("es");
+              localStorage.setItem("language", "es");
+            }}
           >
             <img
               src="https://flagcdn.com/w40/es.png"
@@ -35,7 +41,10 @@ function Home() {
 
           <button
             className="flag-btn"
-            onClick={() => i18n.changeLanguage("fr")}
+            onClick={() => {
+              i18n.changeLanguage("fr");
+              localStorage.setItem("language", "fr");
+            }}
           >
             <img
               src="https://flagcdn.com/w40/fr.png"
@@ -45,7 +54,10 @@ function Home() {
 
           <button
             className="flag-btn"
-            onClick={() => i18n.changeLanguage("de")}
+            onClick={() => {
+              i18n.changeLanguage("de");
+              localStorage.setItem("language", "de");
+            }}
           >
             <img
               src="https://flagcdn.com/w40/de.png"

@@ -1064,3 +1064,158 @@ body{
 .ai-status.error {
   color: #dc2626;
 }
+
+/* CHAT BOT IA */
+.chat-float-btn {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+
+  width: 65px;
+  height: 65px;
+
+  border: none;
+  border-radius: 50%;
+
+  background: linear-gradient(
+    135deg,
+    #2563eb,
+    #3b82f6
+  );
+
+  color: white;
+  font-size: 28px;
+
+  cursor: pointer;
+
+  z-index: 9999;
+
+  box-shadow: 0 8px 25px rgba(37,99,235,0.4);
+
+  transition: all 0.25s ease;
+}
+
+.chat-float-btn:hover {
+  transform: scale(1.1);
+}
+.chat-window {
+  position: fixed;
+
+  bottom: 110px;
+  right: 30px;
+
+  width: 340px;
+  height: 450px;
+
+  background: #0f172a;
+
+  border-radius: 20px;
+
+  overflow: hidden;
+
+  display: flex;
+  flex-direction: column;
+
+  z-index: 9999;
+
+  box-shadow: 0 15px 40px rgba(0,0,0,0.35);
+}
+
+.chat-header {
+  padding: 16px;
+
+  font-weight: 600;
+
+  color: white;
+
+  background: rgba(255,255,255,0.05);
+
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.chat-body {
+  flex: 1;
+
+  padding: 20px;
+
+  overflow-y: auto;
+
+  color: #d1d5db;
+}
+.message {
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  max-width: 85%;
+  word-wrap: break-word;
+}
+
+.message.bot {
+  background: rgba(59,130,246,0.15);
+  color: white;
+}
+
+.message.user {
+  background: rgba(255,255,255,0.08);
+  color: white;
+  margin-left: auto;
+}
+.message.bot {
+  background: rgba(59,130,246,0.15);
+  color: white;
+
+  margin: 0 auto 12px auto;
+
+  text-align: center;
+}
+.chat-input-container {
+  display: flex;
+
+  gap: 10px;
+
+  padding: 12px;
+
+  border-top: 1px solid rgba(255,255,255,0.08);
+
+  background: #0f172a;
+
+  flex-shrink: 0;
+}
+
+.chat-input {
+  flex: 1;
+
+  border: none;
+
+  outline: none;
+
+  padding: 12px;
+
+  border-radius: 10px;
+
+  background: rgba(255,255,255,0.06);
+
+  color: white;
+}
+
+.chat-send-btn {
+  border: none;
+
+  padding: 0 18px;
+
+  border-radius: 10px;
+
+  cursor: pointer;
+
+  background: #2563eb;
+
+  color: white;
+
+  font-weight: 600;
+
+  transition: 0.2s;
+}
+
+.chat-send-btn:hover {
+  transform: scale(1.05);
+}

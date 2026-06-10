@@ -11,6 +11,7 @@ function Dashboard() {
 
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
+  const [showChat, setShowChat] = useState(false);
 
   const user = JSON.parse(localStorage.getItem("user"));
 
@@ -26,6 +27,63 @@ function Dashboard() {
   const [grabando, setGrabando] = useState(false);
   const [estadoIA, setEstadoIA] = useState("ready");
   const [showInstructions, setShowInstructions] = useState(true);
+  const [mensaje, setMensaje] = useState("");
+  const [mensajes, setMensajes] = useState([
+    {
+      sender: "bot",
+      text: "Hello! I'm VoxStock Assistant. How can I help you?"
+    }
+  ]);
+  const enviarMensaje = async () => {
+    if (!mensaje.trim()) return;
+
+    const mensajeUsuario = mensaje;
+
+    setMensajes((prev) => [
+      ...prev,
+      {
+        sender: "user",
+        text: mensajeUsuario,
+      },
+    ]);
+
+    setMensaje("");
+
+    try {
+      const response = await fetch(
+        "https://redesigned-space-doodle-5g7gw7vg76qw2pvpv-5000.app.github.dev/chat",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            message: mensajeUsuario,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      setMensajes((prev) => [
+        ...prev,
+        {
+          sender: "bot",
+          text: data.response,
+        },
+      ]);
+    } catch (error) {
+      console.error(error);
+
+      setMensajes((prev) => [
+        ...prev,
+        {
+          sender: "bot",
+          text: "Error connecting to AI.",
+        },
+      ]);
+    }
+  };
 
   const [textoModal, setTextoModal] = useState(
     "Waiting for voice input..."
@@ -134,6 +192,7 @@ function Dashboard() {
   // ==========================================
   // INTERFAZ
   // ==========================================
+  
 
   return (
     <div className="app">
@@ -144,7 +203,10 @@ function Dashboard() {
 
         <button
           className="flag-btn"
-          onClick={() => i18n.changeLanguage("en")}
+          onClick={() => {
+            i18n.changeLanguage("en");
+            localStorage.setItem("language", "en");
+          }}
         >
           <img
             src="https://flagcdn.com/w40/us.png"
@@ -154,7 +216,10 @@ function Dashboard() {
 
         <button
           className="flag-btn"
-          onClick={() => i18n.changeLanguage("es")}
+          onClick={() => {
+            i18n.changeLanguage("es");
+            localStorage.setItem("language", "es");
+          }}
         >
           <img
             src="https://flagcdn.com/w40/es.png"
@@ -164,7 +229,10 @@ function Dashboard() {
 
         <button
           className="flag-btn"
-          onClick={() => i18n.changeLanguage("fr")}
+          onClick={() => {
+            i18n.changeLanguage("fr");
+            localStorage.setItem("language", "fr");
+          }}
         >
           <img
             src="https://flagcdn.com/w40/fr.png"
@@ -174,7 +242,10 @@ function Dashboard() {
 
         <button
           className="flag-btn"
-          onClick={() => i18n.changeLanguage("de")}
+          onClick={() => {
+            i18n.changeLanguage("de");
+            localStorage.setItem("language", "de");
+          }}
         >
           <img
             src="https://flagcdn.com/w40/de.png"
@@ -296,6 +367,53 @@ function Dashboard() {
         <h3>{t("recognizedCommand")}</h3>
         <p>{textoModal}</p>
       </div>
+      <button
+        className="chat-float-btn"
+        onClick={() => setShowChat(!showChat)}
+      >
+        💬
+      </button>
+      {showChat && (
+        <div className="chat-window">
+          <div className="chat-header">
+            💬 VoxStock Assistant
+          </div>
+
+          <div className="chat-body">
+            {mensajes.map((msg, index) => (
+              <div
+                key={index}
+                className={`message ${msg.sender}`}
+              >
+                {msg.text}
+              </div>
+            ))}
+          </div>
+          <div className="chat-input-container">
+            <input
+              type="text"
+              className="chat-input"
+              value={mensaje}
+              onChange={(e) =>
+                setMensaje(e.target.value)
+              }
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  enviarMensaje();
+                }
+              }}
+              placeholder="Type your message..."
+            />
+
+            <button
+              className="chat-send-btn"
+              onClick={enviarMensaje}
+            >
+              Send
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
