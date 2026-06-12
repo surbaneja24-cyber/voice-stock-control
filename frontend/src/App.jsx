@@ -1,6 +1,13 @@
 import { useState, useRef } from 'react';
-import './App.css';
+// import './App.css';
 import { Mic } from "lucide-react";
+import Home from "./pages/Home";
+import { Routes, Route } from "react-router-dom";
+
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
+import Cookies from "./pages/Cookies";
+
 
 function App() {
   // ==========================================
@@ -8,9 +15,11 @@ function App() {
   // ==========================================
   const [grabando, setGrabando] = useState(false);
   const [textoModal, setTextoModal] = useState("Waiting for voice input...");
-  
+
   const mediaRecorderRef = useRef(null);
   const fragmentosDeAudio = useRef([]);
+  const [mostrarHome, setMostrarHome] = useState(true);
+
 
   const iniciarGrabacion = async () => {
     try {
@@ -25,9 +34,9 @@ function App() {
 
       mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(fragmentosDeAudio.current, { type: 'audio/webm' });
-        
+
         setTextoModal("Procesando audio con IA...");
-        
+
         const formData = new FormData();
         formData.append("audio", audioBlob, "orden_operario.webm");
 
@@ -36,9 +45,9 @@ function App() {
             method: "POST",
             body: formData
           });
-          
+
           const datos = await respuesta.json();
-          
+
           if (respuesta.ok) {
             setTextoModal(datos.texto);
           } else {
@@ -49,7 +58,7 @@ function App() {
           console.error("Error de conexión:", error);
           setTextoModal("Error: Verifica que api_voz.py esté encendido.");
         }
-        
+
         stream.getTracks().forEach(track => track.stop());
       };
 
@@ -68,20 +77,49 @@ function App() {
       setGrabando(false);
     }
   };
+  return (
+    <Routes>
+
+      <Route
+        path="/"
+        element={<Home setMostrarHome={setMostrarHome} />}
+      />
+
+      <Route
+        path="/privacy"
+        element={<Privacy />}
+      />
+
+      <Route
+        path="/terms"
+        element={<Terms />}
+      />
+
+      <Route
+        path="/cookies"
+        element={<Cookies />}
+      />
+
+    </Routes>
+  );
+  if (mostrarHome) {
+    return <Home setMostrarHome={setMostrarHome} />;
+  }
+
 
   // ==========================================
   // 2. LA INTERFAZ (Tu nuevo diseño visual)
   // ==========================================
   return (
     <div className="app">
-        <div className="header">
+      <div className="header">
         <span className="badge">Beta 1.0</span> {/* <--- Esto es nuevo */}
         <h1>VoxStock</h1>
         <p>Intelligent inventory management through voice commands</p>
       </div>
 
       <div className="voice-container">
-        <button 
+        <button
           className={`mic-button ${grabando ? 'grabando' : ''}`}
           onMouseDown={iniciarGrabacion}
           onMouseUp={detenerGrabacion}
