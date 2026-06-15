@@ -7,6 +7,9 @@ import { Routes, Route } from "react-router-dom";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import Cookies from "./pages/Cookies";
+import Dashboard from "./pages/Dashboard";
+import History from "./pages/History";
+import Navbar from "./components/Navbar";
 
 
 function App() {
@@ -78,11 +81,23 @@ function App() {
     }
   };
   return (
-    <Routes>
+  <>
+    <Navbar />
 
+    <Routes>
       <Route
         path="/"
         element={<Home setMostrarHome={setMostrarHome} />}
+      />
+
+      <Route
+        path="/dashboard"
+        element={<Dashboard />}
+      />
+
+      <Route
+        path="/history"
+        element={<History />}
       />
 
       <Route
@@ -99,9 +114,9 @@ function App() {
         path="/cookies"
         element={<Cookies />}
       />
-
     </Routes>
-  );
+  </>
+);
   if (mostrarHome) {
     return <Home setMostrarHome={setMostrarHome} />;
   }
