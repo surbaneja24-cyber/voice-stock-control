@@ -10,6 +10,7 @@ import Cookies from "./pages/Cookies";
 import Dashboard from "./pages/Dashboard";
 import History from "./pages/History";
 import Navbar from "./components/Navbar";
+import VoiceAI from "./pages/VoiceAI";
 
 
 function App() {
@@ -81,42 +82,43 @@ function App() {
     }
   };
   return (
-  <>
-    <Navbar />
+    <>
+      <Navbar />
 
-    <Routes>
-      <Route
-        path="/"
-        element={<Home setMostrarHome={setMostrarHome} />}
-      />
+      <Routes>
+        <Route
+          path="/"
+          element={<Home setMostrarHome={setMostrarHome} />}
+        />
 
-      <Route
-        path="/dashboard"
-        element={<Dashboard />}
-      />
+        <Route
+          path="/dashboard"
+          element={<Dashboard />}
+        />
 
-      <Route
-        path="/history"
-        element={<History />}
-      />
+        <Route
+          path="/history"
+          element={<History />}
+        />
+        <Route path="/voice" element={<VoiceAI />} />
 
-      <Route
-        path="/privacy"
-        element={<Privacy />}
-      />
+        <Route
+          path="/privacy"
+          element={<Privacy />}
+        />
 
-      <Route
-        path="/terms"
-        element={<Terms />}
-      />
+        <Route
+          path="/terms"
+          element={<Terms />}
+        />
 
-      <Route
-        path="/cookies"
-        element={<Cookies />}
-      />
-    </Routes>
-  </>
-);
+        <Route
+          path="/cookies"
+          element={<Cookies />}
+        />
+      </Routes>
+    </>
+  );
   if (mostrarHome) {
     return <Home setMostrarHome={setMostrarHome} />;
   }

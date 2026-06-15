@@ -73,7 +73,7 @@ function Navbar() {
         </NavLink>
 
         <NavLink
-          to="/VoiceAI"
+          to="/voice"
           className={({ isActive }) =>
             `transition-all duration-300 hover:scale-105 ${isActive
               ? "text-white font-semibold border-b-2 border-white pb-1"
