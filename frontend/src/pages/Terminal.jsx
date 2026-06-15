@@ -31,7 +31,7 @@ export default function Terminal() {
         formData.append("audio", audioBlob, "orden_operario.webm");
 
         try {
-          const respuesta = await fetch("http://localhost:5001/api/transcribir", {
+          const respuesta = await fetch("https://animated-goldfish-pj5jx57j5vjg35wp-5001.app.github.dev/api/transcribir", {
             method: "POST",
             body: formData
           });
