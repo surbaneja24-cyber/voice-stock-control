@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 :root {
   --text: #6b6375;
   --text-h: #08060d;
@@ -109,3 +110,13 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+=======
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background-color: #000; /* Fondo base negro */
+  color: white;
+}
+>>>>>>> Stashed changes

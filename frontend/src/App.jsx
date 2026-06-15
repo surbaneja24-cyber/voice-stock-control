@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 import { useState, useRef } from 'react';
 import './App.css';
 import { Mic } from "lucide-react";
@@ -102,8 +103,35 @@ function App() {
         <h3>Recognized Command</h3>
         <p>{textoModal}</p>
       </div>
+=======
+import { Routes, Route } from "react-router-dom";
+import Home from "./pages/Home";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
+import Cookies from "./pages/Cookies";
+import Terminal from "./pages/Terminal";
+// 1. Importamos los nuevos cascarones del equipo
+import Dashboard from "./pages/Dashboard";
+import Historial from "./pages/Historial";
+
+export default function App() {
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-900">
+      <Routes>
+        {/* Rutas Públicas */}
+        <Route path="/" element={<Home />} />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/terms" element={<Terms />} />
+        <Route path="/cookies" element={<Cookies />} />
+        
+        {/* Rutas Operativas */}
+        <Route path="/voice" element={<Terminal />} />
+        
+        {/* Rutas del Equipo (Aisladas y seguras) */}
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/history" element={<Historial />} />
+      </Routes>
+>>>>>>> Stashed changes
     </div>
   );
 }
-
-export default App;
