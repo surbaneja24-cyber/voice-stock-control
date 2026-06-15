@@ -3,9 +3,14 @@ from flask_cors import CORS
 from faster_whisper import WhisperModel
 import os
 import requests # Para la futura conexión con el servidor de Marc
+from datetime import datetime
 
 app_voz = Flask(__name__)
 CORS(app_voz)
+@app_voz.route('/')
+def home():
+    return "Servidor funcionando"
+historial_movimientos = []
 
 print("Cargando el motor de IA...")
 modelo = WhisperModel("tiny", device="cpu", compute_type="int8")
@@ -39,6 +44,16 @@ def procesar_audio():
         os.remove(ruta_temporal)
         
         print(f" Orden detectada: {texto_extraido}")
+
+        historial_movimientos.append({
+            "dateTime": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "user": "Operator",
+            "action": "Voice Command",
+            "product": texto_extraido,
+            "quantity": "-",
+            "method": "Whisper AI"
+        })
+
         return jsonify({
             "texto": texto_extraido,
             "estado": "pendiente"
@@ -48,6 +63,12 @@ def procesar_audio():
         if os.path.exists(ruta_temporal):
             os.remove(ruta_temporal)
         return jsonify({"error": f"Error del motor: {str(e)}"}), 500
+print("RUTA /api/history REGISTRADA")
+@app_voz.route('/api/history', methods=['GET'])
+def obtener_historial():
+    return jsonify(historial_movimientos)
 
 if __name__ == '__main__':
     app_voz.run(port=5001, debug=True)
+
+print(app_voz.url_map)
