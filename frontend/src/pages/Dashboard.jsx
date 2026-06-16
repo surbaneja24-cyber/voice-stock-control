@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
+import { useHistoryStore } from "../store/historyStore";
 
 import {
   LineChart,
@@ -13,7 +14,13 @@ import {
 } from "recharts";
 
 export default function Dashboard() {
-  const [movimientos, setMovimientos] = useState([]);
+  const movimientos = useHistoryStore(
+    (state) => state.movimientos
+  );
+
+  const setMovimientos = useHistoryStore(
+    (state) => state.setMovimientos
+  );
 
   useEffect(() => {
     fetch(
@@ -22,13 +29,13 @@ export default function Dashboard() {
       .then((res) => res.json())
       .then((data) => setMovimientos(data))
       .catch((err) => console.error(err));
-  }, []);
+  }, [setMovimientos]);
 
   const trendData = [
-    { month: "Jan", value: 120 },
+    { month: "Ene", value: 120 },
     { month: "Feb", value: 180 },
     { month: "Mar", value: 150 },
-    { month: "Apr", value: 220 },
+    { month: "Abr", value: 220 },
     { month: "May", value: 310 },
     { month: "Jun", value: 280 },
   ];
@@ -51,7 +58,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-white text-black p-8">
 
       <h1 className="text-4xl font-bold mb-8">
-        Executive Overview
+        Descripción ejecutiva
       </h1>
 
       {/* KPI Cards */}
@@ -59,22 +66,22 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
 
         <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm">
-          <p className="text-zinc-600">Total Value</p>
+          <p className="text-zinc-600">Valor Total</p>
           <h2 className="text-3xl font-bold">$1.24M</h2>
         </div>
 
         <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm">
-          <p className="text-zinc-600">Active Items</p>
+          <p className="text-zinc-600">Artículos activos</p>
           <h2 className="text-3xl font-bold">8,432</h2>
         </div>
 
         <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm">
-          <p className="text-zinc-600">Low Stock Alerts</p>
+          <p className="text-zinc-600">Alertas de bajas existencias</p>
           <h2 className="text-3xl font-bold">24</h2>
         </div>
 
         <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm">
-          <p className="text-zinc-600">Voice Commands</p>
+          <p className="text-zinc-600">Comandos de voz</p>
           <h2 className="text-3xl font-bold">
             {movimientos.length}
           </h2>
@@ -88,7 +95,7 @@ export default function Dashboard() {
 
         <div className="bg-white rounded-2xl p-6 border border-zinc-200 shadow-sm">
           <h2 className="text-xl font-semibold mb-6">
-            Stock Movement Trends
+            Tendencias del movimiento de acciones
           </h2>
 
           <ResponsiveContainer width="100%" height={300}>
@@ -108,7 +115,7 @@ export default function Dashboard() {
 
         <div className="bg-white rounded-2xl p-6 border border-zinc-200 shadow-sm">
           <h2 className="text-xl font-semibold mb-6">
-            Category Distribution
+            Distribución de categorías
           </h2>
 
           <ResponsiveContainer width="100%" height={300}>
@@ -139,14 +146,14 @@ export default function Dashboard() {
       <div className="bg-white rounded-2xl p-6 border border-zinc-200 shadow-sm">
 
         <h2 className="text-xl font-semibold mb-6">
-          Recent Activity
+          Actividad reciente
         </h2>
 
         <div className="space-y-4">
 
           {movimientos.length === 0 ? (
             <p className="text-zinc-600">
-              No recent activity yet.
+              Aún no hay actividad reciente.
             </p>
           ) : (
             movimientos

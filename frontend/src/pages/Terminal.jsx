@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { Mic } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from '../components/Sidebar';
+import { useHistoryStore } from "../store/historyStore";
 
 export default function Terminal() {
   const [grabando, setGrabando] = useState(false);
@@ -11,6 +12,9 @@ export default function Terminal() {
   const mediaRecorderRef = useRef(null);
   const fragmentosDeAudio = useRef([]);
   const navigate = useNavigate(); // <-- El nuevo motor de navegación
+  const addMovimiento = useHistoryStore(
+    (state) => state.addMovimiento
+  );
 
   const iniciarGrabacion = async () => {
     try {
@@ -40,6 +44,16 @@ export default function Terminal() {
 
           if (respuesta.ok) {
             setTextoModal(datos.texto);
+
+            addMovimiento({
+              dateTime: new Date().toLocaleString(),
+              user: "Operario",
+              action: "Movimiento",
+              product: "Detectado por voz",
+              quantity: 1,
+              method: "Voice",
+            });
+
           } else {
             setTextoModal("Error de la IA: " + datos.error);
           }
@@ -77,7 +91,7 @@ export default function Terminal() {
 
           <div className="absolute top-8 right-8">
             <button
-              onClick={() => navigate('/')} 
+              onClick={() => navigate('/')}
               className="px-6 py-2 rounded-lg bg-white hover:bg-slate-50 border border-slate-200 transition-colors text-sm font-semibold text-slate-600 shadow-sm"
             >
               Cerrar Terminal
@@ -104,8 +118,8 @@ export default function Terminal() {
 
               <button
                 className={`w-44 h-44 rounded-full flex items-center justify-center border transition-all duration-300 z-10 ${grabando
-                    ? 'scale-95 bg-blue-600 border-blue-500 shadow-[0_0_40px_rgba(37,99,235,0.4)]'
-                    : 'bg-white border-slate-200 shadow-xl hover:scale-105 hover:border-slate-300 hover:shadow-2xl'
+                  ? 'scale-95 bg-blue-600 border-blue-500 shadow-[0_0_40px_rgba(37,99,235,0.4)]'
+                  : 'bg-white border-slate-200 shadow-xl hover:scale-105 hover:border-slate-300 hover:shadow-2xl'
                   }`}
                 onMouseDown={iniciarGrabacion}
                 onMouseUp={detenerGrabacion}

@@ -1,10 +1,17 @@
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useHistoryStore } from "../store/historyStore";
 
 export default function Historial() {
-  const [movimientos, setMovimientos] = useState([]);
+  const movimientos = useHistoryStore(
+    (state) => state.movimientos
+  );
+
+  const setMovimientos = useHistoryStore(
+    (state) => state.setMovimientos
+  );
 
   useEffect(() => {
     fetch(
@@ -16,7 +23,7 @@ export default function Historial() {
         setMovimientos(data);
       })
       .catch((err) => console.error(err));
-  }, []);
+  }, [setMovimientos]);
 
   const exportExcel = () => {
     const ws = XLSX.utils.json_to_sheet(movimientos);
@@ -50,11 +57,11 @@ export default function Historial() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-10">
         <div>
           <h1 className="text-4xl font-bold mb-2">
-            Stock Movement History
+            Historial de movimientos de inventario
           </h1>
 
           <p className="text-slate-500">
-            Review inventory transactions and export reports.
+            Revisar las transacciones de inventario y exportar informes.
           </p>
         </div>
 
@@ -65,7 +72,7 @@ export default function Historial() {
             hover:scale-105 hover:shadow-[0_0_25px_rgba(255,255,255,0.3)]
             transition-all duration-300"
           >
-            Export PDF
+            Exportar PDF
           </button>
 
           <button
@@ -74,7 +81,7 @@ export default function Historial() {
             hover:scale-105 hover:shadow-[0_0_25px_rgba(255,255,255,0.3)]
             transition-all duration-300"
           >
-            Export Excel
+            Exportar Excel
           </button>
         </div>
       </div>
@@ -83,12 +90,12 @@ export default function Historial() {
         <table className="w-full">
           <thead className="bg-slate-50 border-b border-slate-200">
             <tr>
-              <th className="p-5 text-left">Date / Time</th>
-              <th className="p-5 text-left">User</th>
-              <th className="p-5 text-left">Action</th>
-              <th className="p-5 text-left">Product</th>
-              <th className="p-5 text-left">Quantity</th>
-              <th className="p-5 text-left">Method</th>
+              <th className="p-5 text-left">Fecha y hora</th>
+              <th className="p-5 text-left">Usuario</th>
+              <th className="p-5 text-left">Acción</th>
+              <th className="p-5 text-left">Producto</th>
+              <th className="p-5 text-left">Cantidad</th>
+              <th className="p-5 text-left">Método</th>
             </tr>
           </thead>
 
@@ -99,7 +106,7 @@ export default function Historial() {
                   colSpan="6"
                   className="text-center p-10 text-zinc-500"
                 >
-                  No stock movements recorded yet.
+                  Aún no se han registrado movimientos.
                 </td>
               </tr>
             ) : (
