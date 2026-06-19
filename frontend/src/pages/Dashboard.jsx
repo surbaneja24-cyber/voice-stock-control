@@ -23,7 +23,34 @@ export default function Dashboard() {
   const setMovimientos = useHistoryStore(
     (state) => state.setMovimientos
   );
+  const totalMovimientos = movimientos.length;
 
+  const totalEntradas = movimientos.filter(
+    (m) => m.action === "suma"
+  ).length;
+
+  const totalSalidas = movimientos.filter(
+    (m) => m.action === "resta"
+  ).length;
+
+  const cantidadMovida = movimientos.reduce(
+    (acc, mov) => acc + Number(mov.quantity || 0),
+    0
+  );
+  const trendData = movimientos.map((mov, index) => ({
+    movimiento: index + 1,
+    cantidad: Number(mov.quantity || 0),
+  }));
+  const categoryData = [
+    {
+      name: "Entradas",
+      value: totalEntradas,
+    },
+    {
+      name: "Salidas",
+      value: totalSalidas,
+    },
+  ];
 
 
   useEffect(() => {
@@ -35,21 +62,6 @@ export default function Dashboard() {
       .catch((err) => console.error(err));
   }, [setMovimientos]);
 
-  const trendData = [
-    { month: "Ene", value: 120 },
-    { month: "Feb", value: 180 },
-    { month: "Mar", value: 150 },
-    { month: "Abr", value: 220 },
-    { month: "May", value: 310 },
-    { month: "Jun", value: 280 },
-  ];
-
-  const categoryData = [
-    { name: "Electronics", value: 40 },
-    { name: "Hardware", value: 30 },
-    { name: "Tools", value: 20 },
-    { name: "Other", value: 10 },
-  ];
 
   const COLORS = [
     "#000000",
@@ -70,24 +82,30 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
 
         <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm">
-          <p className="text-zinc-600">Valor Total</p>
-          <h2 className="text-3xl font-bold">$1.24M</h2>
-        </div>
-
-        <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm">
-          <p className="text-zinc-600">Artículos activos</p>
-          <h2 className="text-3xl font-bold">8,432</h2>
-        </div>
-
-        <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm">
-          <p className="text-zinc-600">Alertas de bajas existencias</p>
-          <h2 className="text-3xl font-bold">24</h2>
-        </div>
-
-        <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm">
-          <p className="text-zinc-600">Comandos de voz</p>
+          <p className="text-zinc-600">Movimientos totales</p>
           <h2 className="text-3xl font-bold">
-            {movimientos.length}
+            {totalMovimientos}
+          </h2>
+        </div>
+
+        <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm">
+          <p className="text-zinc-600">Entradas</p>
+          <h2 className="text-3xl font-bold">
+            {totalEntradas}
+          </h2>
+        </div>
+
+        <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm">
+          <p className="text-zinc-600">Salidas</p>
+          <h2 className="text-3xl font-bold">
+            {totalSalidas}
+          </h2>
+        </div>
+
+        <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm">
+          <p className="text-zinc-600">Unidades movidas</p>
+          <h2 className="text-3xl font-bold">
+            {cantidadMovida}
           </h2>
         </div>
 
@@ -104,12 +122,12 @@ export default function Dashboard() {
 
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={trendData}>
-              <XAxis dataKey="month" />
+              <XAxis dataKey="movimiento" />
               <YAxis />
               <Tooltip />
               <Line
                 type="monotone"
-                dataKey="value"
+                dataKey="cantidad"
                 stroke="#000000"
                 strokeWidth={3}
               />
@@ -119,7 +137,7 @@ export default function Dashboard() {
 
         <div className="bg-white rounded-2xl p-6 border border-zinc-200 shadow-sm">
           <h2 className="text-xl font-semibold mb-6">
-            Distribución de categorías
+            Distribución de movimientos
           </h2>
 
           <ResponsiveContainer width="100%" height={300}>
@@ -131,6 +149,8 @@ export default function Dashboard() {
                 innerRadius={70}
                 outerRadius={100}
                 dataKey="value"
+                nameKey="name"
+                label
               >
                 {categoryData.map((entry, index) => (
                   <Cell
@@ -139,6 +159,8 @@ export default function Dashboard() {
                   />
                 ))}
               </Pie>
+
+              <Tooltip />
             </PieChart>
           </ResponsiveContainer>
         </div>
