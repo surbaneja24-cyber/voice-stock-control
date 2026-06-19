@@ -1,0 +1,9 @@
+{
+  "dashboard": "Dashboard",
+  "products": "Products",
+  "history": "History",
+  "settings": "Settings",
+  "voiceTerminal": "Voice Terminal",
+  "lightMode": "Light Mode",
+  "darkMode": "Dark Mode"
+}

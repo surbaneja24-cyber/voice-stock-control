@@ -1,5 +1,7 @@
 import { useEffect } from "react";
 import { useHistoryStore } from "../store/historyStore";
+import { useState } from "react";
+import Sidebar from "../components/Sidebar";
 
 import {
   LineChart,
@@ -22,9 +24,11 @@ export default function Dashboard() {
     (state) => state.setMovimientos
   );
 
+
+
   useEffect(() => {
     fetch(
-      "https://congenial-broccoli-4jpjxpqj5jpg3jwqv-5001.app.github.dev/api/history"
+      "https://animated-goldfish-pj5jx57j5vjg35wp-5001.app.github.dev/api/history"
     )
       .then((res) => res.json())
       .then((data) => setMovimientos(data))

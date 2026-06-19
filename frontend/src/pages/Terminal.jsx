@@ -35,11 +35,13 @@ export default function Terminal() {
         formData.append("audio", audioBlob, "orden_operario.webm");
 
         try {
-          const respuesta = await fetch("https://animated-goldfish-pj5jx57j5vjg35wp-5001.app.github.dev/api/transcribir", {
-            method: "POST",
-            body: formData
-          });
-
+          const respuesta = await fetch(
+            "https://congenial-palm-tree-pj5jx57j5vrqh7v64-5001.app.github.dev/api/transcribir",
+            {
+              method: "POST",
+              body: formData
+            }
+          );
           const datos = await respuesta.json();
 
           if (respuesta.ok) {
@@ -48,9 +50,9 @@ export default function Terminal() {
             addMovimiento({
               dateTime: new Date().toLocaleString(),
               user: "Operario",
-              action: "Movimiento",
-              product: "Detectado por voz",
-              quantity: 1,
+              action: datos.accion,
+              product: datos.producto,
+              quantity: datos.cantidad,
               method: "Voice",
             });
 

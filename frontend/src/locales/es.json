@@ -1,0 +1,9 @@
+{
+  "dashboard": "Panel",
+  "products": "Productos",
+  "history": "Historial",
+  "settings": "Configuración",
+  "voiceTerminal": "Terminal Voz",
+  "lightMode": "Modo Claro",
+  "darkMode": "Modo Oscuro"
+}
