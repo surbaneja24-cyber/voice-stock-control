@@ -1,15 +1,11 @@
-# ==============================================================================
-# ARCHIVO: database.py
-# PROPÓSITO: Gestionar la conexión física con la base de datos (SQLite).
-# ==============================================================================
-
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
+import os
 
-SQLALCHEMY_DATABASE_URL = "sqlite:///./inventario.db"
+# Obtiene la ruta absoluta de la carpeta donde está este archivo
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+SQLALCHEMY_DATABASE_URL = f"sqlite:///{os.path.join(BASE_DIR, 'inventario.db')}"
 
-# connect_args={"check_same_thread": False} es obligatorio en SQLite 
-# para permitir que FastAPI maneje múltiples peticiones a la vez.
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
 )

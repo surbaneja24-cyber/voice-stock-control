@@ -1,13 +1,17 @@
-# Dependencias de Python
-venv/
-__pycache__/
-*.sqlite3
-database.db
+# Dependencias de Python (Especificas para tu carpeta backend)
+backend/venv/
+backend/__pycache__/
+*.pyc
 
-# Dependencias de React/Node
-node_modules/
-dist/
+# Base de datos real del sistema
+backend/inventario.db
 
-# Variables de entorno y SO
+# Dependencias y Cache de React (Especificas para tu carpeta frontend)
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Variables de entorno y archivos del Sistema Operativo
 .env
 .DS_Store
+Thumbs.db

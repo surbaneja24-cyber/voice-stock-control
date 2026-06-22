@@ -1,21 +1,23 @@
 import Navbar from "../components/Navbar";
 import Hero from "../components/Hero";
-// Las comentamos temporalmente hasta que crees los archivos
-// import Features from "../components/Features";
-// import DashboardPreview from "../components/DashboardPreview";
-// import Footer from "../components/Footer";
+import { useThemeStore } from "../store/themeStore"; 
 
 export default function Home() {
+  const { darkMode } = useThemeStore();
+
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Componentes que SÍ existen */}
-      <Navbar />
-      <Hero />
+    <main className={`flex flex-col min-h-screen w-full font-sans antialiased transition-colors duration-300 ${
+      darkMode ? 'bg-slate-900 text-slate-50' : 'bg-slate-50 text-slate-900'
+    }`}>
       
-      {/* Componentes en construcción */}
-      {/* <Features /> */}
-      {/* <DashboardPreview /> */}
-      {/* <Footer /> */}
-    </div>
+      {/* El botón de cambio de tema debe estar programado dentro del Navbar */}
+      <Navbar isDarkMode={darkMode} />
+      
+      {/* Contenido principal */}
+      <div className="flex-grow flex items-center justify-center">
+        <Hero isDarkMode={darkMode} />
+      </div>
+
+    </main>
   );
 }

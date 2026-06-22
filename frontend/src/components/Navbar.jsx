@@ -1,235 +1,143 @@
-import { useLayoutEffect, useRef, useState } from 'react';
-import { gsap } from 'gsap';
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { GoArrowUpRight } from 'react-icons/go';
+import { Moon, Sun } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useThemeStore } from "../store/themeStore";
 
-// Menú por defecto adaptado a las operaciones (Tema Claro)
-const defaultItems = [
-  {
-    label: "Operaciones",
-    bgColor: "#f8fafc", // slate-50
-    textColor: "#0f172a", // slate-900
-    links: [
-      { label: "Control de Stock", href: "#", ariaLabel: "Control de Stock" },
-      { label: "Supervisión", href: "#", ariaLabel: "Supervisión" }
-    ]
-  },
-  {
-    label: "Inventario",
-    bgColor: "#f1f5f9", // slate-100
-    textColor: "#0f172a",
-    links: [
-      { label: "Catálogo", href: "#", ariaLabel: "Catálogo de productos" },
-      { label: "Movimientos", href: "#", ariaLabel: "Historial de movimientos" }
-    ]
-  },
-  {
-    label: "Sistema",
-    bgColor: "#ffffff", // white
-    textColor: "#0f172a",
-    links: [
-      { label: "Terminal de Voz", href: "#", ariaLabel: "Ir a la terminal" },
-      { label: "Ajustes", href: "#", ariaLabel: "Ajustes del sistema" }
-    ]
-  }
-];
+export default function Navbar({ logo, logoAlt = 'VoxStock' }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const navigate = useNavigate();
+  const { darkMode, toggleTheme } = useThemeStore();
 
-const Navbar = ({
-  logo,
-  logoAlt = 'VoxStock',
-  items = defaultItems,
-  className = '',
-  ease = 'power3.out',
-  baseColor = '#ffffff', // Fondo blanco puro
-  menuColor = '#475569', // Icono de hamburguesa gris pizarra
-  buttonBgColor = '#2563eb', // Azul brillante vibrante
-  buttonTextColor = '#ffffff'
-}) => {
-  const [isHamburgerOpen, setIsHamburgerOpen] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
-  const navRef = useRef(null);
-  const cardsRef = useRef([]);
-  const tlRef = useRef(null);
-
-  const calculateHeight = () => {
-    const navEl = navRef.current;
-    if (!navEl) return 260;
-
-    const isMobile = window.matchMedia('(max-width: 768px)').matches;
-    if (isMobile) {
-      const contentEl = navEl.querySelector('.card-nav-content');
-      if (contentEl) {
-        const wasVisible = contentEl.style.visibility;
-        const wasPointerEvents = contentEl.style.pointerEvents;
-        const wasPosition = contentEl.style.position;
-        const wasHeight = contentEl.style.height;
-
-        contentEl.style.visibility = 'visible';
-        contentEl.style.pointerEvents = 'auto';
-        contentEl.style.position = 'static';
-        contentEl.style.height = 'auto';
-
-        contentEl.offsetHeight;
-
-        const topBar = 60;
-        const padding = 16;
-        const contentHeight = contentEl.scrollHeight;
-
-        contentEl.style.visibility = wasVisible;
-        contentEl.style.pointerEvents = wasPointerEvents;
-        contentEl.style.position = wasPosition;
-        contentEl.style.height = wasHeight;
-
-        return topBar + contentHeight + padding;
-      }
+  const menuItems = [
+    {
+      label: "Operaciones",
+      colorClass: darkMode ? "bg-slate-800 border-slate-700 text-slate-100" : "bg-slate-50 border-slate-200 text-slate-900",
+      links: [
+        { label: "Ir a Terminal IA", action: () => navigate('/terminal'), ariaLabel: "Control de Stock" },
+        { label: "Dashboard Analítico", action: () => navigate('/dashboard'), ariaLabel: "Supervisión" }
+      ]
+    },
+    {
+      label: "Inventario",
+      colorClass: darkMode ? "bg-slate-800/80 border-slate-700 text-slate-100" : "bg-slate-100 border-slate-200 text-slate-900",
+      links: [
+        { label: "Historial Completo", action: () => navigate('/history'), ariaLabel: "Historial de movimientos" }
+      ]
     }
-    return 260;
-  };
-
-  const createTimeline = () => {
-    const navEl = navRef.current;
-    if (!navEl) return null;
-
-    gsap.set(navEl, { height: 60, overflow: 'hidden' });
-    gsap.set(cardsRef.current, { y: 50, opacity: 0 });
-
-    const tl = gsap.timeline({ paused: true });
-
-    tl.to(navEl, {
-      height: calculateHeight,
-      duration: 0.4,
-      ease
-    });
-
-    tl.to(cardsRef.current, { y: 0, opacity: 1, duration: 0.4, ease, stagger: 0.08 }, '-=0.1');
-
-    return tl;
-  };
-
-  useLayoutEffect(() => {
-    const tl = createTimeline();
-    tlRef.current = tl;
-
-    return () => {
-      tl?.kill();
-      tlRef.current = null;
-    };
-  }, [ease, items]);
-
-  useLayoutEffect(() => {
-    const handleResize = () => {
-      if (!tlRef.current) return;
-
-      if (isExpanded) {
-        const newHeight = calculateHeight();
-        gsap.set(navRef.current, { height: newHeight });
-
-        tlRef.current.kill();
-        const newTl = createTimeline();
-        if (newTl) {
-          newTl.progress(1);
-          tlRef.current = newTl;
-        }
-      } else {
-        tlRef.current.kill();
-        const newTl = createTimeline();
-        if (newTl) {
-          tlRef.current = newTl;
-        }
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [isExpanded]);
-
-  const toggleMenu = () => {
-    const tl = tlRef.current;
-    if (!tl) return;
-    if (!isExpanded) {
-      setIsHamburgerOpen(true);
-      setIsExpanded(true);
-      tl.play(0);
-    } else {
-      setIsHamburgerOpen(false);
-      tl.eventCallback('onReverseComplete', () => setIsExpanded(false));
-      tl.reverse();
-    }
-  };
-
-  const setCardRef = i => el => {
-    if (el) cardsRef.current[i] = el;
-  };
+  ];
 
   return (
-    <div className={`card-nav-container absolute left-1/2 -translate-x-1/2 w-[90%] max-w-[800px] z-[99] top-[1.2em] md:top-[2em] ${className}`}>
-      <nav
-        ref={navRef}
-        className={`card-nav ${isExpanded ? 'open' : ''} block h-[60px] p-0 rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200 relative overflow-hidden will-change-[height]`}
-        style={{ backgroundColor: baseColor }}
+    // CONTENEDOR FIXED: Nunca desaparece al hacer scroll
+    <div className="fixed top-4 left-1/2 -translate-x-1/2 w-[95%] max-w-[800px] z-[999]">
+      <motion.nav
+        initial={false}
+        animate={{ height: isOpen ? 'auto' : 60 }} // Framer Motion maneja la altura automaticamente
+        transition={{ duration: 0.4, ease: [0.25, 1, 0.5, 1] }}
+        className={`block rounded-2xl shadow-xl border overflow-hidden transition-colors duration-300 ${
+          darkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-slate-200'
+        }`}
       >
-        <div className="card-nav-top absolute inset-x-0 top-0 h-[60px] flex items-center justify-between p-2 pl-[1.1rem] z-[2]">
-          <div
-            className={`hamburger-menu ${isHamburgerOpen ? 'open' : ''} group h-full flex flex-col items-center justify-center cursor-pointer gap-[6px] order-2 md:order-none`}
-            onClick={toggleMenu}
-            role="button"
-            aria-label={isExpanded ? 'Cerrar menú' : 'Abrir menú'}
-            tabIndex={0}
-            style={{ color: menuColor }}
+        {/* BARRA SUPERIOR (Siempre visible - Altura estática 60px) */}
+        <div className="h-[60px] flex items-center justify-between px-4 relative z-10">
+          
+          {/* HAMBURGUESA */}
+          <button
+            onClick={() => setIsOpen(!isOpen)}
+            className={`w-10 h-10 flex flex-col items-center justify-center gap-1.5 rounded-full transition-colors ${
+              darkMode ? 'hover:bg-slate-800 text-slate-300' : 'hover:bg-slate-100 text-slate-600'
+            }`}
+            aria-label="Menú principal"
           >
-            <div className={`hamburger-line w-[30px] h-[2px] bg-current transition-[transform,opacity,margin] duration-300 ease-linear [transform-origin:50%_50%] ${isHamburgerOpen ? 'translate-y-[4px] rotate-45' : ''} group-hover:text-blue-600`} />
-            <div className={`hamburger-line w-[30px] h-[2px] bg-current transition-[transform,opacity,margin] duration-300 ease-linear [transform-origin:50%_50%] ${isHamburgerOpen ? '-translate-y-[4px] -rotate-45' : ''} group-hover:text-blue-600`} />
-          </div>
+            <motion.div 
+              animate={{ rotate: isOpen ? 45 : 0, y: isOpen ? 8 : 0 }} 
+              className="w-6 h-[2px] bg-current origin-center"
+            />
+            <motion.div 
+              animate={{ opacity: isOpen ? 0 : 1 }} 
+              className="w-6 h-[2px] bg-current"
+            />
+            <motion.div 
+              animate={{ rotate: isOpen ? -45 : 0, y: isOpen ? -8 : 0 }} 
+              className="w-6 h-[2px] bg-current origin-center"
+            />
+          </button>
 
-          <div className="logo-container flex items-center md:absolute md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 order-1 md:order-none">
+          {/* LOGOTIPO */}
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
             {logo ? (
-               <img src={logo} alt={logoAlt} className="logo h-[28px]" />
+               <img src={logo} alt={logoAlt} className="h-7" />
             ) : (
-               <span className="text-slate-900 font-extrabold tracking-wider text-xl">VOX<span className="text-blue-600">STOCK</span></span>
+               <span className={`font-extrabold tracking-widest text-xl ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                 VOX<span className="text-blue-500">STOCK</span>
+               </span>
             )}
           </div>
 
-          <button
-            type="button"
-            className="card-nav-cta-button hidden md:inline-flex border-0 rounded-lg px-5 items-center h-full font-semibold cursor-pointer transition-all duration-300 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30"
-            style={{ backgroundColor: buttonBgColor, color: buttonTextColor }}
-          >
-            Probar IA
-          </button>
+          {/* BOTONES DERECHA */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={toggleTheme}
+              className={`p-2 rounded-full border transition-all duration-300 ${
+                darkMode 
+                  ? 'bg-slate-800 border-slate-700 text-yellow-400 hover:bg-slate-700' 
+                  : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+
+            <button
+              onClick={() => navigate('/terminal')}
+              className="hidden md:flex px-5 items-center justify-center h-10 rounded-lg font-semibold transition-all duration-300 bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-600/20"
+            >
+              Probar IA
+            </button>
+          </div>
         </div>
 
-        <div
-          className={`card-nav-content absolute left-0 right-0 top-[60px] bottom-0 p-2 flex flex-col items-stretch gap-2 justify-start z-[1] ${isExpanded ? 'visible pointer-events-auto' : 'invisible pointer-events-none'} md:flex-row md:items-end md:gap-[12px]`}
-          aria-hidden={!isExpanded}
-        >
-          {items.slice(0, 3).map((item, idx) => (
-            <div
-              key={`${item.label}-${idx}`}
-              className="nav-card select-none relative flex flex-col gap-2 p-[12px_16px] rounded-lg min-w-0 flex-[1_1_auto] h-auto min-h-[60px] md:h-full md:min-h-0 md:flex-[1_1_0%] border border-slate-200 hover:border-slate-300 transition-colors shadow-sm"
-              ref={setCardRef(idx)}
-              style={{ backgroundColor: item.bgColor, color: item.textColor }}
+        {/* CONTENIDO DESPLEGABLE (Animado por AnimatePresence) */}
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3, delay: 0.1 }}
+              className="px-4 pb-4 pt-2 grid grid-cols-1 md:grid-cols-2 gap-4"
             >
-              <div className="nav-card-label font-bold tracking-wide text-[18px] md:text-[20px]">
-                {item.label}
-              </div>
-              <div className="nav-card-links mt-auto flex flex-col gap-[4px]">
-                {item.links?.map((lnk, i) => (
-                  <a
-                    key={`${lnk.label}-${i}`}
-                    className="nav-card-link inline-flex items-center gap-[6px] no-underline cursor-pointer transition-colors duration-300 hover:text-blue-600 text-slate-600 font-medium text-[14px] md:text-[15px]"
-                    href={lnk.href}
-                    aria-label={lnk.ariaLabel}
-                  >
-                    <GoArrowUpRight className="nav-card-link-icon shrink-0 text-blue-600" aria-hidden="true" />
-                    {lnk.label}
-                  </a>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </nav>
+              {menuItems.map((item, idx) => (
+                <div
+                  key={idx}
+                  className={`flex flex-col gap-3 p-5 rounded-xl border transition-colors shadow-sm ${item.colorClass}`}
+                >
+                  <h3 className="font-bold tracking-wide text-lg">
+                    {item.label}
+                  </h3>
+                  <div className="flex flex-col gap-1 mt-auto">
+                    {item.links.map((lnk, i) => (
+                      <button
+                        key={i}
+                        onClick={() => {
+                          lnk.action();
+                          setIsOpen(false);
+                        }}
+                        className={`inline-flex items-center gap-2 text-left py-1 font-medium transition-colors ${
+                          darkMode ? 'text-slate-400 hover:text-blue-400' : 'text-slate-600 hover:text-blue-600'
+                        }`}
+                      >
+                        <GoArrowUpRight className={darkMode ? "text-blue-400" : "text-blue-600"} />
+                        {lnk.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.nav>
     </div>
   );
-};
-
-export default Navbar;
+}

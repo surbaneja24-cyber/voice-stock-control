@@ -1,86 +1,120 @@
-# ==============================================================================
-# ARCHIVO: servicios_ia.py
-# PROPÓSITO: Encapsular la IA (Whisper) y la lógica de búsqueda (thefuzz).
-# ==============================================================================
-
 import io
+import re
 from faster_whisper import WhisperModel
 from thefuzz import process, fuzz
-import re
 
-print("Cargando el motor de IA en RAM...")
+print("[INFO] Cargando el motor de IA en RAM...")
 modelo = WhisperModel("tiny", device="cpu", compute_type="int8")
-print("¡Motor de IA asíncrono listo!")
+print("[INFO] Motor de IA listo")
 
 def extraer_texto_de_audio(contenido_audio_bytes: bytes) -> str:
-    """Procesa el audio en Memoria RAM y devuelve texto."""
     flujo_ram = io.BytesIO(contenido_audio_bytes)
     segmentos, _ = modelo.transcribe(flujo_ram, beam_size=5, language="es")
     texto = " ".join([segmento.text for segmento in segmentos]).strip()
     return texto
 
-def evaluar_coincidencia(texto_operario: str, nombres_catalogo: list, umbral: int = 75):
-    """
-    Cruza lo que escuchó la IA con la Base de Datos real.
-    Umbral ajustado al 75% para evitar falsos positivos con ruido o saludos.
-    Utiliza token_set_ratio para ignorar palabras de relleno (ej: "sácame unas...").
-    """
+def evaluar_coincidencia(texto_operario: str, nombres_catalogo: list, umbral: int = 65):
     if not nombres_catalogo:
         return None, 0
         
-    # Usamos un comparador más inteligente que ignora el desorden de palabras
+    texto_limpio = texto_operario.lower()
+    
+    basura_regex = [
+        r"\b(un|uno|una|par|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce|docena|trece|catorce|quince|veinte|treinta|cuarenta|cincuenta|cien)\b", 
+        r"\b(añad|agreg|entr|sum|met|lleg|dev|recib|pon|guard|ingres|compr|tra)\w*", 
+        r"\b(sac|quit|rest|sal|usa|usó|llev|men|gast|vend|retir|despach|mand|envi|rot|tir|perd)\w*", 
+        r"\b(el|la|los|las|unos|unas|de|con|para|por|favor|oye|necesito|quiero|porque|acaban|sistema|mercancia|generar|movimiento)\b",
+        r"\b(pallet|pallets|palet|palets|palé|palés|pales|caja|cajas|unidad|unidades|bulto|bultos|suelto|sueltas|botella|botellas)\b"
+    ]
+    
+    for patron in basura_regex:
+        texto_limpio = re.sub(patron, " ", texto_limpio)
+        
+    texto_limpio = re.sub(r'\s+', ' ', texto_limpio).strip()
+    
+    if not texto_limpio:
+        return None, 0
+        
     mejor_coincidencia, porcentaje = process.extractOne(
-        texto_operario, 
+        texto_limpio, 
         nombres_catalogo, 
         scorer=fuzz.token_set_ratio
     )
+    
+    print(f"[IA NLP] Audio: '{texto_operario}' -> Filtro: '{texto_limpio}' -> Match: '{mejor_coincidencia}' ({porcentaje}%)")
     
     if porcentaje >= umbral:
         return mejor_coincidencia, porcentaje
     return None, porcentaje
 
 def interpretar_orden(texto: str):
-    """
-    Analiza el texto para extraer si es una entrada o salida, y la cantidad.
-    Devuelve una tupla: (accion, cantidad)
-    """
     texto_lower = texto.lower()
-    
-    # 1. Por defecto, asumimos que solo quiere consultar el stock (leer) y la cantidad es 0
     accion = "leer"
     cantidad = 0
+    unidad = "unidad"
     
-    # 2. Diccionario de palabras clave de movimiento
-    palabras_suma = ["añade", "agrega", "entra", "suma", "mete", "llegaron", "devuelven"]
-    palabras_resta = ["saca", "quita", "resta", "sale", "usa", "llevan", "menos"]
+    raices_suma = [
+        r"\bañad", r"\bagreg", r"\bentr", r"\bsum", r"\bmet", 
+        r"\blleg", r"\bdev", r"\brecib", r"\bpon", r"\bguard", 
+        r"\bingres", r"\bcompr", r"\btra"
+    ]
     
-    # 3. Detectar la intención
-    if any(p in texto_lower for p in palabras_suma):
+    raices_resta = [
+        r"\bsac", r"\bquit", r"\brest", r"\bsal", r"\busa", r"\busó",
+        r"\bllev", r"\bmen", r"\bgast", r"\bvend", r"\bretir", 
+        r"\bdespach", r"\bmand", r"\benvi", r"\brot", r"\btir", r"\bperd"
+    ]
+
+    if re.search(r"\b(pallet|pallets|palet|palets|palé|palés|pales)\b", texto_lower):
+        unidad = "pallet"
+    elif re.search(r"\b(caja|cajas)\b", texto_lower):
+        unidad = "caja"
+    elif re.search(r"\b(unidad|unidades|suelto|sueltas|bulto|bultos|botella|botellas)\b", texto_lower):
+        unidad = "unidad"
+
+    pos_suma = -1
+    pos_resta = -1
+
+    for patron in raices_suma:
+        match = re.search(patron, texto_lower)
+        if match:
+            pos = match.start()
+            if pos_suma == -1 or pos < pos_suma:
+                pos_suma = pos
+
+    for patron in raices_resta:
+        match = re.search(patron, texto_lower)
+        if match:
+            pos = match.start()
+            if pos_resta == -1 or pos < pos_resta:
+                pos_resta = pos
+
+    if pos_suma != -1 and pos_resta != -1:
+        accion = "suma" if pos_suma < pos_resta else "resta"
+    elif pos_suma != -1:
         accion = "suma"
-    elif any(p in texto_lower for p in palabras_resta):
+    elif pos_resta != -1:
         accion = "resta"
-        
-    # 4. Detectar la cantidad (Whisper suele devolver dígitos, pero a veces escribe números bajos en texto)
+
     numeros_texto = {
         "un": 1, "uno": 1, "una": 1, "par": 2, "dos": 2, "tres": 3, 
         "cuatro": 4, "cinco": 5, "seis": 6, "siete": 7, "ocho": 8, 
-        "nueve": 9, "diez": 10, "docena": 12
+        "nueve": 9, "diez": 10, "once": 11, "doce": 12, "docena": 12,
+        "trece": 13, "catorce": 14, "quince": 15, "veinte": 20, 
+        "treinta": 30, "cuarenta": 40, "cincuenta": 50, "cien": 100
     }
     
-    # Buscar dígitos matemáticos (ej: "5", "120")
     match_num = re.search(r'\d+', texto_lower)
     if match_num:
         cantidad = int(match_num.group())
     else:
-        # Si no hay dígitos, buscar si dijo "un", "dos", "cinco"...
-        palabras_texto = texto_lower.split()
-        for palabra in palabras_texto:
+        palabras_limpias = re.sub(r'[^\w\s]', '', texto_lower).split()
+        for palabra in palabras_limpias:
             if palabra in numeros_texto:
                 cantidad = numeros_texto[palabra]
                 break
                 
-    # Si detectó una acción pero no entendió la cantidad, por seguridad forzamos a 1
     if accion != "leer" and cantidad == 0:
         cantidad = 1
         
-    return accion, cantidad
+    return accion, cantidad, unidad

@@ -1,216 +1,145 @@
 import { useEffect } from "react";
 import { useHistoryStore } from "../store/historyStore";
-import { useState } from "react";
-import Sidebar from "../components/Sidebar";
-
+import { useThemeStore } from "../store/themeStore";
 import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
+  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell,
 } from "recharts";
 
 export default function Dashboard() {
-  const movimientos = useHistoryStore(
-    (state) => state.movimientos
-  );
+  const storeMovimientos = useHistoryStore((state) => state.movimientos);
+  const setMovimientos = useHistoryStore((state) => state.setMovimientos);
+  const darkMode = useThemeStore((state) => state.darkMode); 
 
-  const setMovimientos = useHistoryStore(
-    (state) => state.setMovimientos
-  );
+  const movimientos = Array.isArray(storeMovimientos) ? storeMovimientos : [];
+
   const totalMovimientos = movimientos.length;
-
-  const totalEntradas = movimientos.filter(
-    (m) => m.action === "suma"
-  ).length;
-
-  const totalSalidas = movimientos.filter(
-    (m) => m.action === "resta"
-  ).length;
-
-  const cantidadMovida = movimientos.reduce(
-    (acc, mov) => acc + Number(mov.quantity || 0),
-    0
-  );
-  const trendData = movimientos.map((mov, index) => ({
-    movimiento: index + 1,
+  const totalEntradas = movimientos.filter((m) => m.action === "suma").length;
+  const totalSalidas = movimientos.filter((m) => m.action === "resta").length;
+  
+  // KPI Corregido: Sumar cantidades mixtas es invalido. Mostramos transacciones totales.
+  const operacionesRegistradas = totalEntradas + totalSalidas; 
+  
+  // Grafico mejorado: Limitado a los ultimos 20 movimientos para no colapsar la vista
+  const trendData = movimientos.slice(-20).map((mov) => ({
+    etiqueta: mov.dateTime.split(',')[1] || "00:00", // Extrae solo la hora
     cantidad: Number(mov.quantity || 0),
   }));
+  
   const categoryData = [
-    {
-      name: "Entradas",
-      value: totalEntradas,
-    },
-    {
-      name: "Salidas",
-      value: totalSalidas,
-    },
+    { name: "Entradas", value: totalEntradas },
+    { name: "Salidas", value: totalSalidas },
   ];
-
 
   useEffect(() => {
-    fetch(
-      "https://animated-goldfish-pj5jx57j5vjg35wp-5001.app.github.dev/api/history"
-    )
+    let isMounted = true; // Escudo contra fugas de memoria
+
+    fetch("/api/history")
       .then((res) => res.json())
-      .then((data) => setMovimientos(data))
-      .catch((err) => console.error(err));
+      .then((data) => {
+        if (isMounted) {
+          if (Array.isArray(data)) {
+            setMovimientos(data);
+          } else {
+            console.warn("[WARNING] El servidor devolvio un formato no valido:", data);
+            setMovimientos([]); 
+          }
+        }
+      })
+      .catch((err) => {
+        if (isMounted) {
+          console.error("[ERROR] Fallo de conexion con el backend:", err);
+          // No vaciamos el store en caso de error para mantener la caché offline
+        }
+      });
+
+    return () => {
+      isMounted = false; 
+    };
   }, [setMovimientos]);
 
+  const COLORS = darkMode ? ["#10b981", "#ef4444"] : ["#059669", "#dc2626"]; // Verde para entradas, Rojo para salidas
 
-  const COLORS = [
-    "#000000",
-    "#404040",
-    "#737373",
-    "#a3a3a3",
-  ];
+  const cardClass = `p-6 rounded-2xl border shadow-sm transition-all duration-300 ${
+    darkMode 
+      ? 'bg-slate-900 border-slate-800 text-white' 
+      : 'bg-white border-slate-200 text-slate-900'
+  }`;
 
   return (
-    <div className="min-h-screen bg-white text-black p-8">
-
-      <h1 className="text-4xl font-bold mb-8">
-        Descripción ejecutiva
+    <div className="min-h-screen p-8 transparent">
+      <h1 className={`text-4xl font-bold mb-8 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+        Analitica de Inventario
       </h1>
 
-      {/* KPI Cards */}
-
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-
-        <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm">
-          <p className="text-zinc-600">Movimientos totales</p>
-          <h2 className="text-3xl font-bold">
-            {totalMovimientos}
-          </h2>
-        </div>
-
-        <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm">
-          <p className="text-zinc-600">Entradas</p>
-          <h2 className="text-3xl font-bold">
-            {totalEntradas}
-          </h2>
-        </div>
-
-        <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm">
-          <p className="text-zinc-600">Salidas</p>
-          <h2 className="text-3xl font-bold">
-            {totalSalidas}
-          </h2>
-        </div>
-
-        <div className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm">
-          <p className="text-zinc-600">Unidades movidas</p>
-          <h2 className="text-3xl font-bold">
-            {cantidadMovida}
-          </h2>
-        </div>
-
+        {[
+          { label: "Movimientos totales", value: totalMovimientos },
+          { label: "Entradas procesadas", value: totalEntradas },
+          { label: "Salidas procesadas", value: totalSalidas },
+          { label: "Transacciones IA", value: operacionesRegistradas }
+        ].map((kpi, idx) => (
+          <div key={idx} className={cardClass}>
+            <p className={darkMode ? "text-slate-400" : "text-zinc-600"}>{kpi.label}</p>
+            <h2 className="text-3xl font-bold mt-2">{kpi.value}</h2>
+          </div>
+        ))}
       </div>
 
-      {/* Charts */}
-
       <div className="grid md:grid-cols-2 gap-8 mb-8">
-
-        <div className="bg-white rounded-2xl p-6 border border-zinc-200 shadow-sm">
-          <h2 className="text-xl font-semibold mb-6">
-            Tendencias del movimiento de acciones
-          </h2>
-
+        <div className={cardClass}>
+          <h2 className="text-xl font-semibold mb-6">Volumen por transaccion (Ultimos 20)</h2>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={trendData}>
-              <XAxis dataKey="movimiento" />
-              <YAxis />
-              <Tooltip />
-              <Line
-                type="monotone"
-                dataKey="cantidad"
-                stroke="#000000"
-                strokeWidth={3}
-              />
+              <XAxis dataKey="etiqueta" stroke={darkMode ? "#94a3b8" : "#64748b"} fontSize={12} />
+              <YAxis stroke={darkMode ? "#94a3b8" : "#64748b"} fontSize={12} />
+              <Tooltip contentStyle={{ backgroundColor: darkMode ? '#1e293b' : '#fff', borderRadius: '8px', border: '1px solid #334155' }} />
+              <Line type="monotone" dataKey="cantidad" stroke={darkMode ? "#60a5fa" : "#2563eb"} strokeWidth={3} dot={false} />
             </LineChart>
           </ResponsiveContainer>
         </div>
 
-        <div className="bg-white rounded-2xl p-6 border border-zinc-200 shadow-sm">
-          <h2 className="text-xl font-semibold mb-6">
-            Distribución de movimientos
-          </h2>
-
+        <div className={cardClass}>
+          <h2 className="text-xl font-semibold mb-6">Proporcion de Flujo</h2>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
-              <Pie
-                data={categoryData}
-                cx="50%"
-                cy="50%"
-                innerRadius={70}
-                outerRadius={100}
-                dataKey="value"
-                nameKey="name"
-                label
-              >
+              <Pie data={categoryData} cx="50%" cy="50%" innerRadius={70} outerRadius={100} dataKey="value" nameKey="name" label>
                 {categoryData.map((entry, index) => (
-                  <Cell
-                    key={index}
-                    fill={COLORS[index % COLORS.length]}
-                  />
+                  <Cell key={index} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-
-              <Tooltip />
+              <Tooltip contentStyle={{ backgroundColor: darkMode ? '#1e293b' : '#fff', borderRadius: '8px', border: '1px solid #334155' }} />
             </PieChart>
           </ResponsiveContainer>
         </div>
-
       </div>
 
-      {/* Recent Activity */}
-
-      <div className="bg-white rounded-2xl p-6 border border-zinc-200 shadow-sm">
-
-        <h2 className="text-xl font-semibold mb-6">
-          Actividad reciente
-        </h2>
-
+      <div className={cardClass}>
+        <h2 className="text-xl font-semibold mb-6">Actividad reciente en tiempo real</h2>
         <div className="space-y-4">
-
           {movimientos.length === 0 ? (
-            <p className="text-zinc-600">
-              Aún no hay actividad reciente.
-            </p>
+            <p className={darkMode ? "text-slate-400" : "text-zinc-600"}>Base de datos sin registros.</p>
           ) : (
-            movimientos
-              .slice(-5)
-              .reverse()
-              .map((item, index) => (
-                <div
-                  key={index}
-                  className="flex justify-between border-b border-zinc-200 pb-4"
-                >
-                  <div>
-                    <p className="font-medium">
-                      {item.product}
-                    </p>
-
-                    <p className="text-zinc-600 text-sm">
-                      {item.user}
-                    </p>
-                  </div>
-
-                  <span className="font-bold">
-                    {item.method}
-                  </span>
+            movimientos.slice(-5).reverse().map((item, index) => (
+              <div key={index} className={`flex justify-between items-center pb-4 border-b ${darkMode ? 'border-slate-800' : 'border-slate-100'} last:border-0`}>
+                <div>
+                  <p className="font-semibold text-base">{item.product}</p>
+                  <p className={`text-xs mt-1 ${darkMode ? "text-slate-400" : "text-slate-500"}`}>
+                    {item.user} • {item.dateTime} • Motor: {item.method}
+                  </p>
                 </div>
-              ))
+                <div className={`px-4 py-2 rounded-lg text-sm font-bold tracking-wide flex items-center gap-2 ${
+                  item.action === 'suma' 
+                    ? (darkMode ? 'bg-emerald-950/40 text-emerald-400' : 'bg-emerald-50 text-emerald-700')
+                    : (darkMode ? 'bg-red-950/40 text-red-400' : 'bg-red-50 text-red-700')
+                }`}>
+                  <span>{item.action === 'suma' ? '+' : '-'}{item.quantity}</span>
+                  <span className="uppercase text-[10px] opacity-80">{item.unit || 'unidad'}</span>
+                </div>
+              </div>
+            ))
           )}
-
         </div>
-
       </div>
-
     </div>
   );
 }
