@@ -65,12 +65,18 @@ def interpretar_orden(texto: str):
         r"\bdespach", r"\bmand", r"\benvi", r"\brot", r"\btir", r"\bperd"
     ]
 
-    if re.search(r"\b(pallet|pallets|palet|palets|palé|palés|pales)\b", texto_lower):
+    # --- INICIO DE LÓGICA DE UNIDAD CORREGIDA ---
+    palabras_pallet = ["pallet", "pallets", "palet", "palets", "palé", "palés", "pales"]
+    palabras_caja = ["caja", "cajas"]
+    palabras_unidad = ["unidad", "unidades", "suelto", "sueltas", "bulto", "bultos", "botella", "botellas"]
+
+    if any(p in texto_lower for p in palabras_pallet):
         unidad = "pallet"
-    elif re.search(r"\b(caja|cajas)\b", texto_lower):
+    elif any(p in texto_lower for p in palabras_caja):
         unidad = "caja"
-    elif re.search(r"\b(unidad|unidades|suelto|sueltas|bulto|bultos|botella|botellas)\b", texto_lower):
+    elif any(p in texto_lower for p in palabras_unidad):
         unidad = "unidad"
+    # --- FIN DE LÓGICA DE UNIDAD CORREGIDA ---
 
     pos_suma = -1
     pos_resta = -1

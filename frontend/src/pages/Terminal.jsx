@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Mic, Settings2, X, BookOpen, LogOut } from "lucide-react"; 
+import { Mic, X, BookOpen, LogOut } from "lucide-react"; 
 import { useNavigate } from "react-router-dom";
 import { useHistoryStore } from "../store/historyStore";
 import { useThemeStore } from "../store/themeStore";
@@ -12,7 +12,7 @@ export default function Terminal() {
   const [listaProductos, setListaProductos] = useState([]);
   const [sectorActivo, setSectorActivo] = useState("universal");
   const [respuestaIA, setRespuestaIA] = useState({
-    transcripcion: "Pulsa el micrófono para hablar...",
+    transcripcion: "Pulsa el microfono para hablar...",
     mensaje: "Esperando comando de voz...",
     estado: "idle" 
   });
@@ -23,18 +23,19 @@ export default function Terminal() {
   const addMovimiento = useHistoryStore((state) => state.addMovimiento);
   const darkMode = useThemeStore((state) => state.darkMode);
 
+  // Emojis eliminados. Sustituidos por codigos de area logisticos.
   const sectores = [
-    { id: "alimentacion", nombre: "Alimentación", icono: "🛒" },
-    { id: "ferreteria", nombre: "Ferretería", icono: "🔨" },
-    { id: "farmacia", nombre: "Farmacia", icono: "💊" },
-    { id: "construccion", nombre: "Construcción", icono: "🧱" },
-    { id: "textil", nombre: "Textil", icono: "👕" },
-    { id: "electronica", nombre: "Electrónica", icono: "💻" },
-    { id: "oficina", nombre: "Oficina", icono: "📎" },
-    { id: "logistica", nombre: "Logística", icono: "📦" },
-    { id: "automocion", nombre: "Automoción", icono: "🚗" },
-    { id: "jardineria", nombre: "Jardinería", icono: "🌱" },
-    { id: "universal", nombre: "Catálogo Completo", icono: "🌍" }
+    { id: "alimentacion", nombre: "Alimentacion", icono: "[AL]" },
+    { id: "ferreteria", nombre: "Ferreteria", icono: "[FE]" },
+    { id: "farmacia", nombre: "Farmacia", icono: "[FA]" },
+    { id: "construccion", nombre: "Construccion", icono: "[CO]" },
+    { id: "textil", nombre: "Textil", icono: "[TX]" },
+    { id: "electronica", nombre: "Electronica", icono: "[EL]" },
+    { id: "oficina", nombre: "Oficina", icono: "[OF]" },
+    { id: "logistica", nombre: "Logistica", icono: "[LO]" },
+    { id: "automocion", nombre: "Automocion", icono: "[AU]" },
+    { id: "jardineria", nombre: "Jardineria", icono: "[JA]" },
+    { id: "universal", nombre: "Catalogo Completo", icono: "[UN]" }
   ];
 
   useEffect(() => {
@@ -46,7 +47,7 @@ export default function Terminal() {
           setListaProductos(data);
         }
       } catch (error) {
-        console.error("No se pudo cargar el catálogo", error);
+        console.error("[ERROR] No se pudo cargar el catalogo:", error);
       }
     };
     if (!mostrarModalSectores) {
@@ -94,10 +95,12 @@ export default function Terminal() {
               if (resCatalogo.ok) setListaProductos(await resCatalogo.json());
             }
           } else {
-            setRespuestaIA({ transcripcion: "Error en la transmisión.", mensaje: "Fallo del motor: " + (datos.detail || datos.error), estado: "error" });
+            setRespuestaIA({ transcripcion: "Error en la transmision.", mensaje: "Fallo del motor: " + (datos.detail || datos.error), estado: "error" });
           }
         } catch (error) {
-          setRespuestaIA({ transcripcion: "Fallo de red.", mensaje: "Error Crítico: Servidor inalcanzable.", estado: "error" });
+          // CORRECCION APLICADA: Uso explicito de la variable error.
+          console.error("[CRITICO] Fallo de red detectado:", error);
+          setRespuestaIA({ transcripcion: "Fallo de red.", mensaje: "Error Critico: Servidor inalcanzable.", estado: "error" });
         }
         stream.getTracks().forEach(track => track.stop());
       };
@@ -105,7 +108,9 @@ export default function Terminal() {
       mediaRecorder.start();
       setGrabando(true);
     } catch (error) {
-      alert("Error: No se pudo acceder al micrófono.");
+      // CORRECCION APLICADA: Uso explicito de la variable error.
+      console.error("[CRITICO] Error de acceso a hardware de microfono:", error);
+      alert("Error: No se pudo acceder al microfono. Verifica los permisos del navegador.");
     }
   };
 
@@ -118,17 +123,16 @@ export default function Terminal() {
 
   const sectorActual = sectores.find(s => s.id === sectorActivo);
 
-  // --- CONFIGURACIÓN DE LOS BOTONES DEL DOCK ---
   const dockItems = [
     { 
-      label: 'Ver Catálogo', 
+      label: 'Ver Catalogo', 
       icon: <BookOpen size={22} />, 
       onClick: () => setMostrarModalCatalogo(true),
       colorClass: darkMode ? 'text-emerald-400 border-emerald-900/50 hover:bg-emerald-900/30 bg-emerald-900/10' : 'text-emerald-600 border-emerald-200 hover:bg-emerald-50 bg-emerald-50/50'
     },
     { 
       label: `Sector: ${sectorActual?.nombre}`, 
-      icon: <span className="text-xl leading-none">{sectorActual?.icono}</span>, 
+      icon: <span className="text-xl leading-none font-mono font-bold">{sectorActual?.icono}</span>, 
       onClick: () => setMostrarModalSectores(true),
       colorClass: darkMode ? 'text-blue-400 border-blue-900/50 hover:bg-blue-900/30 bg-blue-900/10' : 'text-blue-600 border-blue-200 hover:bg-blue-50 bg-blue-50/50'
     },
@@ -143,16 +147,14 @@ export default function Terminal() {
   return (
     <div className="min-h-full flex flex-col items-center justify-center p-6 pb-32 relative">
       
-      {/* MAC OS DOCK INFERIOR */}
       <Dock items={dockItems} darkMode={darkMode} />
 
-      {/* MODAL DE SECTORES */}
       {mostrarModalSectores && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className={`w-full max-w-4xl p-8 rounded-2xl shadow-2xl relative animate-in fade-in zoom-in duration-200 ${darkMode ? 'bg-slate-900 border border-slate-700' : 'bg-white border border-slate-200'}`}>
             <div className="text-center mb-8">
               <h2 className={`text-3xl font-extrabold tracking-tight mb-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>Configurar Entorno de Trabajo</h2>
-              <p className={`text-lg ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Selecciona la industria en la que estás operando hoy.</p>
+              <p className={`text-lg ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Selecciona la industria en la que estas operando hoy.</p>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {sectores.map((sector) => (
@@ -165,7 +167,7 @@ export default function Terminal() {
                       : darkMode ? 'border-slate-800 bg-slate-800/50 hover:border-slate-600 text-slate-300' : 'border-slate-100 bg-slate-50 hover:border-slate-300 text-slate-700'
                   }`}
                 >
-                  <span className="text-4xl mb-2">{sector.icono}</span>
+                  <span className="text-2xl font-mono font-bold mb-2">{sector.icono}</span>
                   <span className="font-semibold">{sector.nombre}</span>
                 </button>
               ))}
@@ -174,7 +176,6 @@ export default function Terminal() {
         </div>
       )}
 
-      {/* MODAL DEL CATÁLOGO */}
       {mostrarModalCatalogo && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className={`w-full max-w-2xl max-h-[80vh] flex flex-col p-8 rounded-2xl shadow-2xl relative animate-in fade-in zoom-in duration-200 ${darkMode ? 'bg-slate-900 border border-slate-700' : 'bg-white border border-slate-200'}`}>
@@ -182,7 +183,7 @@ export default function Terminal() {
               <X size={24} className={darkMode ? 'text-slate-400' : 'text-slate-600'} />
             </button>
             <div className="mb-6">
-              <h2 className={`text-2xl font-bold tracking-tight flex items-center gap-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}><BookOpen className="text-blue-500"/> Artículos Disponibles</h2>
+              <h2 className={`text-2xl font-bold tracking-tight flex items-center gap-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}><BookOpen className="text-blue-500"/> Articulos Disponibles</h2>
               <p className={`mt-1 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Estos son los productos registrados en tu sector ({sectorActual?.nombre}).</p>
             </div>
             <div className="overflow-y-auto pr-2 space-y-2 custom-scrollbar">
@@ -202,17 +203,15 @@ export default function Terminal() {
         </div>
       )}
 
-      {/* CONTENEDOR CENTRAL */}
       <div className="flex flex-col items-center gap-10 w-full max-w-4xl mt-10 md:mt-0">
         <div className="flex flex-col items-center text-center gap-3">
           <span className={`px-4 py-1.5 rounded-full border text-xs font-bold uppercase tracking-widest mb-1 ${darkMode ? 'bg-blue-900/30 border-blue-800 text-blue-400' : 'bg-blue-50 border-blue-100 text-blue-600'}`}>
             Modo Operario: {sectorActual?.nombre.toUpperCase()}
           </span>
           <h1 className={`text-4xl md:text-5xl font-extrabold tracking-tight ${darkMode ? 'text-white' : 'text-slate-900'}`}>Terminal de Entrada</h1>
-          <p className={`text-lg max-w-lg ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Mantén presionado el botón central para dictar movimientos de stock.</p>
+          <p className={`text-lg max-w-lg ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Manten presionado el boton central para dictar movimientos de stock.</p>
         </div>
 
-        {/* MICRÓFONO */}
         <div className="flex flex-col items-center gap-8 relative">
           {grabando && <div className="absolute inset-0 bg-blue-500/20 rounded-full blur-3xl animate-pulse -z-10 w-72 h-72 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></div>}
           <button
@@ -224,15 +223,14 @@ export default function Terminal() {
           <span className={`font-bold tracking-wider text-sm uppercase ${grabando ? 'text-blue-500' : (darkMode ? 'text-slate-500' : 'text-slate-400')}`}>{grabando ? "Escuchando..." : "Esperando orden"}</span>
         </div>
 
-        {/* CAJA DE RESPUESTA */}
         <div className={`w-full max-w-2xl mt-2 p-8 rounded-2xl border shadow-lg transition-colors ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
           <div className="mb-6 pb-6 border-b border-dashed border-slate-300 dark:border-slate-700">
-            <h3 className={`text-xs font-bold uppercase tracking-widest mb-2 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Transcripción de Audio</h3>
+            <h3 className={`text-xs font-bold uppercase tracking-widest mb-2 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Transcripcion de Audio</h3>
             <p className={`text-lg italic ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>"{respuestaIA.transcripcion}"</p>
           </div>
           <div className="flex items-center gap-3 mb-4">
             <div className={`w-2.5 h-2.5 rounded-full animate-pulse ${respuestaIA.estado === 'error' ? 'bg-red-500' : respuestaIA.estado === 'completado' ? 'bg-emerald-500' : 'bg-blue-600'}`}></div>
-            <h3 className={`text-sm font-bold uppercase tracking-wider ${darkMode ? 'text-slate-300' : 'text-slate-800'}`}>Resolución del Sistema</h3>
+            <h3 className={`text-sm font-bold uppercase tracking-wider ${darkMode ? 'text-slate-300' : 'text-slate-800'}`}>Resolucion del Sistema</h3>
           </div>
           <div className={`p-4 rounded-xl ${respuestaIA.estado === 'error' ? (darkMode ? 'bg-red-950/30 text-red-400 border border-red-900/50' : 'bg-red-50 text-red-700 border border-red-100') : respuestaIA.estado === 'completado' ? (darkMode ? 'bg-emerald-950/30 text-emerald-400 border border-emerald-900/50' : 'bg-emerald-50 text-emerald-700 border border-emerald-100') : (darkMode ? 'text-slate-400' : 'text-slate-500')}`}>
             <p className="text-lg leading-relaxed font-medium whitespace-pre-wrap">{respuestaIA.mensaje || "Esperando instrucciones por voz..."}</p>

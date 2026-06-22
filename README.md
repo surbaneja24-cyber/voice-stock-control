@@ -16,102 +16,99 @@
 
 ## 📦 Sobre el Proyecto
 
-**VoxStock** es una solución de software B2B diseñada para modernizar el control de almacenes en sectores industriales. Elimina la fricción de los sistemas tradicionales al permitir a los operarios actualizar el stock, registrar entradas/salidas y consultar ubicaciones **100% manos libres** mediante comandos de voz naturales.
+**VoxStock** es una solución de software B2B diseñada para modernizar el control de almacenes. Elimina la fricción de los sistemas tradicionales permitiendo a los operarios gestionar stock, registrar entradas/salidas y consultar el inventario **100% manos libres** mediante comandos de voz naturales.
 
-A diferencia de los costosos sistemas corporativos, este proyecto es ligero, funciona en redes locales (Offline-First) y utiliza procesamiento de lenguaje natural (NLP) para entender el contexto logístico, tolerando ruido de fondo y variaciones en la dicción.
+
 
 ## ✨ Características Principales
 
-- **🗣️ Picking por Voz Natural:** Transcripción asíncrona en tiempo real usando `faster-whisper` ejecutado enteramente en la memoria RAM local.
-- **🧠 Extracción de Intenciones:** Motor lógico que procesa el lenguaje para detectar si la orden es de lectura, suma (entrada) o resta (salida) de material.
-- **🎯 Filtro de Similitud (Fuzzy Matching):** Uso de la librería `thefuzz` para asociar comandos de voz imperfectos con el catálogo de base de datos, evitando falsos positivos por ruido ambiente.
-- **⚡ Interfaz Reactiva y Modular:** Panel de control rápido construido con React (Vite) y enrutamiento seguro (React Router).
-- **🔒 Operativa Aislada:** Base de datos SQLite integrada. Todo el ciclo de datos ocurre en la máquina, sin depender de APIs de terceros (OpenAI, Google).
+- **🗣️ Picking por Voz Natural:** Procesamiento de audio en tiempo real mediante `faster-whisper` ejecutado en local.
+- **🧠 Motor de Inferencia:** Análisis de lenguaje natural para categorizar acciones (suma/resta) y extraer cantidades y unidades automáticamente.
+- **🎯 Precisión Logística:** Uso de algoritmos de *Fuzzy Matching* para asociar dictados imperfectos con el catálogo real del almacén.
+- **⚡ Arquitectura Offline-First:** Base de datos SQLite integrada, garantizando operatividad total sin dependencias de APIs externas de pago (OpenAI/Google).
+- **📱 Interfaz Adaptativa:** UI moderna con React, diseñada para terminales industriales o tablets.
 
 ---
 
-## 🏗️ Arquitectura y Tecnologías
+## 🚀 Guía de Instalación
 
-El proyecto sigue una arquitectura Full-Stack desacoplada y orientada a microservicios locales:
+### 1. Preparación del Entorno
+Asegúrate de tener instalados:
+- **Node.js** (v18+)
+- **Python** (v3.10+)
+- **Git**
 
-* **Frontend:** React.js, Vite, TailwindCSS y React Router (Gestión de UI y captura de audio nativa mediante `MediaRecorder`).
-* **Backend:** Python con **FastAPI** para orquestar la concurrencia y procesar los binarios de audio en el puerto 5001.
-* **Motor de IA:** `faster-whisper` (Speech-to-Text en CPU).
-* **Base de Datos:** SQLite gestionado a través del ORM SQLAlchemy.
-
----
-
-## 🚀 Instalación y despliegue en Local (PC)
-
-Sigue estos pasos para levantar el entorno de desarrollo en tu máquina.
-
-### Requisitos Previos
-- Node.js (v18+) y npm instalados.
-- Python 3.10+ instalado.
-
-### 1. Levantar el Backend (FastAPI e IA)
-Abre tu terminal en la raíz del proyecto y ejecuta:
-
-```bash
-cd backend
-# Crear entorno virtual
-python -m venv venv
-
-# Activar el entorno (Windows)
-venv\Scripts\activate
-# Activar el entorno (Mac/Linux)
-# source venv/bin/activate
-
-# Instalar las dependencias exactas del motor
-pip install fastapi uvicorn sqlalchemy faster-whisper thefuzz python-multipart
-
-# Iniciar servidor asíncrono en el puerto 5001
-uvicorn main:app --host 0.0.0.0 --port 5001 --reload
+### 2. Configuración del Backend
+Crea el archivo `backend/requirements.txt` con este contenido para simplificar la instalación:
+```text
+fastapi
+uvicorn
+sqlalchemy
+faster-whisper
+thefuzz
+python-multipart
 ```
 
-### 2. Levantar el Frontend (React)
-Abre una segunda terminal en la raíz del proyecto:
+### 3. Ejecución en Local (PC)
+Terminal A (Backend):
 
 ```Bash
-cd frontend
-npm install
-npm run dev
-El sistema logístico estará disponible en http://localhost:5173.
+cd backend
+python -m venv venv
+# Activar (Windows: venv\Scripts\activate | Mac/Linux: source venv/bin/activate)
+pip install -r requirements.txt
+uvicorn main:app --port 5001 --reload
 ```
-
-## ☁️ Instalación y despliegue en GitHub Codespaces (Terminal Bash)
-Debido a la arquitectura de contenedores de la nube, sigue estos pasos exactos para evitar bloqueos de red o de micrófono.
-
-### 1. Levantar el Frontend
-Abre la primera terminal de bash y ejecuta:
+Terminal B (Frontend):
 
 ```Bash
 cd frontend
 npm install
 npm run dev
 ```
-### 2. Levantar el Backend
-Abre una segunda terminal (+), entra al backend y lanza el servidor:
+## ☁️ Despliegue en GitHub Codespaces
+Si estás evaluando este proyecto en Codespaces, sigue estrictamente estos pasos:
 
+Inicia los servicios:
+
+Abre dos terminales. En la primera, ejecuta el Backend:
 ```Bash
 cd backend
 python -m venv venv
-source venv/bin/activate
-pip install fastapi uvicorn sqlalchemy faster-whisper thefuzz python-multipart
-uvicorn main:app --host 0.0.0.0 --port 5001 --reload
+# Activar (Windows: venv\Scripts\activate | Mac/Linux: source venv/bin/activate)
+pip install -r requirements.txt
+uvicorn main:app --port 5001 --reload
 ```
-### ⚠️ 3. CONFIGURACIÓN CRÍTICA DE PUERTOS
-Para que el navegador permita enviar el audio de tu micrófono al backend dentro del contenedor de GitHub:
+En la segunda, ejecuta el Frontend:
+```Bash
+cd frontend
+npm install
+npm run dev
+```
 
-Ve a la pestaña "Ports" (Puertos) en el panel inferior de VS Code.
+### ⚠️ Configuración Crítica de Puertos:
 
-Verás dos puertos activos: 5173 (Frontend) y 5001 (Backend).
+Ve a la pestaña "Ports" (Puertos) en VS Code.
 
-Haz clic derecho bajo la columna "Visibility" (Visibilidad) en AMBOS puertos.
+Verás los puertos 5173 y 5001.
 
-Cámbialos de Private a Public.
+Haz clic derecho sobre la columna "Visibility" de cada uno y cámbialos de Private a Public.
 
-Abre la URL del puerto 5173 en tu navegador y permite el uso del micrófono.
+Esto permite que el túnel de red de GitHub habilite las APIs de micrófono (WebRTC) de forma segura.
+
+### Acceso:
+
+Haz clic en el enlace que genera el puerto 5173 para abrir la aplicación en tu navegador.
+
+Importante: Debes aceptar el permiso de micrófono cuando el navegador lo solicite.
+
+### 🛠️ Tecnologías Utilizadas
+
+Frontend: React.js, Vite, TailwindCSS, Framer Motion, Zustand.
+
+Backend: Python, FastAPI, SQLAlchemy (ORM), Faster-Whisper.
+
+Base de Datos: SQLite.
 
 ### 👥 Equipo de Desarrollo
-Proyecto final de arquitectura Full-Stack construido por:
+Proyecto final de arquitectura Full-Stack.
