@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+sqlalchemy
+faster-whisper
+thefuzz
+python-multipart

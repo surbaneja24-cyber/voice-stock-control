@@ -75,7 +75,7 @@ Abre dos terminales. En la primera, ejecuta el Backend:
 ```Bash
 cd backend
 python -m venv venv
-# Activar (Windows: venv\Scripts\activate | Mac/Linux: source venv/bin/activate)
+# Activar (Windows: venv\Scripts\activate | Mac/Linux/CODESPACE: source venv/bin/activate)
 pip install -r requirements.txt
 uvicorn main:app --port 5001 --reload
 ```
