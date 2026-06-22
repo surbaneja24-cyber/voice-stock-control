@@ -23,7 +23,7 @@
 ## ✨ Características Principales
 
 - **🗣️ Picking por Voz Natural:** Procesamiento de audio en tiempo real mediante `faster-whisper` ejecutado en local.
-- **🧠 Motor de Inferencia:** Análisis de lenguaje natural para categorizar acciones (suma/resta) y extraer cantidades y unidades automáticamente.
+- **🧠 Motor de Inferencia:** Análisis de lenguaje natural para categorizar acciones (suma/resta) y extraer cantidades y unidades automaticamente.
 - **🎯 Precisión Logística:** Uso de algoritmos de *Fuzzy Matching* para asociar dictados imperfectos con el catálogo real del almacén.
 - **⚡ Arquitectura Offline-First:** Base de datos SQLite integrada, garantizando operatividad total sin dependencias de APIs externas de pago (OpenAI/Google).
 - **📱 Interfaz Adaptativa:** UI moderna con React, diseñada para terminales industriales o tablets.
