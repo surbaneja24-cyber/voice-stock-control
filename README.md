@@ -22,13 +22,13 @@ Diseñado bajo una arquitectura **SaaS Multi-Tenant**, permite que múltiples op
 
 ##  Características Principales
 
-- ** Picking por Voz Natural:** Procesamiento de audio en tiempo real mediante `faster-whisper` ejecutado en local.
-- ** Seguridad Multi-Usuario:** Sistema de autenticación encriptada y aislamiento de base de datos a nivel de fila (Row-level Multi-tenancy). Cada operario tiene su propio entorno.
-- ** Motor de Inferencia:** Análisis de lenguaje natural para categorizar acciones (suma/resta) y extraer cantidades y unidades automáticamente.
-- ** Precisión Logística:** Uso de algoritmos de *Fuzzy Matching* para asociar dictados imperfectos con el catálogo real del almacén.
-- ** Catálogos Dinámicos:** CRUD completo que permite a los usuarios sembrar y personalizar sus propios inventarios según su sector industrial.
-- ** Arquitectura Offline-First:** Base de datos SQLite integrada, garantizando operatividad sin dependencias de APIs de IA de pago (OpenAI/Google).
-- ** Interfaz Adaptativa:** UI moderna con React, Dashboards analíticos y Onboarding persistente.
+- **Picking por Voz Natural:** Procesamiento de audio en tiempo real mediante `faster-whisper` ejecutado en local.
+- **Seguridad Multi-Usuario:** Sistema de autenticación encriptada y aislamiento de base de datos a nivel de fila (Row-level Multi-tenancy). Cada operario tiene su propio entorno.
+- **Motor de Inferencia:** Análisis de lenguaje natural para categorizar acciones (suma/resta) y extraer cantidades y unidades automáticamente.
+- **Precisión Logística:** Uso de algoritmos de *Fuzzy Matching* para asociar dictados imperfectos con el catálogo real del almacén.
+- **Catálogos Dinámicos:** CRUD completo que permite a los usuarios sembrar y personalizar sus propios inventarios según su sector industrial.
+- **Arquitectura Offline-First:** Base de datos SQLite integrada, garantizando operatividad sin dependencias de APIs de IA de pago (OpenAI/Google).
+- **Interfaz Adaptativa:** UI moderna con React, Dashboards analíticos y Onboarding persistente.
 
 ---
 
@@ -39,19 +39,6 @@ Asegúrate de tener instalados:
 - **Node.js** (v18+)
 - **Python** (v3.10+)
 - **Git**
-
-### 2. Configuración del Backend
-Crea el archivo `backend/requirements.txt` con este contenido para instalar el motor, la IA y las librerías de seguridad:
-```text
-fastapi
-uvicorn
-sqlalchemy
-faster-whisper
-thefuzz
-python-multipart
-passlib[bcrypt]
-email-validator
-```
 
 ## Despliegue en Local (PC)
 Terminal A (Backend):
