@@ -1,180 +1,194 @@
-# ==============================================================================
-# ARCHIVO: main.py
-# PROPÓSITO: Controlador principal de FastAPI. 
-# ==============================================================================
-
 import asyncio
 from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, Form
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from datetime import datetime
+from pydantic import BaseModel, EmailStr, Field
+from passlib.context import CryptContext
 
 from database import engine, Base, get_db, SessionLocal
-from models import Producto, Movimiento 
+from models import Producto, Movimiento, Usuario
 import servicios_ia
 
+# Inicialización de las tablas en la Base de Datos
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="VoxStock IA Motor")
 
-# IMPORTANTE: En producción cambiar ["*"] por los dominios reales ["https://tudominio.com"]
+# Configuración de seguridad para contraseñas (Bcrypt)
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"], # Nota de QA: Cambiar por dominios específicos en producción
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-def inicializar_catalogo_seguro():
-    """Inyecta el catálogo inicial SOLO si la tabla está completamente vacía."""
-    db = SessionLocal()
+# --- VALIDACIONES PYDANTIC ---
+class UsuarioRegistro(BaseModel):
+    nombre: str = Field(..., min_length=2)
+    email: str
+    password: str = Field(..., min_length=6)
+
+class UsuarioLogin(BaseModel):
+    email: str
+    password: str
+
+class NuevoProducto(BaseModel):
+    nombre: str
+    stock: int = 0
+    sector: str
+    usuario_id: int
+
+# --- FUNCIONES AUXILIARES ---
+def verificar_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
+
+def obtener_password_hash(password):
+    return pwd_context.hash(password)
+
+def sembrar_catalogo_para_usuario(db: Session, usuario_id: int):
+    """Inyecta el catálogo inicial parametrizado para un usuario específico de forma interna."""
+    productos_semilla = [
+        {"nombre": "Leche entera", "stock": 250, "sector": "alimentacion"},
+        {"nombre": "Leche desnatada", "stock": 180, "sector": "alimentacion"},
+        {"nombre": "Huevos docena", "stock": 120, "sector": "alimentacion"},
+        {"nombre": "Pan de molde", "stock": 90, "sector": "alimentacion"},
+        {"nombre": "Arroz blanco 1kg", "stock": 200, "sector": "alimentacion"},
+        {"nombre": "Atún en conserva", "stock": 200, "sector": "alimentacion"},
+        {"nombre": "Tornillos galvanizados", "stock": 1000, "sector": "ferreteria"},
+        {"nombre": "Tuercas metálicas", "stock": 1200, "sector": "ferreteria"},
+        {"nombre": "Martillo de carpintero", "stock": 50, "sector": "ferreteria"},
+        {"nombre": "Destornillador estrella", "stock": 90, "sector": "ferreteria"},
+        {"nombre": "Paracetamol 500mg", "stock": 500, "sector": "farmacia"},
+        {"nombre": "Ibuprofeno 400mg", "stock": 450, "sector": "farmacia"},
+        {"nombre": "Alcohol antiséptico 1L", "stock": 120, "sector": "farmacia"},
+        {"nombre": "Palets de madera", "stock": 80, "sector": "logistica"},
+        {"nombre": "Cajas de cartón medianas", "stock": 350, "sector": "logistica"},
+        {"nombre": "Precinto de embalaje", "stock": 300, "sector": "logistica"},
+        {"nombre": "Materiales varios", "stock": 100, "sector": "universal"},
+        {"nombre": "Cosas generales", "stock": 100, "sector": "universal"}
+    ]
+    
+    nuevos_productos = [Producto(**p, usuario_id=usuario_id) for p in productos_semilla]
+    db.add_all(nuevos_productos)
+    # Nota de QA: No hacemos commit aquí para permitir transacciones atómicas desde la ruta padre
+
+# --- ENDPOINTS ---
+@app.post("/api/registro")
+def registrar_usuario(user: UsuarioRegistro, db: Session = Depends(get_db)):
+    db_user = db.query(Usuario).filter(Usuario.email == user.email).first()
+    if db_user:
+        raise HTTPException(status_code=400, detail="El correo electrónico ya está registrado.")
+    
     try:
-        if db.query(Producto).count() == 0:
-            productos_nuevos = [
-                # --- ALIMENTACIÓN / SUPERMERCADO ---
-                Producto(nombre="Leche entera", stock=250, sector="alimentacion"),
-                Producto(nombre="Leche desnatada", stock=180, sector="alimentacion"),
-                Producto(nombre="Huevos docena", stock=120, sector="alimentacion"),
-                Producto(nombre="Pan de molde", stock=90, sector="alimentacion"),
-                Producto(nombre="Arroz blanco 1kg", stock=200, sector="alimentacion"),
-                Producto(nombre="Arroz integral 1kg", stock=80, sector="alimentacion"),
-                Producto(nombre="Harina de trigo", stock=180, sector="alimentacion"),
-                Producto(nombre="Azúcar blanco 1kg", stock=150, sector="alimentacion"),
-                Producto(nombre="Aceite de oliva 1L", stock=90, sector="alimentacion"),
-                Producto(nombre="Aceite de girasol 1L", stock=150, sector="alimentacion"),
-                Producto(nombre="Pasta espaguetis", stock=140, sector="alimentacion"),
-                Producto(nombre="Lentejas secas", stock=110, sector="alimentacion"),
-                Producto(nombre="Garbanzos cocidos", stock=100, sector="alimentacion"),
-                Producto(nombre="Atún en conserva", stock=200, sector="alimentacion"),
-
-                # --- FERRETERÍA ---
-                Producto(nombre="Tornillos galvanizados", stock=1000, sector="ferreteria"),
-                Producto(nombre="Tornillos para madera", stock=700, sector="ferreteria"),
-                Producto(nombre="Tuercas metálicas", stock=1200, sector="ferreteria"),
-                Producto(nombre="Arandelas", stock=1500, sector="ferreteria"),
-                Producto(nombre="Clavos de acero", stock=2000, sector="ferreteria"),
-                Producto(nombre="Martillo de carpintero", stock=50, sector="ferreteria"),
-                Producto(nombre="Destornillador plano", stock=80, sector="ferreteria"),
-                Producto(nombre="Destornillador estrella", stock=90, sector="ferreteria"),
-                Producto(nombre="Llave inglesa", stock=40, sector="ferreteria"),
-                Producto(nombre="Alicates universales", stock=60, sector="ferreteria"),
-                Producto(nombre="Taladro eléctrico", stock=20, sector="ferreteria"),
-                Producto(nombre="Brocas para metal", stock=300, sector="ferreteria"),
-                Producto(nombre="Pintura blanca 5L", stock=30, sector="ferreteria"),
-                Producto(nombre="Pintura negra 5L", stock=25, sector="ferreteria"),
-
-                # --- FARMACIA ---
-                Producto(nombre="Paracetamol 500mg", stock=500, sector="farmacia"),
-                Producto(nombre="Ibuprofeno 400mg", stock=450, sector="farmacia"),
-                Producto(nombre="Alcohol antiséptico 1L", stock=120, sector="farmacia"),
-                Producto(nombre="Agua oxigenada", stock=100, sector="farmacia"),
-                Producto(nombre="Gasas estériles", stock=250, sector="farmacia"),
-                Producto(nombre="Mascarillas quirúrgicas", stock=300, sector="farmacia"),
-                Producto(nombre="Guantes de látex", stock=400, sector="farmacia"),
-                Producto(nombre="Termómetro digital", stock=50, sector="farmacia"),
-
-                # --- CONSTRUCCIÓN ---
-                Producto(nombre="Sacos de cemento", stock=120, sector="construccion"),
-                Producto(nombre="Sacos de yeso", stock=80, sector="construccion"),
-                Producto(nombre="Ladrillos cerámicos", stock=5000, sector="construccion"),
-                Producto(nombre="Bloques de hormigón", stock=700, sector="construccion"),
-                Producto(nombre="Arena de construcción", stock=300, sector="construccion"),
-                Producto(nombre="Grava", stock=250, sector="construccion"),
-                Producto(nombre="Tubos de PVC", stock=180, sector="construccion"),
-                Producto(nombre="Varillas de acero", stock=400, sector="construccion"),
-
-                # --- TEXTIL ---
-                Producto(nombre="Camisetas de algodón", stock=90, sector="textil"),
-                Producto(nombre="Camisas de algodón", stock=60, sector="textil"),
-                Producto(nombre="Pantalones vaqueros", stock=70, sector="textil"),
-                Producto(nombre="Sudaderas", stock=50, sector="textil"),
-                Producto(nombre="Chaquetas impermeables", stock=40, sector="textil"),
-                Producto(nombre="Zapatos de cuero", stock=40, sector="textil"),
-                Producto(nombre="Botas de seguridad", stock=35, sector="textil"),
-                Producto(nombre="Tela de lona", stock=100, sector="textil"),
-
-                # --- ELECTRÓNICA ---
-                Producto(nombre="Cable HDMI", stock=100, sector="electronica"),
-                Producto(nombre="Cable USB-C", stock=150, sector="electronica"),
-                Producto(nombre="Cable Ethernet", stock=120, sector="electronica"),
-                Producto(nombre="Ratón inalámbrico", stock=60, sector="electronica"),
-                Producto(nombre="Teclado mecánico", stock=40, sector="electronica"),
-                Producto(nombre="Monitor 24 pulgadas", stock=20, sector="electronica"),
-                Producto(nombre="Disco SSD 1TB", stock=35, sector="electronica"),
-                Producto(nombre="Memoria USB 64GB", stock=80, sector="electronica"),
-
-                # --- OFICINA ---
-                Producto(nombre="Paquetes de folios A4", stock=200, sector="oficina"),
-                Producto(nombre="Bolígrafos azules", stock=500, sector="oficina"),
-                Producto(nombre="Bolígrafos negros", stock=450, sector="oficina"),
-                Producto(nombre="Lápices HB", stock=300, sector="oficina"),
-                Producto(nombre="Carpetas archivadoras", stock=120, sector="oficina"),
-                Producto(nombre="Grapadoras", stock=50, sector="oficina"),
-                Producto(nombre="Grapas", stock=1000, sector="oficina"),
-                Producto(nombre="Etiquetas adhesivas", stock=1000, sector="oficina"),
-
-                # --- LOGÍSTICA ---
-                Producto(nombre="Palets de madera", stock=80, sector="logistica"),
-                Producto(nombre="Palet europeo", stock=60, sector="logistica"),
-                Producto(nombre="Cajas de cartón pequeñas", stock=500, sector="logistica"),
-                Producto(nombre="Cajas de cartón medianas", stock=350, sector="logistica"),
-                Producto(nombre="Cajas de cartón grandes", stock=200, sector="logistica"),
-                Producto(nombre="Film estirable", stock=90, sector="logistica"),
-                Producto(nombre="Precinto de embalaje", stock=300, sector="logistica"),
-                Producto(nombre="Contenedores apilables", stock=70, sector="logistica"),
-
-                # --- AUTOMOCIÓN ---
-                Producto(nombre="Aceite de motor 5W30", stock=120, sector="automocion"),
-                Producto(nombre="Filtro de aceite", stock=90, sector="automocion"),
-                Producto(nombre="Filtro de aire", stock=80, sector="automocion"),
-                Producto(nombre="Líquido refrigerante", stock=100, sector="automocion"),
-                Producto(nombre="Pastillas de freno", stock=60, sector="automocion"),
-                Producto(nombre="Batería de coche", stock=25, sector="automocion"),
-                Producto(nombre="Neumático 16 pulgadas", stock=40, sector="automocion"),
-
-                # --- JARDINERÍA ---
-                Producto(nombre="Semillas de césped", stock=150, sector="jardineria"),
-                Producto(nombre="Abono universal", stock=100, sector="jardineria"),
-                Producto(nombre="Macetas de plástico", stock=200, sector="jardineria"),
-                Producto(nombre="Manguera de jardín", stock=50, sector="jardineria"),
-                Producto(nombre="Regadera", stock=40, sector="jardineria"),
-                Producto(nombre="Tijeras de poda", stock=35, sector="jardineria"),
-                Producto(nombre="Pala de jardín", stock=45, sector="jardineria"),
-                Producto(nombre="Rastrillo", stock=30, sector="jardineria"),
-                
-                # --- UNIVERSAL / COMODINES ---
-                Producto(nombre="Materiales varios", stock=100, sector="universal"),
-                Producto(nombre="Cosas generales", stock=100, sector="universal")
-            ]
-            db.add_all(productos_nuevos)
-            db.commit()
-            print("[INFO] Catalogo semilla inicializado correctamente.")
+        nuevo_usuario = Usuario(
+            nombre=user.nombre,
+            email=user.email,
+            password_hash=obtener_password_hash(user.password),
+            rol="operario"
+        )
+        db.add(nuevo_usuario)
+        db.flush() # Genera el id del usuario de forma intermedia sin guardarlo permanentemente aún
+        
+        # Flujo Atómico: Sembrar el catálogo bajo la misma transacción
+        sembrar_catalogo_para_usuario(db, nuevo_usuario.id)
+        
+        db.commit() # Si todo sale bien, confirmamos usuario + catálogo al mismo tiempo
+        db.refresh(nuevo_usuario)
+        
+        return {
+            "status": "success",
+            "usuario": {"nombre": nuevo_usuario.nombre, "email": nuevo_usuario.email, "rol": nuevo_usuario.rol}
+        }
     except Exception as e:
-        print(f"[ERROR] Error inicializando catalogo: {e}")
-    finally:
-        db.close()
+        db.rollback() # Si algo falla (ej. la siembra), revertimos todo para evitar datos huérfanos
+        raise HTTPException(status_code=500, detail=f"Fallo crítico en la creación de cuenta: {str(e)}")
 
-inicializar_catalogo_seguro()
+@app.post("/api/login")
+def login_usuario(user: UsuarioLogin, db: Session = Depends(get_db)):
+    db_user = db.query(Usuario).filter(Usuario.email == user.email).first()
+    if not db_user or not verificar_password(user.password, db_user.password_hash):
+        raise HTTPException(status_code=400, detail="Credenciales incorrectas. Verifique correo y contraseña.")
+    
+    return {
+        "status": "success",
+        "usuario": {
+            "id": db_user.id,
+            "nombre": db_user.nombre,
+            "email": db_user.email,
+            "rol": db_user.rol
+        }
+    }
 
 @app.get("/api/history")
-def obtener_historial(db: Session = Depends(get_db)):
-    return db.query(Movimiento).all()
+def obtener_historial(usuario_id: int, db: Session = Depends(get_db)):
+    return db.query(Movimiento).filter(Movimiento.usuario_id == usuario_id).all()
 
 @app.get("/api/catalogo")
-def obtener_catalogo(sector: str = "universal", db: Session = Depends(get_db)):
+def obtener_catalogo(usuario_id: int, sector: str = "universal", db: Session = Depends(get_db)):
+    query_base = db.query(Producto).filter(Producto.usuario_id == usuario_id)
+    
     if sector != "universal":
-        productos = db.query(Producto).filter(
+        productos = query_base.filter(
             (Producto.sector == sector.lower()) | (Producto.sector == "universal")
         ).all()
     else:
-        productos = db.query(Producto).all()
-    return [{"nombre": p.nombre, "stock": p.stock, "sector": p.sector} for p in productos]
+        productos = query_base.all()
+        
+    # CORREGIDO POR QA: Se reincorpora el campo 'id' para evitar errores 'undefined' en el borrado frontend
+    return [{"id": p.id, "nombre": p.nombre, "stock": p.stock, "sector": p.sector} for p in productos]
+
+
+# --- ENDPOINTS DE GESTIÓN DE CATÁLOGO ---
+@app.post("/api/catalogo/item")
+def agregar_producto_personalizado(producto: NuevoProducto, db: Session = Depends(get_db)):
+    producto_existente = db.query(Producto).filter(
+        Producto.usuario_id == producto.usuario_id,
+        Producto.nombre.ilike(producto.nombre)
+    ).first()
+    
+    if producto_existente:
+        raise HTTPException(status_code=400, detail=f"Ya tienes un producto llamado '{producto.nombre}' en tu catálogo.")
+    
+    nuevo_item = Producto(
+        nombre=producto.nombre,
+        stock=producto.stock,
+        sector=producto.sector.lower(),
+        usuario_id=producto.usuario_id
+    )
+    
+    db.add(nuevo_item)
+    db.commit()
+    db.refresh(nuevo_item)
+    
+    return {"status": "success", "mensaje": f"Producto '{nuevo_item.nombre}' añadido correctamente."}
+
+@app.delete("/api/catalogo/item/{producto_id}")
+def eliminar_producto_personalizado(producto_id: int, usuario_id: int, db: Session = Depends(get_db)):
+    producto_db = db.query(Producto).filter(
+        Producto.id == producto_id,
+        Producto.usuario_id == usuario_id
+    ).first()
+    
+    if not producto_db:
+        raise HTTPException(status_code=404, detail="Producto no encontrado o no tienes permisos para borrarlo.")
+    
+    nombre_borrado = producto_db.nombre
+    db.delete(producto_db)
+    db.commit()
+    
+    return {"status": "success", "mensaje": f"Producto '{nombre_borrado}' eliminado de tu catálogo."}
+
 
 @app.post("/api/transcribir")
 async def endpoint_transcribir(
     audio: UploadFile = File(...), 
     sector: str = Form("universal"), 
+    usuario_id: int = Form(...), 
+    usuario_nombre: str = Form("Operario Desconocido"), 
     db: Session = Depends(get_db)
 ):
     if not audio.filename:
@@ -185,18 +199,24 @@ async def endpoint_transcribir(
         raise HTTPException(status_code=400, detail="Audio muy corto. Manten presionado.")
     
     try:
-        # DELEGACIÓN A HILO SECUNDARIO: Evita congelar el servidor.
         texto_extraido = await asyncio.to_thread(servicios_ia.extraer_texto_de_audio, contenido_audio)
         
         productos_filtrados = db.query(Producto).filter(
+            Producto.usuario_id == usuario_id
+        ).filter(
             (Producto.sector == sector.lower()) | (Producto.sector == "universal")
         ).all()
+        
         nombres_catalogo = [p.nombre for p in productos_filtrados]
         
         coincidencia, porcentaje = servicios_ia.evaluar_coincidencia(texto_extraido, nombres_catalogo)
         
         if coincidencia:
-            producto_db = db.query(Producto).filter(Producto.nombre == coincidencia).first()
+            producto_db = db.query(Producto).filter(
+                Producto.nombre == coincidencia, 
+                Producto.usuario_id == usuario_id
+            ).first()
+            
             accion, cantidad, unidad = servicios_ia.interpretar_orden(texto_extraido)
             
             if accion == "suma":
@@ -215,8 +235,13 @@ async def endpoint_transcribir(
                 try:
                     nuevo_movimiento = Movimiento(
                         dateTime=datetime.now().strftime("%d/%m/%Y, %H:%M:%S"),
-                        user="Operario 1", action=accion, product=producto_db.nombre,
-                        quantity=cantidad, unit=unidad, method="Voz"
+                        user=usuario_nombre, 
+                        action=accion, 
+                        product=producto_db.nombre,
+                        quantity=cantidad, 
+                        unit=unidad, 
+                        method="Voz",
+                        usuario_id=usuario_id 
                     )
                     db.add(nuevo_movimiento)
                     db.commit() 
@@ -233,7 +258,7 @@ async def endpoint_transcribir(
         else:
             return {
                 "transcripcion": texto_extraido, 
-                "mensaje": f"[ERROR] Producto no identificado en el sector '{sector.upper()}'. Verifica el nombre del articulo.", 
+                "mensaje": f"[ERROR] Producto no identificado en tu inventario del sector '{sector.upper()}'.", 
                 "estado": "error"
             }
             

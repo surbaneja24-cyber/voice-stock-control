@@ -8,16 +8,19 @@ import {
 } from "react-icons/fi";
 import { NavLink, Link } from "react-router-dom";
 import { useThemeStore } from "../store/themeStore";
+import { useAuthStore } from "../store/authStore"; // <-- NUEVO: Importación del cerebro global
 import { useTranslation } from "react-i18next";
 
 const Sidebar = ({ isOpen, setIsOpen }) => {
   const { darkMode } = useThemeStore();
-  const { t, i18n } = useTranslation();
-  const profile = JSON.parse(localStorage.getItem("profile") || "{}");
-  const currentLanguage = i18n.resolvedLanguage || i18n.language;
+  const { t } = useTranslation();
+  
+  // Suscripción reactiva: El Sidebar se repintará instantáneamente si esto cambia
+  const usuario = useAuthStore((state) => state.usuario); 
 
-  const baseLinkClass = `flex items-center ${isOpen ? "gap-3 px-4" : "justify-center px-0 w-12"
-    } py-3 rounded-lg transition-all duration-300`;
+  const baseLinkClass = `flex items-center ${
+    isOpen ? "gap-3 px-4" : "justify-center px-0 w-12"
+  } py-3 rounded-lg transition-all duration-300`;
 
   const inactiveClass = darkMode
     ? "text-slate-400 hover:bg-slate-800 hover:text-slate-100"
@@ -27,26 +30,44 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
     ? "bg-blue-900/50 border border-blue-800 text-blue-400 font-semibold"
     : "bg-blue-50 border border-blue-100 text-blue-700 font-semibold";
 
+  // Lógica blindada para extraer iniciales sin que el navegador colapse
+  const getIniciales = () => {
+    if (!usuario?.nombre) return "OP";
+    return usuario.nombre
+      .trim()
+      .split(" ")
+      .filter(Boolean) // Evita crasheos por múltiples espacios seguidos
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .substring(0, 2);
+  };
+
   return (
     <aside
-      className={`fixed left-0 top-0 h-screen flex flex-col justify-between transition-all duration-300 z-[100] shadow-[4px_0_24px_rgba(0,0,0,0.05)] ${isOpen ? "w-64" : "w-20 -translate-x-full md:translate-x-0"
-        } ${darkMode
+      className={`fixed left-0 top-0 h-screen flex flex-col justify-between transition-all duration-300 z-[100] shadow-[4px_0_24px_rgba(0,0,0,0.05)] ${
+        isOpen ? "w-64" : "w-20 -translate-x-full md:translate-x-0"
+      } ${
+        darkMode
           ? "bg-slate-950 border-r border-slate-800"
           : "bg-white border-r border-slate-200"
-        }`}
+      }`}
     >
       <div>
         <div
-          className={`h-20 flex items-center transition-all duration-300 ${isOpen ? "justify-between px-6" : "justify-center"
-            } ${darkMode
+          className={`h-20 flex items-center transition-all duration-300 ${
+            isOpen ? "justify-between px-6" : "justify-center"
+          } ${
+            darkMode
               ? "border-b border-slate-800"
               : "border-b border-slate-100"
-            }`}
+          }`}
         >
           {isOpen && (
             <span
-              className={`font-extrabold tracking-wider text-2xl whitespace-nowrap overflow-hidden ${darkMode ? "text-white" : "text-slate-900"
-                }`}
+              className={`font-extrabold tracking-wider text-2xl whitespace-nowrap overflow-hidden ${
+                darkMode ? "text-white" : "text-slate-900"
+              }`}
             >
               VOX<span className="text-blue-500">STOCK</span>
             </span>
@@ -54,10 +75,11 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
 
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className={`p-2 rounded-lg transition-colors cursor-pointer ${darkMode
-              ? "text-slate-400 hover:text-blue-400 hover:bg-slate-800"
-              : "text-slate-500 hover:text-blue-600 hover:bg-blue-50"
-              }`}
+            className={`p-2 rounded-lg transition-colors cursor-pointer ${
+              darkMode
+                ? "text-slate-400 hover:text-blue-400 hover:bg-slate-800"
+                : "text-slate-500 hover:text-blue-600 hover:bg-blue-50"
+            }`}
           >
             {isOpen ? (
               <FiChevronLeft size={24} />
@@ -125,41 +147,47 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
       </div>
 
       <div
-        className={`p-4 border-t mb-2 flex justify-center md:justify-start ${darkMode ? "border-slate-800" : "border-slate-100"
-          }`}
+        className={`p-4 border-t mb-2 flex justify-center md:justify-start ${
+          darkMode ? "border-slate-800" : "border-slate-100"
+        }`}
       >
         <Link
           to="/profile"
-          className={`flex items-center ${isOpen
-            ? "gap-3 px-4 w-full"
-            : "justify-center p-0 w-12"
-            } py-3 border rounded-xl cursor-pointer transition-all overflow-hidden ${darkMode
+          className={`flex items-center ${
+            isOpen ? "gap-3 px-4 w-full" : "justify-center p-0 w-12"
+          } py-3 border rounded-xl cursor-pointer transition-all overflow-hidden ${
+            darkMode
               ? "bg-slate-900 border-slate-700 hover:bg-slate-800"
               : "bg-slate-50 border-slate-200 hover:bg-slate-100"
-            }`}
+          }`}
         >
-          <div className="w-10 h-10 shrink-0 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold shadow-md">
-            {profile?.fullName
-              ? profile.fullName
-                .split(" ")
-                .map((n) => n[0])
-                .join("")
-                .toUpperCase()
-                .slice(0, 2)
-              : "SU"}
+          {/* Contenedor del Avatar Mejorado */}
+          <div className="w-10 h-10 shrink-0 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold shadow-md overflow-hidden">
+            {usuario?.avatarUrl ? (
+              <img 
+                src={usuario.avatarUrl} 
+                alt="Avatar Operario" 
+                className="w-full h-full object-cover" 
+              />
+            ) : (
+              getIniciales()
+            )}
           </div>
 
           {isOpen && (
             <div className="flex flex-col min-w-0">
               <span
-                className={`text-sm font-bold leading-tight truncate ${darkMode ? "text-white" : "text-slate-900"
-                  }`}
+                className={`text-sm font-bold leading-tight truncate ${
+                  darkMode ? "text-white" : "text-slate-900"
+                }`}
               >
-                {profile?.fullName || "Santiago U."}
+                {/* Lógica dinámica de identidad */}
+                {usuario?.nombre || "Operario Desconocido"}
               </span>
 
               <span className="text-[11px] text-slate-500 font-medium tracking-wide uppercase mt-0.5 truncate">
-                Operaciones
+                {/* Asigna el rol real del backend, o un default seguro */}
+                {usuario?.rol || "Operaciones"}
               </span>
             </div>
           )}

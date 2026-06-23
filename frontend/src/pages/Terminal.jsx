@@ -1,16 +1,35 @@
-import { useState, useRef, useEffect } from 'react';
-import { Mic, X, BookOpen, LogOut } from "lucide-react"; 
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { Mic, X, BookOpen, LogOut, Trash2, Plus } from "lucide-react"; 
 import { useNavigate } from "react-router-dom";
 import { useHistoryStore } from "../store/historyStore";
 import { useThemeStore } from "../store/themeStore";
+import { useAuthStore } from "../store/authStore"; 
 import Dock from "../components/Dock";
 
 export default function Terminal() {
+  const navigate = useNavigate();
+  
+  // Estados Globales
+  const addMovimiento = useHistoryStore((state) => state.addMovimiento);
+  const darkMode = useThemeStore((state) => state.darkMode);
+  const usuario = useAuthStore((state) => state.usuario); 
+  const logoutAction = useAuthStore((state) => state.logout); 
+
+  // --- LÓGICA DE ONBOARDING PERSISTENTE ---
+  const getInitialSector = () => localStorage.getItem(`voxstock_sector_${usuario?.id}`) || "universal";
+  const getInitialOnboarding = () => !localStorage.getItem(`voxstock_onboarding_${usuario?.id}`);
+
+  const [sectorActivo, setSectorActivo] = useState(getInitialSector());
+  const [mostrarModalSectores, setMostrarModalSectores] = useState(getInitialOnboarding());
+  
   const [grabando, setGrabando] = useState(false);
-  const [mostrarModalSectores, setMostrarModalSectores] = useState(true);
   const [mostrarModalCatalogo, setMostrarModalCatalogo] = useState(false);
   const [listaProductos, setListaProductos] = useState([]);
-  const [sectorActivo, setSectorActivo] = useState("universal");
+  
+  // Estados para el CRUD del catálogo
+  const [nuevoItemNombre, setNuevoItemNombre] = useState("");
+  const [nuevoItemStock, setNuevoItemStock] = useState("");
+
   const [respuestaIA, setRespuestaIA] = useState({
     transcripcion: "Pulsa el microfono para hablar...",
     mensaje: "Esperando comando de voz...",
@@ -19,11 +38,7 @@ export default function Terminal() {
 
   const mediaRecorderRef = useRef(null);
   const fragmentosDeAudio = useRef([]);
-  const navigate = useNavigate();
-  const addMovimiento = useHistoryStore((state) => state.addMovimiento);
-  const darkMode = useThemeStore((state) => state.darkMode);
 
-  // Emojis eliminados. Sustituidos por codigos de area logisticos.
   const sectores = [
     { id: "alimentacion", nombre: "Alimentacion", icono: "[AL]" },
     { id: "ferreteria", nombre: "Ferreteria", icono: "[FE]" },
@@ -38,23 +53,78 @@ export default function Terminal() {
     { id: "universal", nombre: "Catalogo Completo", icono: "[UN]" }
   ];
 
-  useEffect(() => {
-    const fetchCatalogo = async () => {
-      try {
-        const res = await fetch(`/api/catalogo?sector=${sectorActivo}`);
-        if (res.ok) {
-          const data = await res.json();
-          setListaProductos(data);
-        }
-      } catch (error) {
-        console.error("[ERROR] No se pudo cargar el catalogo:", error);
+  const fetchCatalogo = useCallback(async () => {
+    if (!usuario?.id) return;
+    try {
+      // OBLIGATORIO: Pasamos el usuario_id al backend
+      const res = await fetch(`/api/catalogo?usuario_id=${usuario.id}&sector=${sectorActivo}`);
+      if (res.ok) {
+        const data = await res.json();
+        setListaProductos(data);
       }
-    };
+    } catch (error) {
+      console.error("[ERROR] No se pudo cargar el catalogo:", error);
+    }
+  }, [sectorActivo, usuario?.id]);
+
+  useEffect(() => {
     if (!mostrarModalSectores) {
       fetchCatalogo();
     }
-  }, [sectorActivo, mostrarModalSectores]);
+  }, [fetchCatalogo, mostrarModalSectores]);
 
+  // --- GESTIÓN DE CATÁLOGO PERSONALIZADO ---
+  const handleAgregarProducto = async (e) => {
+    e.preventDefault();
+    if (!nuevoItemNombre.trim()) return;
+
+    const payload = {
+      nombre: nuevoItemNombre,
+      stock: parseInt(nuevoItemStock) || 0,
+      sector: sectorActivo,
+      usuario_id: usuario.id
+    };
+
+    try {
+      const res = await fetch('/api/catalogo/item', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        setNuevoItemNombre("");
+        setNuevoItemStock("");
+        fetchCatalogo(); // Recargamos la lista
+      } else {
+        const err = await res.json();
+        alert(err.detail);
+      }
+    } catch (error) {
+      console.error("Error al añadir:", error);
+    }
+  };
+
+  const handleEliminarProducto = async (productoId) => {
+    if (!confirm("¿Estás seguro de eliminar este artículo de tu inventario?")) return;
+    try {
+      const res = await fetch(`/api/catalogo/item/${productoId}?usuario_id=${usuario.id}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) fetchCatalogo();
+    } catch (error) {
+      console.error("Error al eliminar:", error);
+    }
+  };
+
+  const handleSelectSector = (sectorId) => {
+    setSectorActivo(sectorId);
+    setMostrarModalSectores(false);
+    // Persistencia: El usuario no volverá a ver esta pantalla al recargar
+    localStorage.setItem(`voxstock_sector_${usuario?.id}`, sectorId);
+    localStorage.setItem(`voxstock_onboarding_${usuario?.id}`, "done");
+  };
+
+  // --- LÓGICA DE VOZ ---
   const iniciarGrabacion = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -73,33 +143,41 @@ export default function Terminal() {
         const formData = new FormData();
         formData.append("audio", audioBlob, "orden_operario.webm");
         formData.append("sector", sectorActivo); 
+        formData.append("usuario_id", usuario?.id); // <-- VITAL: Candado de seguridad
+        formData.append("usuario_nombre", usuario?.nombre || "Operario"); 
 
         try {
           const respuesta = await fetch("/api/transcribir", { method: "POST", body: formData });
           const datos = await respuesta.json();
 
           if (respuesta.ok) {
-            setRespuestaIA({ transcripcion: datos.transcripcion || "Audio procesado", mensaje: datos.mensaje, estado: datos.estado });
+            setRespuestaIA({ 
+              transcripcion: datos.transcripcion || "Audio procesado", 
+              mensaje: datos.mensaje, 
+              estado: datos.estado 
+            });
 
             if (datos.estado === "completado") {
               addMovimiento({
                 dateTime: new Date().toLocaleString(),
-                user: `Operario (${sectorActivo})`,
+                user: usuario?.nombre || "Operario Anonimo", 
                 action: datos.accion,
                 product: datos.producto,
                 quantity: datos.cantidad,
                 unit: datos.unidad,
                 method: "Voice",
               });
-              const resCatalogo = await fetch(`/api/catalogo?sector=${sectorActivo}`);
-              if (resCatalogo.ok) setListaProductos(await resCatalogo.json());
+              fetchCatalogo();
             }
           } else {
-            setRespuestaIA({ transcripcion: "Error en la transmision.", mensaje: "Fallo del motor: " + (datos.detail || datos.error), estado: "error" });
+            setRespuestaIA({ 
+              transcripcion: "Error en la transmision.", 
+              mensaje: "Fallo del motor: " + (datos.detail || datos.error), 
+              estado: "error" 
+            });
           }
         } catch (error) {
-          // CORRECCION APLICADA: Uso explicito de la variable error.
-          console.error("[CRITICO] Fallo de red detectado:", error);
+          console.error("[CRITICO] Fallo de red:", error);
           setRespuestaIA({ transcripcion: "Fallo de red.", mensaje: "Error Critico: Servidor inalcanzable.", estado: "error" });
         }
         stream.getTracks().forEach(track => track.stop());
@@ -108,9 +186,7 @@ export default function Terminal() {
       mediaRecorder.start();
       setGrabando(true);
     } catch (error) {
-      // CORRECCION APLICADA: Uso explicito de la variable error.
-      console.error("[CRITICO] Error de acceso a hardware de microfono:", error);
-      alert("Error: No se pudo acceder al microfono. Verifica los permisos del navegador.");
+      alert("Error: No se pudo acceder al microfono. Verifica los permisos.");
     }
   };
 
@@ -119,6 +195,11 @@ export default function Terminal() {
       mediaRecorderRef.current.stop();
       setGrabando(false);
     }
+  };
+
+  const ejecutarCerrarSesion = () => {
+    logoutAction();
+    navigate('/login');
   };
 
   const sectorActual = sectores.find(s => s.id === sectorActivo);
@@ -133,20 +214,19 @@ export default function Terminal() {
     { 
       label: `Sector: ${sectorActual?.nombre}`, 
       icon: <span className="text-xl leading-none font-mono font-bold">{sectorActual?.icono}</span>, 
-      onClick: () => setMostrarModalSectores(true),
+      onClick: () => setMostrarModalSectores(true), // Permite reabrirlo manualmente
       colorClass: darkMode ? 'text-blue-400 border-blue-900/50 hover:bg-blue-900/30 bg-blue-900/10' : 'text-blue-600 border-blue-200 hover:bg-blue-50 bg-blue-50/50'
     },
     { 
-      label: 'Cerrar Terminal', 
+      label: 'Cerrar Sesión', 
       icon: <LogOut size={22} />, 
-      onClick: () => navigate('/'),
+      onClick: ejecutarCerrarSesion, 
       colorClass: darkMode ? 'text-red-400 border-red-900/50 hover:bg-red-900/30 bg-red-900/10' : 'text-red-600 border-red-200 hover:bg-red-50 bg-red-50/50'
     }
   ];
 
   return (
     <div className="min-h-full flex flex-col items-center justify-center p-6 pb-32 relative">
-      
       <Dock items={dockItems} darkMode={darkMode} />
 
       {mostrarModalSectores && (
@@ -154,13 +234,13 @@ export default function Terminal() {
           <div className={`w-full max-w-4xl p-8 rounded-2xl shadow-2xl relative animate-in fade-in zoom-in duration-200 ${darkMode ? 'bg-slate-900 border border-slate-700' : 'bg-white border border-slate-200'}`}>
             <div className="text-center mb-8">
               <h2 className={`text-3xl font-extrabold tracking-tight mb-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>Configurar Entorno de Trabajo</h2>
-              <p className={`text-lg ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Selecciona la industria en la que estas operando hoy.</p>
+              <p className={`text-lg ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Bienvenido, {usuario?.nombre || "Operario"}. Selecciona tu área de hoy.</p>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {sectores.map((sector) => (
                 <button
                   key={sector.id}
-                  onClick={() => { setSectorActivo(sector.id); setMostrarModalSectores(false); }}
+                  onClick={() => handleSelectSector(sector.id)}
                   className={`flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all duration-200 hover:scale-105 ${
                     sectorActivo === sector.id
                       ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400'
@@ -178,26 +258,63 @@ export default function Terminal() {
 
       {mostrarModalCatalogo && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className={`w-full max-w-2xl max-h-[80vh] flex flex-col p-8 rounded-2xl shadow-2xl relative animate-in fade-in zoom-in duration-200 ${darkMode ? 'bg-slate-900 border border-slate-700' : 'bg-white border border-slate-200'}`}>
-            <button onClick={() => setMostrarModalCatalogo(false)} className="absolute top-6 right-6 p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
+          <div className={`w-full max-w-2xl max-h-[85vh] flex flex-col p-6 rounded-2xl shadow-2xl relative animate-in fade-in zoom-in duration-200 ${darkMode ? 'bg-slate-900 border border-slate-700' : 'bg-white border border-slate-200'}`}>
+            <button onClick={() => setMostrarModalCatalogo(false)} className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
               <X size={24} className={darkMode ? 'text-slate-400' : 'text-slate-600'} />
             </button>
-            <div className="mb-6">
-              <h2 className={`text-2xl font-bold tracking-tight flex items-center gap-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}><BookOpen className="text-blue-500"/> Articulos Disponibles</h2>
-              <p className={`mt-1 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Estos son los productos registrados en tu sector ({sectorActual?.nombre}).</p>
+            
+            <div className="mb-4">
+              <h2 className={`text-2xl font-bold tracking-tight flex items-center gap-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}><BookOpen className="text-blue-500"/> Tu Inventario ({sectorActual?.nombre})</h2>
             </div>
+
+            {/* FORMULARIO PARA AÑADIR PRODUCTOS */}
+            <form onSubmit={handleAgregarProducto} className={`mb-4 flex gap-2 p-3 rounded-xl border ${darkMode ? 'bg-slate-800/50 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
+              <input 
+                type="text" 
+                placeholder="Nuevo producto..." 
+                value={nuevoItemNombre}
+                onChange={(e) => setNuevoItemNombre(e.target.value)}
+                className={`flex-1 px-3 py-2 rounded-lg text-sm border focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'}`}
+                required
+              />
+              <input 
+                type="number" 
+                placeholder="Stock" 
+                value={nuevoItemStock}
+                onChange={(e) => setNuevoItemStock(e.target.value)}
+                className={`w-24 px-3 py-2 rounded-lg text-sm border focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'}`}
+              />
+              <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white p-2 rounded-lg transition-colors flex items-center justify-center">
+                <Plus size={20} />
+              </button>
+            </form>
+
+            {/* LISTA DE PRODUCTOS CON BOTÓN DE BORRAR */}
             <div className="overflow-y-auto pr-2 space-y-2 custom-scrollbar">
-              {listaProductos.map((prod, idx) => (
-                <div key={idx} className={`flex justify-between items-center p-3 rounded-lg border ${
-                  prod.sector === 'universal' ? (darkMode ? 'bg-purple-900/10 border-purple-800/50' : 'bg-purple-50 border-purple-100') : (darkMode ? 'bg-slate-800/50 border-slate-700' : 'bg-slate-50 border-slate-200')
-                }`}>
-                  <span className={`font-medium flex items-center gap-2 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>
-                    {prod.nombre} 
-                    {prod.sector === 'universal' && <span className="text-[10px] uppercase tracking-wider text-purple-500 font-bold border border-purple-500/30 bg-purple-500/10 px-2 py-0.5 rounded-full">Universal</span>}
-                  </span>
-                  <span className={`text-sm font-mono bg-black/5 dark:bg-white/5 px-2 py-1 rounded ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Stock: {prod.stock}</span>
-                </div>
-              ))}
+              {listaProductos.length === 0 ? (
+                <p className={`text-center py-4 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>No hay productos en esta categoría.</p>
+              ) : (
+                listaProductos.map((prod) => (
+                  <div key={prod.id} className={`flex justify-between items-center p-3 rounded-lg border group ${
+                    prod.sector === 'universal' ? (darkMode ? 'bg-purple-900/10 border-purple-800/50' : 'bg-purple-50 border-purple-100') : (darkMode ? 'bg-slate-800/30 border-slate-700' : 'bg-white border-slate-200')
+                  }`}>
+                    <span className={`font-medium flex items-center gap-2 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>
+                      {prod.nombre} 
+                      {prod.sector === 'universal' && <span className="text-[10px] uppercase tracking-wider text-purple-500 font-bold border border-purple-500/30 bg-purple-500/10 px-2 py-0.5 rounded-full">Global</span>}
+                    </span>
+                    <div className="flex items-center gap-3">
+                      <span className={`text-sm font-mono px-2 py-1 rounded ${darkMode ? 'bg-slate-950 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>Stock: {prod.stock}</span>
+                      <button 
+                        onClick={() => handleEliminarProducto(prod.id)}
+                        className="p-1.5 text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-md opacity-0 group-hover:opacity-100 transition-all focus:opacity-100"
+                        title="Borrar producto"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -209,7 +326,7 @@ export default function Terminal() {
             Modo Operario: {sectorActual?.nombre.toUpperCase()}
           </span>
           <h1 className={`text-4xl md:text-5xl font-extrabold tracking-tight ${darkMode ? 'text-white' : 'text-slate-900'}`}>Terminal de Entrada</h1>
-          <p className={`text-lg max-w-lg ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Manten presionado el boton central para dictar movimientos de stock.</p>
+          <p className={`text-lg max-w-lg ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Operador: {usuario?.nombre || "No identificado"}</p>
         </div>
 
         <div className="flex flex-col items-center gap-8 relative">

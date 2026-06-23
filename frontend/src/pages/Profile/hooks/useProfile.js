@@ -1,76 +1,76 @@
 import { useState, useEffect, useCallback } from 'react';
-import {
-    fetchProfile,
-    updateProfile,
-    uploadAvatar,
-    changePassword,
-    deleteAccount,
-} from '../Services/profileService';
-
-const MOCK_PROFILE = {
-    fullName: 'Alex Mercer',
-    employeeId: 'VX-88492',
-    email: 'alex.mercer@voxstock.app',
-    phone: '+1 (555) 019-8472',
-    birthDate: '1990-06-15',
-    bio: '',
-    avatarUrl: null,
-    provider: 'email', // 'email' | 'google' | 'apple'
-};
+import { useAuthStore } from "../../../store/authStore";
+import { useNavigate } from 'react-router-dom';
 
 export const useProfile = () => {
+    // 1. Conectamos directamente con el cerebro de autenticación (Zustand)
+    const usuarioAuth = useAuthStore((state) => state.usuario);
+    const loginAction = useAuthStore((state) => state.login); // Reutilizamos login para actualizar datos
+    const logoutAction = useAuthStore((state) => state.logout);
+
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState(null);
     const [successMsg, setSuccessMsg] = useState(null);
+    const navigate = useNavigate();
 
     const showSuccess = (msg) => {
         setSuccessMsg(msg);
         setTimeout(() => setSuccessMsg(null), 3500);
     };
 
-    // ─── Cargar perfil al montar ────────────────────────────────────────────────
-    const loadProfile = useCallback(async () => {
+    // ─── Cargar perfil sincronizado con Zustand ───────────────────────────────
+    const loadProfile = useCallback(() => {
         setLoading(true);
         setError(null);
         try {
-            // TODO: reemplazar MOCK_PROFILE por la llamada real cuando el endpoint esté listo
-            // const data = await fetchProfile();
-            const savedProfile = localStorage.getItem("profile");
-
-            const data = savedProfile
-                ? JSON.parse(savedProfile)
-                : MOCK_PROFILE;
-
-            setProfile(data);
+            if (usuarioAuth) {
+                // Mapeamos los datos reales del Login hacia la estructura visual del Perfil
+                setProfile({
+                    fullName: usuarioAuth.nombre || 'Operario',
+                    email: usuarioAuth.email || '',
+                    employeeId: `VX-${usuarioAuth.id || '0000'}`,
+                    phone: usuarioAuth.phone || '+34 000 000 000', // Mock complementario
+                    birthDate: usuarioAuth.birthDate || '1990-01-01', // Mock complementario
+                    bio: usuarioAuth.bio || `Operario activo del sector Logístico.`,
+                    avatarUrl: usuarioAuth.avatarUrl || null,
+                    provider: 'email', 
+                });
+            }
         } catch (err) {
             setError(err.message);
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [usuarioAuth]);
 
     useEffect(() => {
         loadProfile();
     }, [loadProfile]);
 
-    // ─── Actualizar campos del perfil ───────────────────────────────────────────
+    // ─── Actualizar campos del perfil (Sincroniza UI y Zustand) ───────────────
     const saveProfile = async (updatedData) => {
         setSaving(true);
         setError(null);
         try {
-            // TODO: descomentar cuando el endpoint esté listo
-            // const updated = await updateProfile(updatedData);
-            // setProfile(updated);
-            setProfile((prev) => {
-                const updated = { ...prev, ...updatedData };
+            // Simulamos retraso de red de 1 segundo
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // 1. Actualizamos el estado local de esta pantalla
+            setProfile((prev) => ({ ...prev, ...updatedData }));
 
-                localStorage.setItem("profile", JSON.stringify(updated));
-
-                return updated;
+            // 2. IMPORTANTE: Actualizamos el estado global (Zustand) 
+            // para que la terminal y el menú lateral vean el nuevo nombre.
+            loginAction({
+                ...usuarioAuth,
+                nombre: updatedData.fullName || usuarioAuth.nombre,
+                phone: updatedData.phone,
+                birthDate: updatedData.birthDate,
+                bio: updatedData.bio
             });
-            showSuccess('Profile updated successfully.');
+
+            showSuccess('Perfil actualizado correctamente.');
             return true;
         } catch (err) {
             setError(err.message);
@@ -85,17 +85,15 @@ export const useProfile = () => {
         setSaving(true);
         setError(null);
         try {
-            // TODO: descomentar cuando el endpoint esté listo
-            // const { avatarUrl } = await uploadAvatar(file);
-            const avatarUrl = URL.createObjectURL(file); // simulación local
-            setProfile((prev) => {
-                const updated = { ...prev, avatarUrl };
+            await new Promise(resolve => setTimeout(resolve, 800));
+            const avatarUrl = URL.createObjectURL(file);
+            
+            setProfile((prev) => ({ ...prev, avatarUrl }));
+            
+            // Actualizamos Zustand para que el Sidebar muestre la foto nueva
+            loginAction({ ...usuarioAuth, avatarUrl });
 
-                localStorage.setItem("profile", JSON.stringify(updated));
-
-                return updated;
-            });
-            showSuccess('Profile photo updated.');
+            showSuccess('Foto de perfil actualizada.');
             return true;
         } catch (err) {
             setError(err.message);
@@ -105,14 +103,16 @@ export const useProfile = () => {
         }
     };
 
-    // ─── Cambiar contraseña ──────────────────────────────────────────────────────
+    // ─── Cambiar contraseña (Mock) ───────────────────────────────────────────────
     const updatePassword = async (passwords) => {
         setSaving(true);
         setError(null);
         try {
-            // TODO: descomentar cuando el endpoint esté listo
-            // await changePassword(passwords);
-            showSuccess('Password changed successfully.');
+            await new Promise(resolve => setTimeout(resolve, 1200));
+            if (passwords.newPassword !== passwords.confirmPassword) {
+                throw new Error("Las contraseñas no coinciden");
+            }
+            showSuccess('Contraseña cambiada (Simulación).');
             return true;
         } catch (err) {
             setError(err.message);
@@ -122,15 +122,15 @@ export const useProfile = () => {
         }
     };
 
-    // ─── Eliminar cuenta ─────────────────────────────────────────────────────────
+    // ─── Eliminar cuenta (Logout Seguro) ─────────────────────────────────────────
     const removeAccount = async () => {
         setSaving(true);
         setError(null);
         try {
-            // TODO: descomentar cuando el endpoint esté listo
-            // await deleteAccount();
-            localStorage.removeItem('authToken');
-            window.location.href = '/login';
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            // Expulsamos al usuario limpiando el Zustand real
+            logoutAction(); 
+            navigate('/login');
             return true;
         } catch (err) {
             setError(err.message);

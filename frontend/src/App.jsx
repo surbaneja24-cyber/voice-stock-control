@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Routes, Route, Outlet, Navigate } from "react-router-dom";
 import { useThemeStore } from "./store/themeStore";
+import { useAuthStore } from "./store/authStore";
 
 import Sidebar from "./components/Sidebar";
 import Home from "./pages/Home";
@@ -8,12 +9,19 @@ import Terminal from "./pages/Terminal";
 import Historial from "./pages/Historial";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
+import Register from "./pages/Register"; 
 import Profile from "./pages/Profile/Profile";
 import Settings from "./pages/Settings/Settings";
 
-function ToolLayout() {
+// COMPONENTE DE PROTECCIÓN
+function ProtectedLayout() {
+  const estaAutenticado = useAuthStore((state) => state.estaAutenticado);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const darkMode = useThemeStore((state) => state.darkMode);
+
+  if (!estaAutenticado) {
+    return <Navigate to="/login" replace />;
+  }
 
   return (
     <div className={`flex h-screen overflow-hidden font-sans transition-colors duration-500 ${
@@ -29,14 +37,17 @@ function ToolLayout() {
   );
 }
 
+// ESTA ES LA LÍNEA QUE BORRASTE POR ERROR:
 export default function App() {
   return (
     <Routes>
+      {/* RUTAS PÚBLICAS (No requieren sesión) */}
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} /> 
 
-      <Route element={<ToolLayout />}>
-        {/* CORRECCIÓN: El path debe ser /terminal para coincidir con Navbar y Dock */}
+      {/* RUTAS PROTEGIDAS (Requieren sesión) */}
+      <Route element={<ProtectedLayout />}>
         <Route path="/terminal" element={<Terminal />} />
         <Route path="/history" element={<Historial />} />
         <Route path="/dashboard" element={<Dashboard />} />
@@ -44,7 +55,6 @@ export default function App() {
         <Route path="/settings" element={<Settings />} />
       </Route>
 
-      {/* RUTA DE RESPALDO: Previene la pantalla blanca si se introduce una URL errónea */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

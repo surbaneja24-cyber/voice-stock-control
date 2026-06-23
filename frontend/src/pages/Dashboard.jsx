@@ -1,6 +1,7 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useHistoryStore } from "../store/historyStore";
 import { useThemeStore } from "../store/themeStore";
+import { useAuthStore } from "../store/authStore"; // <-- NUEVO: Importación del cerebro global
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell,
 } from "recharts";
@@ -8,7 +9,11 @@ import {
 export default function Dashboard() {
   const storeMovimientos = useHistoryStore((state) => state.movimientos);
   const setMovimientos = useHistoryStore((state) => state.setMovimientos);
+  
   const darkMode = useThemeStore((state) => state.darkMode); 
+  const usuario = useAuthStore((state) => state.usuario); // <-- NUEVO: Identidad del usuario
+
+  const [cargando, setCargando] = useState(true);
 
   const movimientos = Array.isArray(storeMovimientos) ? storeMovimientos : [];
 
@@ -16,12 +21,10 @@ export default function Dashboard() {
   const totalEntradas = movimientos.filter((m) => m.action === "suma").length;
   const totalSalidas = movimientos.filter((m) => m.action === "resta").length;
   
-  // KPI Corregido: Sumar cantidades mixtas es invalido. Mostramos transacciones totales.
   const operacionesRegistradas = totalEntradas + totalSalidas; 
   
-  // Grafico mejorado: Limitado a los ultimos 20 movimientos para no colapsar la vista
   const trendData = movimientos.slice(-20).map((mov) => ({
-    etiqueta: mov.dateTime.split(',')[1] || "00:00", // Extrae solo la hora
+    etiqueta: mov.dateTime.split(',')[1] || "00:00", 
     cantidad: Number(mov.quantity || 0),
   }));
   
@@ -31,10 +34,18 @@ export default function Dashboard() {
   ];
 
   useEffect(() => {
-    let isMounted = true; // Escudo contra fugas de memoria
+    // Escudo: No ejecutar si aún no sabemos quién es el usuario
+    if (!usuario?.id) return;
 
-    fetch("/api/history")
-      .then((res) => res.json())
+    let isMounted = true; 
+    setCargando(true);
+
+    // NUEVO: Inyección de seguridad por usuario
+    fetch(`/api/history?usuario_id=${usuario.id}`)
+      .then((res) => {
+        if (!res.ok) throw new Error("Acceso denegado o error de red");
+        return res.json();
+      })
       .then((data) => {
         if (isMounted) {
           if (Array.isArray(data)) {
@@ -48,16 +59,18 @@ export default function Dashboard() {
       .catch((err) => {
         if (isMounted) {
           console.error("[ERROR] Fallo de conexion con el backend:", err);
-          // No vaciamos el store en caso de error para mantener la caché offline
         }
+      })
+      .finally(() => {
+        if (isMounted) setCargando(false);
       });
 
     return () => {
       isMounted = false; 
     };
-  }, [setMovimientos]);
+  }, [setMovimientos, usuario?.id]); // <-- Se re-ejecuta si cambia el usuario
 
-  const COLORS = darkMode ? ["#10b981", "#ef4444"] : ["#059669", "#dc2626"]; // Verde para entradas, Rojo para salidas
+  const COLORS = darkMode ? ["#10b981", "#ef4444"] : ["#059669", "#dc2626"];
 
   const cardClass = `p-6 rounded-2xl border shadow-sm transition-all duration-300 ${
     darkMode 
@@ -67,9 +80,22 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen p-8 transparent">
-      <h1 className={`text-4xl font-bold mb-8 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-        Analitica de Inventario
-      </h1>
+      <div className="flex justify-between items-end mb-8">
+        <div>
+          <h1 className={`text-4xl font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+            Analitica de Inventario
+          </h1>
+          <p className={`mt-2 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+            Resumen de actividad para {usuario?.nombre || "Operario"}
+          </p>
+        </div>
+        {cargando && (
+          <span className="flex h-3 w-3 relative">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+          </span>
+        )}
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         {[
@@ -80,7 +106,9 @@ export default function Dashboard() {
         ].map((kpi, idx) => (
           <div key={idx} className={cardClass}>
             <p className={darkMode ? "text-slate-400" : "text-zinc-600"}>{kpi.label}</p>
-            <h2 className="text-3xl font-bold mt-2">{kpi.value}</h2>
+            <h2 className="text-3xl font-bold mt-2">
+              {cargando && movimientos.length === 0 ? "-" : kpi.value}
+            </h2>
           </div>
         ))}
       </div>
@@ -89,26 +117,38 @@ export default function Dashboard() {
         <div className={cardClass}>
           <h2 className="text-xl font-semibold mb-6">Volumen por transaccion (Ultimos 20)</h2>
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={trendData}>
-              <XAxis dataKey="etiqueta" stroke={darkMode ? "#94a3b8" : "#64748b"} fontSize={12} />
-              <YAxis stroke={darkMode ? "#94a3b8" : "#64748b"} fontSize={12} />
-              <Tooltip contentStyle={{ backgroundColor: darkMode ? '#1e293b' : '#fff', borderRadius: '8px', border: '1px solid #334155' }} />
-              <Line type="monotone" dataKey="cantidad" stroke={darkMode ? "#60a5fa" : "#2563eb"} strokeWidth={3} dot={false} />
-            </LineChart>
+            {movimientos.length > 0 ? (
+              <LineChart data={trendData}>
+                <XAxis dataKey="etiqueta" stroke={darkMode ? "#94a3b8" : "#64748b"} fontSize={12} />
+                <YAxis stroke={darkMode ? "#94a3b8" : "#64748b"} fontSize={12} />
+                <Tooltip contentStyle={{ backgroundColor: darkMode ? '#1e293b' : '#fff', borderRadius: '8px', border: '1px solid #334155' }} />
+                <Line type="monotone" dataKey="cantidad" stroke={darkMode ? "#60a5fa" : "#2563eb"} strokeWidth={3} dot={false} />
+              </LineChart>
+            ) : (
+              <div className={`flex h-full items-center justify-center ${darkMode ? "text-slate-500" : "text-slate-400"}`}>
+                {cargando ? "Cargando datos..." : "No hay datos suficientes para graficar."}
+              </div>
+            )}
           </ResponsiveContainer>
         </div>
 
         <div className={cardClass}>
           <h2 className="text-xl font-semibold mb-6">Proporcion de Flujo</h2>
           <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie data={categoryData} cx="50%" cy="50%" innerRadius={70} outerRadius={100} dataKey="value" nameKey="name" label>
-                {categoryData.map((entry, index) => (
-                  <Cell key={index} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip contentStyle={{ backgroundColor: darkMode ? '#1e293b' : '#fff', borderRadius: '8px', border: '1px solid #334155' }} />
-            </PieChart>
+            {movimientos.length > 0 ? (
+              <PieChart>
+                <Pie data={categoryData} cx="50%" cy="50%" innerRadius={70} outerRadius={100} dataKey="value" nameKey="name" label>
+                  {categoryData.map((entry, index) => (
+                    <Cell key={index} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip contentStyle={{ backgroundColor: darkMode ? '#1e293b' : '#fff', borderRadius: '8px', border: '1px solid #334155' }} />
+              </PieChart>
+            ) : (
+               <div className={`flex h-full items-center justify-center ${darkMode ? "text-slate-500" : "text-slate-400"}`}>
+                 {cargando ? "Cargando proporciones..." : "No hay transacciones registradas."}
+               </div>
+            )}
           </ResponsiveContainer>
         </div>
       </div>
@@ -116,7 +156,9 @@ export default function Dashboard() {
       <div className={cardClass}>
         <h2 className="text-xl font-semibold mb-6">Actividad reciente en tiempo real</h2>
         <div className="space-y-4">
-          {movimientos.length === 0 ? (
+          {cargando && movimientos.length === 0 ? (
+             <p className={`animate-pulse ${darkMode ? "text-slate-500" : "text-slate-400"}`}>Sincronizando con el servidor...</p>
+          ) : movimientos.length === 0 ? (
             <p className={darkMode ? "text-slate-400" : "text-zinc-600"}>Base de datos sin registros.</p>
           ) : (
             movimientos.slice(-5).reverse().map((item, index) => (
