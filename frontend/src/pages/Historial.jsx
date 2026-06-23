@@ -4,11 +4,13 @@ import autoTable from "jspdf-autotable";
 import { useEffect } from "react";
 import { useHistoryStore } from "../store/historyStore";
 import { useThemeStore } from "../store/themeStore";
+import { useTranslation } from "react-i18next";
 
 export default function Historial() {
   const storeMovimientos = useHistoryStore((state) => state.movimientos);
   const setMovimientos = useHistoryStore((state) => state.setMovimientos);
   const darkMode = useThemeStore((state) => state.darkMode);
+  
 
   // 🛡️ EL ESCUDO PROTECTOR
   const movimientos = Array.isArray(storeMovimientos) ? storeMovimientos : [];

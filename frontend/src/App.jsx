@@ -8,6 +8,8 @@ import Terminal from "./pages/Terminal";
 import Historial from "./pages/Historial";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
+import Profile from "./pages/Profile/Profile";
+import Settings from "./pages/Settings/Settings";
 
 function ToolLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -38,6 +40,8 @@ export default function App() {
         <Route path="/terminal" element={<Terminal />} />
         <Route path="/history" element={<Historial />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/settings" element={<Settings />} />
       </Route>
 
       {/* RUTA DE RESPALDO: Previene la pantalla blanca si se introduce una URL errónea */}
