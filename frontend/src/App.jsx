@@ -11,7 +11,13 @@ import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import Register from "./pages/Register"; 
 import Profile from "./pages/Profile/Profile";
+import Instrucciones from './pages/Instrucciones';
 import Settings from "./pages/Settings/Settings";
+import Pricing from './pages/Pricing';
+import Piloto from './pages/Piloto';
+import Faq from './pages/Faq';
+import Equipo from './pages/Equipo'
+
 
 // COMPONENTE DE PROTECCIÓN
 function ProtectedLayout() {
@@ -44,7 +50,12 @@ export default function App() {
       {/* RUTAS PÚBLICAS (No requieren sesión) */}
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} /> 
+      <Route path="/como-funciona" element={<Instrucciones />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/pricing" element={<Pricing />} /> 
+      <Route path="/piloto" element={<Piloto />} />
+      <Route path="/faq" element={<Faq />} />
+      <Route path="/equipo" element={<Equipo />} />
 
       {/* RUTAS PROTEGIDAS (Requieren sesión) */}
       <Route element={<ProtectedLayout />}>
