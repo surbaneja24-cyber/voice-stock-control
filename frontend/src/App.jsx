@@ -30,15 +30,35 @@ function ProtectedLayout() {
   }
 
   return (
-    <div className={`flex h-screen overflow-hidden font-sans transition-colors duration-500 ${
-      darkMode ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'
-    }`}>
-      <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
-      <main className={`flex-1 transition-all duration-300 ease-in-out h-screen overflow-y-auto ${
-        sidebarOpen ? 'md:ml-64' : 'md:ml-20'
-      } ml-0 p-6`}> 
-        <Outlet />
-      </main>
+    <div className="app">
+        <div className="header">
+        <span className="badge">Beta 1.0</span> {/* <--- Esto es nuevo */}
+        <h1>VoxStock</h1>
+        <p>Intelligent inventory management through voice commands</p>
+      </div>
+
+      <div className="voice-container">
+        <button 
+          className={`mic-button ${grabando ? 'grabando' : ''}`}
+          onMouseDown={iniciarGrabacion}
+          onMouseUp={detenerGrabacion}
+          onMouseLeave={detenerGrabacion}
+          onTouchStart={iniciarGrabacion}
+          onTouchEnd={detenerGrabacion}
+        >
+          {/* El icono cambia de color si está grabando para dar feedback visual */}
+          <Mic size={70} strokeWidth={1.5} color={grabando ? "white" : "currentColor"} />
+        </button>
+
+        <span className="status">
+          {grabando ? "Escuchando... (Suelta para enviar)" : "Mantén presionado para hablar"}
+        </span>
+      </div>
+
+      <div className="result-card">
+        <h3>Recognized Command</h3>
+        <p>{textoModal}</p>
+      </div>
     </div>
   );
 }

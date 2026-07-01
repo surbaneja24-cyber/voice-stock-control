@@ -32,18 +32,23 @@ Diseñado bajo una arquitectura **SaaS Multi-Tenant**, permite que múltiples op
 
 ---
 
-##  Guía de Instalación
+## 🚀 Instalación y despliegue en Local (Desde cero)
 
-### 1. Preparación del Entorno
-Asegúrate de tener instalados:
-- **Node.js** (v18+)
-- **Python** (v3.10+)
-- **Git**
+Sigue estos pasos para levantar el entorno de desarrollo en tu máquina.
 
-## Despliegue en Local (PC)
-Terminal A (Backend):
+### Requisitos Previos
+- Node.js y npm instalados.
+- Python 3.10+ instalado.
+- Git.
 
-```Fragmento de código
+### 1. Clonar el repositorio
+```bash
+git clone [https://github.com/tu-usuario/voxstock.git](https://github.com/tu-usuario/voxstock.git)
+cd voxstock
+```
+2. Levantar el Backend (Python)
+
+```bash
 cd backend
 python -m venv venv
 source venv/bin/activate
@@ -58,27 +63,8 @@ cd frontend
 npm install
 npm run dev
 ```
-## Despliegue en GitHub Codespaces
-Si estás evaluando este proyecto en Codespaces, sigue estrictamente estos pasos:
 
-Abre dos terminales y ejecuta los comandos de la sección anterior (Backend y Frontend).
-
-### Configuración Crítica de Puertos: - Ve a la pestaña "Ports" (Puertos) en VS Code.
-
-Verás los puertos 5173 y 5001.
-
-Haz clic derecho sobre la columna "Visibility" de cada uno y cámbialos de Private a Public.
-
-Nota: Esto es vital para que el túnel de red de GitHub habilite las APIs de micrófono (WebRTC) y permita el Login.
-
-Haz clic en el enlace que genera el puerto 5173 para abrir la aplicación. (Acepta los permisos de micrófono).
-
-### Tecnologías Utilizadas
-Frontend: React.js, Vite, TailwindCSS, Recharts, Zustand.
-
-Backend: Python, FastAPI, SQLAlchemy (ORM), Faster-Whisper, Passlib (Bcrypt).
-
-Base de Datos: SQLite.
+El panel de control estará disponible en http://localhost:5173.
 
 👥 Equipo de Desarrollo
 Proyecto de arquitectura Full-Stack.

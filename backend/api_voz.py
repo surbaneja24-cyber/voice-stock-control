@@ -8,7 +8,7 @@ app_voz = Flask(__name__)
 CORS(app_voz)
 
 print("Cargando el motor de IA...")
-modelo = WhisperModel("base", device="cpu", compute_type="int8")
+modelo = WhisperModel("tiny", device="cpu", compute_type="int8")
 print("¡Motor de voz listo y esperando órdenes!")
 
 @app_voz.route('/api/transcribir', methods=['POST'])
