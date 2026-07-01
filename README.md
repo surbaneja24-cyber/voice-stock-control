@@ -1,10 +1,11 @@
 <div align="center">
 
-  <h1>🎙️ VoxStock WMS</h1>
-  <p><strong>Sistema SaaS de Gestión de Inventario dirigido por Inteligencia Artificial de Voz</strong></p>
+  <h1>VoxStock WMS</h1>
+  <p><strong>Sistema SaaS de Gestión de Inventario Multi-Usuario dirigido por IA de Voz</strong></p>
 
   <img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" />
   <img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white" />
+  <img src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white" />
   <img src="https://img.shields.io/badge/SQLite-07405E?style=for-the-badge&logo=sqlite&logoColor=white" />
   <img src="https://img.shields.io/badge/AI-faster--whisper-FF6F00?style=for-the-badge" />
 
@@ -13,30 +14,21 @@
 
 ---
 
-## 📦 Sobre el Proyecto
+##  Sobre el Proyecto
 
-**VoxStock** es una solución de software diseñada para modernizar el control de almacenes y sectores industriales (química, curtidos, logística). Elimina la fricción de los sistemas tradicionales al permitir a los operarios actualizar el stock, registrar entradas y salidas, y consultar ubicaciones **100% manos libres** mediante comandos de voz naturales.
+**VoxStock** es una solución de software B2B diseñada para modernizar el control de almacenes. Elimina la fricción de los sistemas tradicionales permitiendo a los operarios gestionar stock, registrar entradas/salidas y consultar el inventario **100% manos libres** mediante comandos de voz naturales. 
 
-A diferencia de los costosos sistemas corporativos, este proyecto es ligero, funciona en redes locales (Offline-First) y utiliza procesamiento de lenguaje natural para entender el contexto, tolerando ruido de fondo y variaciones en la dicción.
+Diseñado bajo una arquitectura **SaaS Multi-Tenant**, permite que múltiples operarios interactúen con el sistema simultáneamente manteniendo sus catálogos e historiales de forma completamente aislada y segura.
 
-## ✨ Características Principales
+##  Características Principales
 
-- **🗣️ Picking por Voz Natural:** Transcripción de audio a texto en tiempo real usando el modelo de IA `faster-whisper` ejecutado en local.
-- **🧠 Filtro de Similitud (Fuzzy Matching):** Uso de la librería `thefuzz` para asociar comandos de voz imperfectos con el catálogo real de productos, reduciendo los errores de lectura a cero.
-- **⚡ Interfaz Reactiva:** Panel de control moderno y rápido construido con React y Vite.
-- **🔒 Operativa Offline:** Base de datos SQLite integrada, garantizando que el almacén siga funcionando incluso sin conexión a internet externa.
-- **📱 Multi-dispositivo:** Accesible desde cualquier ordenador, tablet o terminal móvil con navegador y micrófono.
-
----
-
-## 🏗️ Arquitectura y Tecnologías
-
-El proyecto sigue una arquitectura Full-Stack desacoplada:
-
-* **Frontend:** React.js, Vite, HTML/CSS (Gestión de UI y captura nativa de audio mediante `MediaRecorder`).
-* **Backend:** Python (FastAPI/Flask) para orquestar la lógica del servidor y procesar los binarios de audio.
-* **Motor de IA:** `faster-whisper` (Speech-to-Text).
-* **Base de Datos:** SQLite / SQL Estándar (Almacenamiento persistente local).
+- **Picking por Voz Natural:** Procesamiento de audio en tiempo real mediante `faster-whisper` ejecutado en local.
+- **Seguridad Multi-Usuario:** Sistema de autenticación encriptada y aislamiento de base de datos a nivel de fila (Row-level Multi-tenancy). Cada operario tiene su propio entorno.
+- **Motor de Inferencia:** Análisis de lenguaje natural para categorizar acciones (suma/resta) y extraer cantidades y unidades automáticamente.
+- **Precisión Logística:** Uso de algoritmos de *Fuzzy Matching* para asociar dictados imperfectos con el catálogo real del almacén.
+- **Catálogos Dinámicos:** CRUD completo que permite a los usuarios sembrar y personalizar sus propios inventarios según su sector industrial.
+- **Arquitectura Offline-First:** Base de datos SQLite integrada, garantizando operatividad sin dependencias de APIs de IA de pago (OpenAI/Google).
+- **Interfaz Adaptativa:** UI moderna con React, Dashboards analíticos y Onboarding persistente.
 
 ---
 
@@ -58,19 +50,15 @@ cd voxstock
 
 ```bash
 cd backend
-# Crear entorno virtual (Recomendado)
 python -m venv venv
-source venv/Scripts/activate  # En Windows
-# Instalar dependencias
+source venv/bin/activate
 pip install -r requirements.txt
-# Iniciar servidor
-python app.py
+pip install "bcrypt==4.0.1"
+uvicorn main:app --port 5001 --reload
 ```
+Terminal B (Frontend):
 
-### 3. Levantar el Frontend (React)
-Abre otra terminal en la raíz del proyecto:
-
-```bash
+```Fragmento de código
 cd frontend
 npm install
 npm run dev
@@ -78,42 +66,5 @@ npm run dev
 
 El panel de control estará disponible en http://localhost:5173.
 
-## 🚀 Instalación y despliegue en GitHub Codespaces (Desde cero)
-
-Sigue estos pasos exactos para arrancar el proyecto en un Codespace nuevo, evitando errores de memoria o librerías faltantes.
-
-### 1. Levantar el Frontend (Diseño en React)
-Abre una terminal y ejecuta estos comandos en orden:
-
-```Bash
-cd frontend
-npm install
-npm run dev
-```
-(Deja esta terminal corriendo).
-
-### 2. Preparar el Backend e IA de Voz
-Abre una nueva terminal (dejando la otra activa) y ejecuta:
-
-```Bash
-cd backend
-python -m venv venv
-source venv/bin/activate
-pip install Flask Flask-Cors faster-whisper requests
-```
-
-### 3. Encender el Motor de IA
-En la terminal del backend (con el (venv) activado), arranca el servidor:
-
-```Bash
-python api_voz.py
-```
-### 4. Abrir la Aplicación
-Ve a la pestaña PUERTOS en la parte inferior de VS Code.
-
-Busca el puerto 5173 (el del frontend).
-
-Haz clic en el icono del mundo (Abrir en el navegador) para empezar a usar la interfaz y el micrófono.
-
 👥 Equipo de Desarrollo
-Este sistema ha sido diseñado y construido por:
+Proyecto de arquitectura Full-Stack.

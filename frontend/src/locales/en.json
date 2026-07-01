@@ -1,0 +1,29 @@
+{
+  "dashboard": "Dashboard",
+  "products": "Products",
+  "history": "History",
+  "settings": "Settings",
+  "voiceTerminal": "Voice Terminal",
+  "lightMode": "Light Mode",
+  "darkMode": "Dark Mode",
+
+  "managePreferences": "Manage your VoxStock preferences",
+  "appearance": "Appearance",
+  "language": "Language",
+  "currentLanguage": "Current Language",
+  "notifications": "Notifications",
+  "about": "About VoxStock",
+
+  "enabled": "Enabled",
+  "disabled": "Disabled",
+
+  "recognitionLanguage": "Recognition Language",
+  "confirmationSound": "Confirmation Sound",
+  "autoExecuteCommands": "Auto Execute Commands",
+
+  "lowStockAlerts": "Low Stock Alerts",
+  "desktopNotifications": "Desktop Notifications",
+
+  "version": "Version",
+  "voiceInventorySystem": "Voice-powered inventory management system"
+}

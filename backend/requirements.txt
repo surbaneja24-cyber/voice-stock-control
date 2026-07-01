@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+sqlalchemy
+faster-whisper
+thefuzz
+python-multipart
+passlib[bcrypt]
+email-validator
+pydantic
