@@ -11,25 +11,25 @@ export default function Register() {
   
   const navigate = useNavigate();
   const darkMode = useThemeStore((state) => state.darkMode);
-  
-  // Extraer idioma y diccionario (con fallback a objeto vacío para evitar crasheos)
   const { language } = useLanguageStore();
-  const t = translations[language]?.register || {};
+
+  // Diccionario con fallback seguro ante estructuras no definidas
+  const t = translations[language]?.register || translations["es"].register;
 
   // --- LÓGICA DEL MEDIDOR DE CONTRASEÑA ---
   const evaluatePasswordStrength = (password) => {
-    let score = 0;
-    if (!password) return { score: 0, text: language === 'es' ? "Muy débil" : "Very weak", color: "bg-slate-300 dark:bg-slate-700" };
+    if (!password) return { score: 0, text: t.strength.veryWeak, color: "bg-slate-300 dark:bg-slate-700", width: "w-0" };
 
+    let score = 0;
     if (password.length >= 6) score += 1;
     if (password.length >= 8) score += 1;
     if (/[A-Z]/.test(password)) score += 1; 
     if (/[0-9]/.test(password)) score += 1; 
     if (/[^A-Za-z0-9]/.test(password)) score += 1; 
 
-    if (score <= 2) return { score, text: language === 'es' ? "Débil" : "Weak", color: "bg-red-500", width: "w-1/3" };
-    if (score === 3 || score === 4) return { score, text: language === 'es' ? "Media" : "Medium", color: "bg-yellow-500", width: "w-2/3" };
-    return { score, text: language === 'es' ? "Segura" : "Strong", color: "bg-emerald-500", width: "w-full" };
+    if (score <= 2) return { score, text: t.strength.weak, color: "bg-red-500", width: "w-1/3" };
+    if (score === 3 || score === 4) return { score, text: t.strength.medium, color: "bg-yellow-500", width: "w-2/3" };
+    return { score, text: t.strength.strong, color: "bg-emerald-500", width: "w-full" };
   };
 
   const passStrength = evaluatePasswordStrength(formData.password);
@@ -42,24 +42,23 @@ export default function Register() {
     const emailSanitizado = formData.email.trim();
 
     if (!nombreSanitizado || !emailSanitizado || !formData.password) {
-      setError(language === 'es' ? "Por favor, completa todos los campos requeridos." : "Please fill in all required fields.");
+      setError(t.errors.required);
       return;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      setError(language === 'es' ? "Las contraseñas no coinciden." : "Passwords do not match.");
+      setError(t.errors.match);
       return;
     }
 
     if (formData.password.length < 6) {
-      setError(language === 'es' ? "La contraseña debe tener al menos 6 caracteres." : "Password must be at least 6 characters.");
+      setError(t.errors.length);
       return;
     }
 
     setLoading(true);
 
     try {
-      // Resolución dinámica de entorno hacia FastAPI
       const backendUrl = window.location.hostname === "localhost" 
         ? "http://localhost:5001/api/registro"
         : `${window.location.protocol}//${window.location.hostname.replace(window.location.port, "5001")}/api/registro`;
@@ -77,15 +76,15 @@ export default function Register() {
       if (!res.ok) {
         const data = await res.json();
         if (Array.isArray(data.detail)) {
-            throw new Error(language === 'es' ? "Error de validación en el formulario." : "Form validation error.");
+            throw new Error(t.errors.validation);
         }
-        throw new Error(data.detail || (language === 'es' ? "Error en el proceso de registro." : "Error during registration."));
+        throw new Error(data.detail || t.errors.generic);
       }
       
       navigate("/login");
     } catch (err) {
       if (err.message === "Failed to fetch") {
-        setError(language === 'es' ? "Error crítico: Servidor inalcanzable." : "Critical error: Server unreachable.");
+        setError(t.errors.unreachable);
       } else {
         setError(err.message);
       }
@@ -105,9 +104,9 @@ export default function Register() {
         }`}
       >
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-extrabold tracking-tight">{t.title || "Registrar Operario"}</h2>
+          <h2 className="text-3xl font-extrabold tracking-tight">{t.title}</h2>
           <p className={`text-sm mt-2 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-            {t.subtitle || "Crea una credencial nueva para el acceso al WMS."}
+            {t.subtitle}
           </p>
         </div>
         
@@ -119,11 +118,11 @@ export default function Register() {
         
         <div className="space-y-5">
           <div>
-            <label htmlFor="nombre" className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">{t.nameLabel || "Nombre Completo"}</label>
+            <label htmlFor="nombre" className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">{t.nameLabel}</label>
             <input
               id="nombre"
               type="text"
-              placeholder={language === 'es' ? "Ej. Juan Pérez" : "e.g. John Doe"}
+              placeholder={t.namePlaceholder}
               className={`w-full rounded-xl border p-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
                 darkMode ? 'border-slate-700 bg-slate-800 text-white placeholder-slate-500' : 'border-slate-200 bg-slate-50 text-slate-900 placeholder-slate-400'
               }`}
@@ -135,7 +134,7 @@ export default function Register() {
           </div>
 
           <div>
-            <label htmlFor="email" className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">{t.emailLabel || "Correo Corporativo"}</label>
+            <label htmlFor="email" className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">{t.emailLabel}</label>
             <input
               id="email"
               type="email"
@@ -151,11 +150,11 @@ export default function Register() {
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">{t.passLabel || "Contraseña de Acceso"}</label>
+            <label htmlFor="password" className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">{t.passLabel}</label>
             <input
               id="password"
               type="password"
-              placeholder={language === 'es' ? "Mínimo 6 caracteres" : "Minimum 6 characters"}
+              placeholder={t.passPlaceholder}
               className={`w-full rounded-xl border p-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
                 darkMode ? 'border-slate-700 bg-slate-800 text-white placeholder-slate-500' : 'border-slate-200 bg-slate-50 text-slate-900 placeholder-slate-400'
               }`}
@@ -170,11 +169,11 @@ export default function Register() {
               <div className="mt-2">
                 <div className="flex justify-between text-[10px] uppercase font-bold tracking-wider mb-1">
                   <span className={darkMode ? "text-slate-400" : "text-slate-500"}>
-                    {language === 'es' ? "Fuerza de la contraseña" : "Password Strength"}
+                    {t.strengthLabel}
                   </span>
                   <span className={`transition-colors ${
-                    passStrength.text === "Débil" || passStrength.text === "Weak" ? "text-red-500" : 
-                    passStrength.text === "Media" || passStrength.text === "Medium" ? "text-yellow-500" : "text-emerald-500"
+                    passStrength.text === t.strength.weak ? "text-red-500" : 
+                    passStrength.text === t.strength.medium ? "text-yellow-500" : "text-emerald-500"
                   }`}>
                     {passStrength.text}
                   </span>
@@ -189,11 +188,11 @@ export default function Register() {
           </div>
 
           <div>
-            <label htmlFor="confirmPassword" className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">{t.confirmLabel || "Confirmar Contraseña"}</label>
+            <label htmlFor="confirmPassword" className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">{t.confirmLabel}</label>
             <input
               id="confirmPassword"
               type="password"
-              placeholder={language === 'es' ? "Repite la contraseña" : "Repeat password"}
+              placeholder={t.confirmPlaceholder}
               className={`w-full rounded-xl border p-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
                 darkMode ? 'border-slate-700 bg-slate-800 text-white placeholder-slate-500' : 'border-slate-200 bg-slate-50 text-slate-900 placeholder-slate-400'
               }`}
@@ -220,18 +219,18 @@ export default function Register() {
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
-              {t.btnLoading || "Creando cuenta..."}
+              {t.btnLoading}
             </>
-          ) : (t.btnSubmit || "Confirmar Registro")}
+          ) : t.btnSubmit}
         </button>
         
         <p className="mt-6 text-center text-sm text-slate-400">
-          {language === 'es' ? '¿El operario ya tiene cuenta?' : 'Does the operator already have an account?'} {" "}
+          {t.footerText}{" "}
           <Link 
             to="/login" 
             className={`font-semibold text-blue-500 transition-colors ${loading ? "pointer-events-none opacity-50" : "hover:text-blue-400 hover:underline"}`}
           >
-            {language === 'es' ? 'Iniciar sesión aquí' : 'Log in here'}
+            {t.footerLink}
           </Link>
         </p>
       </form>

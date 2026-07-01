@@ -2,53 +2,29 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Check, Zap, Building2, User, Star, ArrowRight, Loader2 } from "lucide-react";
 import { useThemeStore } from "../store/themeStore";
+import { useLanguageStore } from "../store/languageStore";
+import { translations } from "../utils/translations";
 import Navbar from "../components/Navbar";
-
-// DATOS DE EMERGENCIA (Fallback): Si el backend está apagado, el cliente verá esto
-const fallbackPlans = [
-  {
-    name: "Lite",
-    price: "Gratis",
-    period: "para siempre",
-    description: "Ideal para pequeñas tiendas y pruebas de concepto.",
-    features: ["Hasta 50 productos", "Reconocimiento de voz estándar", "Soporte comunitario"],
-    buttonText: "Comenzar Gratis",
-    popular: false,
-    icon_type: "user"
-  },
-  {
-    name: "Pro",
-    price: "$49",
-    period: "/mes",
-    description: "Para almacenes en crecimiento que necesitan velocidad.",
-    features: ["Productos ilimitados", "Voz de alta precisión (Whisper)", "Soporte prioritario", "Exportación CSV"],
-    buttonText: "Prueba de 14 días",
-    popular: true,
-    icon_type: "star"
-  },
-  {
-    name: "Industrial",
-    price: "A medida",
-    period: "",
-    description: "Despliegues on-premise para máxima seguridad.",
-    features: ["Servidor local propio", "SLA 99.9%", "Integración SAP/ERP", "Modelo acústico entrenado"],
-    buttonText: "Contactar Ventas",
-    popular: false,
-    icon_type: "building"
-  }
-];
 
 export default function Pricing() {
   const { darkMode } = useThemeStore();
-  const [plans, setPlans] = useState([]);
+  const { language } = useLanguageStore();
+  
+  // Obtener traducciones correspondientes en tiempo real en cada renderizado
+  const t = translations[language]?.pricing || translations["es"].pricing;
+
+  const [backendPlans, setBackendPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isFallback, setIsFallback] = useState(false);
 
   const iconMap = {
     user: <User className="text-slate-400" size={24} />,
     star: <Star className="text-blue-500" size={24} />,
     building: <Building2 className="text-purple-500" size={24} />
   };
+
+  const iconTypes = ["user", "star", "building"];
 
   useEffect(() => {
     const backendUrl = window.location.hostname === "localhost" 
@@ -61,15 +37,26 @@ export default function Pricing() {
         return res.json();
       })
       .then((data) => {
-        setPlans(data);
+        setBackendPlans(data);
+        setIsFallback(false);
         setLoading(false);
       })
       .catch((err) => {
         console.warn("Backend inalcanzable. Usando matriz de precios de respaldo.", err);
-        setPlans(fallbackPlans);
+        setIsFallback(true);
         setLoading(false);
       });
-  }, []);
+  }, []); // El fetch solo se hace UNA VEZ al montar el componente
+
+  // Construcción dinámica de la lista de planes a mostrar
+  // Si el backend falló, mapeamos DIRECTAMENTE los datos de translations.js que cambian con "language"
+  const displayPlans = isFallback
+    ? t.plansData.map((plan, index) => ({
+        ...plan,
+        popular: index === 1,
+        icon_type: iconTypes[index]
+      }))
+    : backendPlans;
 
   return (
     <main className={`min-h-screen w-full font-sans antialiased pb-20 transition-colors duration-300 ${
@@ -83,10 +70,10 @@ export default function Pricing() {
         {/* ENCABEZADO */}
         <div className="text-center mb-16">
           <h1 className="text-4xl md:text-6xl font-black tracking-tight mb-4">
-            Planes que escalan con tu <span className="text-blue-500">Stock</span>
+            {t.title}<span className="text-blue-500">Stock</span>
           </h1>
           <p className={`text-xl max-w-2xl mx-auto ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-            Desde una pequeña tienda hasta un centro de distribución global. Controla todo con el poder de tu voz.
+            {t.subtitle}
           </p>
         </div>
 
@@ -94,14 +81,14 @@ export default function Pricing() {
         {loading && (
           <div className="flex flex-col items-center gap-4 py-20">
             <Loader2 className="animate-spin text-blue-500" size={40} />
-            <p className="text-sm opacity-70">Sincronizando tarifas con el motor central...</p>
+            <p className="text-sm opacity-70">{t.loading}</p>
           </div>
         )}
 
         {/* MANEJO DE ESTADO: ERROR DE CONEXIÓN */}
         {error && (
           <div className="p-6 rounded-2xl border border-red-500/30 bg-red-500/10 text-center max-w-md my-10">
-            <p className="text-red-500 font-bold mb-2">Error de Comunicación</p>
+            <p className="text-red-500 font-bold mb-2">{t.connError}</p>
             <p className="text-sm opacity-80">{error}</p>
           </div>
         )}
@@ -109,7 +96,7 @@ export default function Pricing() {
         {/* RENDERIZADO DINÁMICO DE PLANES */}
         {!loading && !error && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full">
-            {plans.map((plan, index) => (
+            {displayPlans.map((plan, index) => (
               <motion.div
                 key={index}
                 whileHover={{ y: -10 }}
@@ -121,7 +108,7 @@ export default function Pricing() {
               >
                 {plan.popular && (
                   <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-blue-500 text-white px-4 py-1 rounded-full text-sm font-bold flex items-center gap-1">
-                    <Zap size={14} fill="white" /> Recomendado
+                    <Zap size={14} fill="white" /> {t.recommended}
                   </div>
                 )}
 
@@ -166,7 +153,7 @@ export default function Pricing() {
         )}
 
         <p className="mt-12 text-sm text-slate-500 text-center max-w-xl">
-          ¿Necesitas algo a medida? Ofrecemos despliegues en servidores locales para empresas con requisitos de seguridad estrictos.
+          {t.customNotice}
         </p>
 
       </div>

@@ -2,66 +2,20 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, MessageCircleQuestion, Terminal, CreditCard, ShieldAlert } from "lucide-react";
 import { useThemeStore } from "../store/themeStore";
+import { useLanguageStore } from "../store/languageStore";
+import { translations } from "../utils/translations";
 import Navbar from "../components/Navbar";
-
-// ESTRUCTURA DE DATOS DESACOPLADA (Fácil de editar para el equipo de contenido)
-const faqData = [
-  {
-    category: "General",
-    icon: <MessageCircleQuestion size={20} />,
-    questions: [
-      {
-        q: "¿Qué es VoxStock y en qué fase se encuentra?",
-        a: "VoxStock es un motor de gestión de inventario por voz (WMS). Actualmente nos encontramos en fase BETA cerrada, optimizando nuestro modelo acústico para entornos industriales."
-      },
-      {
-        q: "¿Necesito hardware especial para usarlo?",
-        a: "No. VoxStock funciona en cualquier dispositivo con navegador web moderno y micrófono (smartphones, tablets industriales, o PCs). Recomendamos micrófonos con cancelación de ruido para almacenes muy ruidosos."
-      }
-    ]
-  },
-  {
-    category: "Técnico y Funcionalidad",
-    icon: <Terminal size={20} />,
-    questions: [
-      {
-        q: "¿Qué motor de IA utiliza el sistema?",
-        a: "Utilizamos una implementación optimizada de faster-whisper ejecutada en nuestro propio backend, garantizando que el procesamiento de voz sea rápido y privado."
-      },
-      {
-        q: "¿Qué pasa si el sistema no entiende mi pronunciación?",
-        a: "VoxStock incorpora algoritmos de 'Fuzzy Matching' (Coincidencia Difusa) que toleran ligeras variaciones silábicas. Sin embargo, para mayor precisión, recomendamos usar el formato: [Acción] + [Cantidad] + [Producto]."
-      },
-      {
-        q: "¿Puedo importar mi catálogo actual?",
-        a: "En la fase BETA actual, la siembra del catálogo se realiza de forma manual o mediante el registro inicial. La importación masiva por CSV estará disponible en la versión 1.0."
-      }
-    ]
-  },
-  {
-    category: "Facturación y Límites",
-    icon: <CreditCard size={20} />,
-    questions: [
-      {
-        q: "¿Qué ocurre si supero el límite de 50 productos en el plan Lite?",
-        a: "El sistema bloqueará la creación de nuevos ítems mediante un error 400. Tu inventario existente seguirá funcionando perfectamente, pero deberás actualizar al plan Pro para expandir tu catálogo."
-      },
-      {
-        q: "¿Cómo funciona el Programa Early Adopter?",
-        a: "Si eres seleccionado como empresa piloto, obtendrás acceso a las capacidades del plan Industrial de forma gratuita durante la duración del piloto, a cambio de tu retroalimentación directa con nuestros ingenieros."
-      }
-    ]
-  }
-];
 
 const AccordionItem = ({ q, a, isOpen, onClick, darkMode }) => {
   return (
     <div className={`border-b ${darkMode ? 'border-slate-800' : 'border-slate-200'} last:border-none`}>
       <button
         onClick={onClick}
-        className="w-full py-5 flex items-center justify-between text-left focus:outline-none"
+        className="w-full py-5 flex items-center justify-between text-left focus:outline-none group"
       >
-        <span className="font-semibold text-lg">{q}</span>
+        <span className={`font-semibold text-lg transition-colors duration-200 ${
+          isOpen ? 'text-blue-500' : darkMode ? 'group-hover:text-slate-300' : 'group-hover:text-slate-600'
+        }`}>{q}</span>
         <motion.div animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
           <ChevronDown className="text-blue-500" />
         </motion.div>
@@ -87,13 +41,25 @@ const AccordionItem = ({ q, a, isOpen, onClick, darkMode }) => {
 
 export default function Faq() {
   const { darkMode } = useThemeStore();
+  const { language } = useLanguageStore();
   const [openIndex, setOpenIndex] = useState(null);
+
+  // Obtener traducción activa o fallback en español
+  const t = translations[language]?.faq || translations["es"].faq;
 
   const toggleAccordion = (index) => {
     setOpenIndex(openIndex === index ? null : index);
   };
 
-  let globalQuestionIndex = 0; // Para mantener IDs únicos en el estado abierto
+  // Mapeo ordenado de iconos según la posición fija de las categorías
+  const categoryIcons = [
+    <MessageCircleQuestion size={20} key="general" />,
+    <Terminal size={20} key="technical" />,
+    <CreditCard size={20} key="billing" />
+  ];
+
+  // IMPORTANTE: El contador global se reinicia en cada ejecución del renderizado
+  let globalQuestionIndex = 0;
 
   return (
     <main className={`min-h-screen w-full font-sans antialiased pb-24 transition-colors duration-300 ${
@@ -105,39 +71,43 @@ export default function Faq() {
         
         {/* ENCABEZADO */}
         <motion.div 
-          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, y: 20 }} 
+          animate={{ opacity: 1, y: 0 }}
           className="text-center mb-4"
         >
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 text-amber-500 font-bold text-sm border border-amber-500/20 mb-6">
-            <ShieldAlert size={16} /> Centro de Ayuda BETA
+            <ShieldAlert size={16} /> {t.badge}
           </div>
           <h1 className="text-4xl md:text-5xl font-black tracking-tight mb-4">
-            Preguntas Frecuentes
+            {t.title}
           </h1>
           <p className={`text-lg md:text-xl ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-            Resolvemos tus dudas sobre el motor de VoxStock, integraciones y límites de uso.
+            {t.subtitle}
           </p>
         </motion.div>
 
         {/* CONTENEDOR DE CATEGORÍAS */}
         <motion.div 
-          initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+          initial={{ opacity: 0, y: 30 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          transition={{ delay: 0.1 }}
           className="flex flex-col gap-10"
         >
-          {faqData.map((category, catIndex) => (
+          {t.categories.map((category, catIndex) => (
             <div key={catIndex} className="flex flex-col gap-4">
               <h2 className="text-2xl font-bold flex items-center gap-3 text-blue-500 border-b pb-2 border-blue-500/20">
-                {category.icon}
-                {category.category}
+                {categoryIcons[catIndex] || <MessageCircleQuestion size={20} />}
+                {category.title}
               </h2>
-              <div className={`rounded-2xl border px-6 ${
+              
+              <div className={`rounded-2xl border px-6 transition-colors duration-300 ${
                 darkMode ? 'bg-slate-800/30 border-slate-700' : 'bg-white border-slate-200 shadow-sm'
               }`}>
-                {category.questions.map((item) => {
+                {category.questions.map((item, itemIdx) => {
                   const currentIndex = globalQuestionIndex++;
                   return (
                     <AccordionItem
-                      key={currentIndex}
+                      key={`${catIndex}-${itemIdx}`}
                       q={item.q}
                       a={item.a}
                       isOpen={openIndex === currentIndex}
