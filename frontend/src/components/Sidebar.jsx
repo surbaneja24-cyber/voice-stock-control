@@ -1,199 +1,156 @@
-import {
-  FiGrid,
-  FiMic,
-  FiClock,
-  FiSettings,
-  FiMenu,
-  FiChevronLeft,
-} from "react-icons/fi";
-import { NavLink, Link } from "react-router-dom";
+import { LayoutDashboard, Mic, Clock, Settings, Menu, ChevronLeft, X } from "lucide-react";
+import { Link, useLocation } from "react-router-dom"; 
 import { useThemeStore } from "../store/themeStore";
-import { useAuthStore } from "../store/authStore"; // <-- NUEVO: Importación del cerebro global
-import { useTranslation } from "react-i18next";
+import { useAuthStore } from "../store/authStore";
+import { useLanguageStore } from "../store/languageStore"; 
+import { translations } from "../utils/translations";
 
-const Sidebar = ({ isOpen, setIsOpen }) => {
-  const { darkMode } = useThemeStore();
-  const { t } = useTranslation();
+const Sidebar = ({ isOpen = false, setIsOpen = () => {} }) => {
+  const location = useLocation();
+  const rutaActual = location.pathname;
+
+  const darkMode = useThemeStore((state) => state?.darkMode || false);
+  const usuario = useAuthStore((state) => state?.usuario || null); 
+  const language = useLanguageStore((state) => state?.language || "es");
   
-  // Suscripción reactiva: El Sidebar se repintará instantáneamente si esto cambia
-  const usuario = useAuthStore((state) => state.usuario); 
+  const t = translations?.[language]?.sidebar || {};
 
-  const baseLinkClass = `flex items-center ${
-    isOpen ? "gap-3 px-4" : "justify-center px-0 w-12"
-  } py-3 rounded-lg transition-all duration-300`;
+  // Clases compartidas
+  const baseLinkClass = `flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300`;
+  const inactiveClass = darkMode ? "text-slate-400 hover:bg-slate-800 hover:text-slate-100" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900";
+  const activeClass = darkMode ? "bg-blue-900/50 border border-blue-800 text-blue-400 font-semibold" : "bg-blue-50 border border-blue-100 text-blue-700 font-semibold";
 
-  const inactiveClass = darkMode
-    ? "text-slate-400 hover:bg-slate-800 hover:text-slate-100"
-    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900";
-
-  const activeClass = darkMode
-    ? "bg-blue-900/50 border border-blue-800 text-blue-400 font-semibold"
-    : "bg-blue-50 border border-blue-100 text-blue-700 font-semibold";
-
-  // Lógica blindada para extraer iniciales sin que el navegador colapse
   const getIniciales = () => {
-    if (!usuario?.nombre) return "OP";
-    return usuario.nombre
-      .trim()
-      .split(" ")
-      .filter(Boolean) // Evita crasheos por múltiples espacios seguidos
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .substring(0, 2);
+    try {
+      if (!usuario?.nombre) return "OP";
+      return String(usuario.nombre).trim().split(" ").filter(Boolean).map((n) => n[0]).join("").toUpperCase().substring(0, 2);
+    } catch (error) {
+      return "OP";
+    }
   };
 
+  const handleMobileNav = () => setIsOpen(false);
+
   return (
-    <aside
-      className={`fixed left-0 top-0 h-screen flex flex-col justify-between transition-all duration-300 z-[100] shadow-[4px_0_24px_rgba(0,0,0,0.05)] ${
-        isOpen ? "w-64" : "w-20 -translate-x-full md:translate-x-0"
-      } ${
-        darkMode
-          ? "bg-slate-950 border-r border-slate-800"
-          : "bg-white border-r border-slate-200"
-      }`}
-    >
-      <div>
-        <div
-          className={`h-20 flex items-center transition-all duration-300 ${
-            isOpen ? "justify-between px-6" : "justify-center"
-          } ${
-            darkMode
-              ? "border-b border-slate-800"
-              : "border-b border-slate-100"
-          }`}
-        >
-          {isOpen && (
-            <span
-              className={`font-extrabold tracking-wider text-2xl whitespace-nowrap overflow-hidden ${
-                darkMode ? "text-white" : "text-slate-900"
-              }`}
-            >
-              VOX<span className="text-blue-500">STOCK</span>
-            </span>
-          )}
-
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className={`p-2 rounded-lg transition-colors cursor-pointer ${
-              darkMode
-                ? "text-slate-400 hover:text-blue-400 hover:bg-slate-800"
-                : "text-slate-500 hover:text-blue-600 hover:bg-blue-50"
-            }`}
-          >
-            {isOpen ? (
-              <FiChevronLeft size={24} />
-            ) : (
-              <FiMenu size={24} />
-            )}
-          </button>
-        </div>
-
-        <nav className="p-4 space-y-2 mt-2 flex flex-col items-center md:items-stretch">
-          <NavLink
-            to="/dashboard"
-            className={({ isActive }) =>
-              `${baseLinkClass} ${isActive ? activeClass : inactiveClass}`
-            }
-          >
-            <FiGrid size={22} className="shrink-0" />
-            {isOpen && (
-              <span className="tracking-wide whitespace-nowrap">
-                {t("dashboard")}
-              </span>
-            )}
-          </NavLink>
-
-          <NavLink
-            to="/terminal"
-            className={({ isActive }) =>
-              `${baseLinkClass} ${isActive ? activeClass : inactiveClass}`
-            }
-          >
-            <FiMic size={22} className="shrink-0" />
-            {isOpen && (
-              <span className="tracking-wide whitespace-nowrap">
-                {t("voiceTerminal")}
-              </span>
-            )}
-          </NavLink>
-
-          <NavLink
-            to="/history"
-            className={({ isActive }) =>
-              `${baseLinkClass} ${isActive ? activeClass : inactiveClass}`
-            }
-          >
-            <FiClock size={22} className="shrink-0" />
-            {isOpen && (
-              <span className="tracking-wide whitespace-nowrap">
-                {t("history")}
-              </span>
-            )}
-          </NavLink>
-
-          <Link
-            to="/settings"
-            className={`${baseLinkClass} ${inactiveClass}`}
-          >
-            <FiSettings size={22} className="shrink-0" />
-            {isOpen && (
-              <span className="tracking-wide whitespace-nowrap">
-                {t("settings")}
-              </span>
-            )}
-          </Link>
-        </nav>
+    <>
+      {/* =========================================
+          VERSIÓN MÓVIL: TOP BAR + DRAWER DESLIZABLE
+          ========================================= */}
+      
+      {/* 1. Barra Superior Fija (Solo Móvil) */}
+      <div className={`md:hidden fixed top-0 left-0 w-full h-16 z-[90] flex items-center justify-between px-4 border-b transition-colors duration-300 ${darkMode ? "bg-slate-950 border-slate-800" : "bg-white border-slate-200"}`}>
+        <button onClick={() => setIsOpen(true)} className={`p-2 -ml-2 rounded-lg ${darkMode ? "text-slate-300 hover:bg-slate-800" : "text-slate-600 hover:bg-slate-100"}`}>
+          <Menu size={26} />
+        </button>
+        <span className={`font-extrabold tracking-wider text-xl ${darkMode ? "text-white" : "text-slate-900"}`}>
+          VOX<span className="text-blue-500">STOCK</span>
+        </span>
+        <div className="w-8" /> 
       </div>
 
-      <div
-        className={`p-4 border-t mb-2 flex justify-center md:justify-start ${
-          darkMode ? "border-slate-800" : "border-slate-100"
-        }`}
-      >
-        <Link
-          to="/profile"
-          className={`flex items-center ${
-            isOpen ? "gap-3 px-4 w-full" : "justify-center p-0 w-12"
-          } py-3 border rounded-xl cursor-pointer transition-all overflow-hidden ${
-            darkMode
-              ? "bg-slate-900 border-slate-700 hover:bg-slate-800"
-              : "bg-slate-50 border-slate-200 hover:bg-slate-100"
-          }`}
-        >
-          {/* Contenedor del Avatar Mejorado */}
-          <div className="w-10 h-10 shrink-0 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold shadow-md overflow-hidden">
-            {usuario?.avatarUrl ? (
-              <img 
-                src={usuario.avatarUrl} 
-                alt="Avatar Operario" 
-                className="w-full h-full object-cover" 
-              />
-            ) : (
-              getIniciales()
-            )}
+      {/* 2. Cortina Oscura y Menú Deslizable (Drawer) - ¡CORREGIDO A Z-[9999]! */}
+      <div className={`md:hidden fixed inset-0 z-[9999] transition-opacity duration-300 ${isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}>
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsOpen(false)} />
+        
+        <aside className={`absolute top-0 left-0 w-[80%] max-w-[320px] h-full flex flex-col justify-between shadow-2xl transition-transform duration-300 ${isOpen ? "translate-x-0" : "-translate-x-full"} ${darkMode ? "bg-slate-950 border-r border-slate-800" : "bg-white border-r border-slate-200"}`}>
+          <div>
+            <div className={`h-16 flex items-center justify-between px-6 border-b ${darkMode ? "border-slate-800" : "border-slate-100"}`}>
+              <span className={`font-extrabold tracking-wider text-2xl ${darkMode ? "text-white" : "text-slate-900"}`}>
+                VOX<span className="text-blue-500">STOCK</span>
+              </span>
+              <button onClick={() => setIsOpen(false)} className={`p-2 rounded-lg ${darkMode ? "text-slate-400 hover:bg-slate-800" : "text-slate-500 hover:bg-slate-100"}`}>
+                <X size={24} />
+              </button>
+            </div>
+
+            <nav className="p-4 space-y-2 mt-2 flex flex-col">
+              <Link to="/dashboard" onClick={handleMobileNav} className={`${baseLinkClass} ${rutaActual === "/dashboard" ? activeClass : inactiveClass}`}>
+                <LayoutDashboard size={24} className="shrink-0" />
+                <span className="tracking-wide text-lg">{t.dashboard || "Panel de Control"}</span>
+              </Link>
+              <Link to="/terminal" onClick={handleMobileNav} className={`${baseLinkClass} ${rutaActual === "/terminal" ? activeClass : inactiveClass}`}>
+                <Mic size={24} className="shrink-0" />
+                <span className="tracking-wide text-lg">{t.voiceTerminal || "Terminal de Voz"}</span>
+              </Link>
+              <Link to="/history" onClick={handleMobileNav} className={`${baseLinkClass} ${rutaActual === "/history" ? activeClass : inactiveClass}`}>
+                <Clock size={24} className="shrink-0" />
+                <span className="tracking-wide text-lg">{t.history || "Historial"}</span>
+              </Link>
+              <Link to="/settings" onClick={handleMobileNav} className={`${baseLinkClass} ${rutaActual === "/settings" ? activeClass : inactiveClass}`}>
+                <Settings size={24} className="shrink-0" />
+                <span className="tracking-wide text-lg">{t.settings || "Ajustes"}</span>
+              </Link>
+            </nav>
           </div>
 
-          {isOpen && (
-            <div className="flex flex-col min-w-0">
-              <span
-                className={`text-sm font-bold leading-tight truncate ${
-                  darkMode ? "text-white" : "text-slate-900"
-                }`}
-              >
-                {/* Lógica dinámica de identidad */}
-                {usuario?.nombre || "Operario Desconocido"}
-              </span>
-
-              <span className="text-[11px] text-slate-500 font-medium tracking-wide uppercase mt-0.5 truncate">
-                {/* Asigna el rol real del backend, o un default seguro */}
-                {usuario?.rol || "Operaciones"}
-              </span>
-            </div>
-          )}
-        </Link>
+          <div className={`p-4 border-t ${darkMode ? "border-slate-800" : "border-slate-100"}`}>
+            <Link to="/profile" onClick={handleMobileNav} className={`flex items-center gap-3 px-4 py-3 border rounded-xl transition-all ${darkMode ? "bg-slate-900 border-slate-700 hover:bg-slate-800" : "bg-slate-50 border-slate-200 hover:bg-slate-100"}`}>
+              <div className="w-12 h-12 shrink-0 rounded-full bg-blue-600 flex items-center justify-center text-white text-lg font-bold shadow-md overflow-hidden">
+                {usuario?.avatarUrl ? <img src={usuario.avatarUrl} alt="Avatar Operario" className="w-full h-full object-cover" /> : getIniciales()}
+              </div>
+              <div className="flex flex-col min-w-0">
+                <span className={`font-bold leading-tight truncate ${darkMode ? "text-white" : "text-slate-900"}`}>{usuario?.nombre || "Operario"}</span>
+                <span className="text-xs text-slate-500 font-medium tracking-wide uppercase mt-0.5 truncate">{usuario?.rol || "Operaciones"}</span>
+              </div>
+            </Link>
+          </div>
+        </aside>
       </div>
-    </aside>
+
+      {/* =========================================
+          VERSIÓN ESCRITORIO: SIDEBAR RETRÁCTIL (También elevado a Z-[9999] por prevención)
+          ========================================= */}
+      <aside className={`hidden md:flex fixed left-0 top-0 h-screen flex-col justify-between transition-all duration-300 z-[9999] shadow-[4px_0_24px_rgba(0,0,0,0.05)] ${isOpen ? "w-64" : "w-20"} ${darkMode ? "bg-slate-950 border-r border-slate-800" : "bg-white border-r border-slate-200"}`}>
+        <div>
+          <div className={`h-20 flex items-center transition-all duration-300 ${isOpen ? "justify-between px-6" : "justify-center"} ${darkMode ? "border-b border-slate-800" : "border-b border-slate-100"}`}>
+            {isOpen && (
+              <span className={`font-extrabold tracking-wider text-2xl whitespace-nowrap overflow-hidden ${darkMode ? "text-white" : "text-slate-900"}`}>
+                VOX<span className="text-blue-500">STOCK</span>
+              </span>
+            )}
+            <button onClick={() => setIsOpen(!isOpen)} className={`p-2 rounded-lg transition-colors cursor-pointer ${darkMode ? "text-slate-400 hover:text-blue-400 hover:bg-slate-800" : "text-slate-500 hover:text-blue-600 hover:bg-blue-50"}`}>
+              {isOpen ? <ChevronLeft size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
+
+          <nav className="p-4 space-y-2 mt-2 flex flex-col items-stretch">
+            <Link to="/dashboard" className={`flex items-center ${isOpen ? "gap-3 px-4" : "justify-center px-0 w-12"} py-3 rounded-lg transition-all duration-300 ${rutaActual === "/dashboard" ? activeClass : inactiveClass}`}>
+              <LayoutDashboard size={22} className="shrink-0" />
+              {isOpen && <span className="tracking-wide whitespace-nowrap">{t.dashboard || "Panel"}</span>}
+            </Link>
+
+            <Link to="/terminal" className={`flex items-center ${isOpen ? "gap-3 px-4" : "justify-center px-0 w-12"} py-3 rounded-lg transition-all duration-300 ${rutaActual === "/terminal" ? activeClass : inactiveClass}`}>
+              <Mic size={22} className="shrink-0" />
+              {isOpen && <span className="tracking-wide whitespace-nowrap">{t.voiceTerminal || "Terminal Voz"}</span>}
+            </Link>
+
+            <Link to="/history" className={`flex items-center ${isOpen ? "gap-3 px-4" : "justify-center px-0 w-12"} py-3 rounded-lg transition-all duration-300 ${rutaActual === "/history" ? activeClass : inactiveClass}`}>
+              <Clock size={22} className="shrink-0" />
+              {isOpen && <span className="tracking-wide whitespace-nowrap">{t.history || "Historial"}</span>}
+            </Link>
+
+            <Link to="/settings" className={`flex items-center ${isOpen ? "gap-3 px-4" : "justify-center px-0 w-12"} py-3 rounded-lg transition-all duration-300 ${rutaActual === "/settings" ? activeClass : inactiveClass}`}>
+              <Settings size={22} className="shrink-0" />
+              {isOpen && <span className="tracking-wide whitespace-nowrap">{t.settings || "Ajustes"}</span>}
+            </Link>
+          </nav>
+        </div>
+
+        <div className={`p-4 border-t mb-2 flex justify-start ${darkMode ? "border-slate-800" : "border-slate-100"}`}>
+          <Link to="/profile" className={`flex items-center ${isOpen ? "gap-3 px-4 w-full" : "justify-center p-0 w-12"} py-3 border rounded-xl cursor-pointer transition-all overflow-hidden ${darkMode ? "bg-slate-900 border-slate-700 hover:bg-slate-800" : "bg-slate-50 border-slate-200 hover:bg-slate-100"}`}>
+            <div className="w-10 h-10 shrink-0 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold shadow-md overflow-hidden">
+              {usuario?.avatarUrl ? <img src={usuario.avatarUrl} alt="Avatar Operario" className="w-full h-full object-cover" /> : getIniciales()}
+            </div>
+            {isOpen && (
+              <div className="flex flex-col min-w-0">
+                <span className={`text-sm font-bold leading-tight truncate ${darkMode ? "text-white" : "text-slate-900"}`}>{usuario?.nombre || "Operario"}</span>
+                <span className="text-[11px] text-slate-500 font-medium tracking-wide uppercase mt-0.5 truncate">{usuario?.rol || "Operaciones"}</span>
+              </div>
+            )}
+          </Link>
+        </div>
+      </aside>
+    </>
   );
 };
 

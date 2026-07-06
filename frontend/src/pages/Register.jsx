@@ -8,24 +8,22 @@ export default function Register() {
   const [formData, setFormData] = useState({ nombre: "", email: "", password: "", confirmPassword: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  
+
   const navigate = useNavigate();
   const darkMode = useThemeStore((state) => state.darkMode);
   const { language } = useLanguageStore();
 
-  // Diccionario con fallback seguro ante estructuras no definidas
   const t = translations[language]?.register || translations["es"].register;
 
-  // --- LÓGICA DEL MEDIDOR DE CONTRASEÑA ---
   const evaluatePasswordStrength = (password) => {
     if (!password) return { score: 0, text: t.strength.veryWeak, color: "bg-slate-300 dark:bg-slate-700", width: "w-0" };
 
     let score = 0;
     if (password.length >= 6) score += 1;
     if (password.length >= 8) score += 1;
-    if (/[A-Z]/.test(password)) score += 1; 
-    if (/[0-9]/.test(password)) score += 1; 
-    if (/[^A-Za-z0-9]/.test(password)) score += 1; 
+    if (/[A-Z]/.test(password)) score += 1;
+    if (/[0-9]/.test(password)) score += 1;
+    if (/[^A-Za-z0-9]/.test(password)) score += 1;
 
     if (score <= 2) return { score, text: t.strength.weak, color: "bg-red-500", width: "w-1/3" };
     if (score === 3 || score === 4) return { score, text: t.strength.medium, color: "bg-yellow-500", width: "w-2/3" };
@@ -59,9 +57,13 @@ export default function Register() {
     setLoading(true);
 
     try {
-      const backendUrl = window.location.hostname === "localhost" 
-        ? "http://localhost:5001/api/registro"
-        : `${window.location.protocol}//${window.location.hostname.replace(window.location.port, "5001")}/api/registro`;
+      // Arquitectura profesional: Primero busca variable de entorno, luego hace fallback al hack de desarrollo
+      const baseApiUrl = import.meta.env.VITE_BACKEND_URL 
+        || (window.location.hostname === "localhost" 
+            ? "http://localhost:5001" 
+            : `${window.location.protocol}//${window.location.hostname.replace("-5173", "-5001")}`);
+      
+      const backendUrl = `${baseApiUrl}/api/registro`;
 
       const res = await fetch(backendUrl, {
         method: "POST",
@@ -75,12 +77,17 @@ export default function Register() {
 
       if (!res.ok) {
         const data = await res.json();
+        
+        // Extracción Quirúrgica del error 422 de Pydantic
         if (Array.isArray(data.detail)) {
-            throw new Error(t.errors.validation);
+          const campoFallido = data.detail[0].loc[1]; // Extrae si fue 'email', 'nombre', etc.
+          const mensajeTecnico = data.detail[0].msg;
+          throw new Error(`Error en '${campoFallido}': ${mensajeTecnico}`);
         }
+        
         throw new Error(data.detail || t.errors.generic);
       }
-      
+
       navigate("/login");
     } catch (err) {
       if (err.message === "Failed to fetch") {
@@ -89,19 +96,15 @@ export default function Register() {
         setError(err.message);
       }
     } finally {
-      setLoading(false); 
+      setLoading(false);
     }
   };
 
   return (
-    <div className={`flex min-h-screen items-center justify-center p-4 py-12 transition-colors duration-300 ${
-      darkMode ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900'
-    }`}>
-      <form 
-        onSubmit={handleSubmit} 
-        className={`w-full max-w-md rounded-2xl border p-8 shadow-2xl transition-all duration-300 ${
-          darkMode ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white'
-        }`}
+    <div className={`flex min-h-screen items-center justify-center p-4 py-12 transition-colors duration-300 ${darkMode ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900'}`}>
+      <form
+        onSubmit={handleSubmit}
+        className={`w-full max-w-md rounded-2xl border p-8 shadow-2xl transition-all duration-300 ${darkMode ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white'}`}
       >
         <div className="text-center mb-8">
           <h2 className="text-3xl font-extrabold tracking-tight">{t.title}</h2>
@@ -109,13 +112,13 @@ export default function Register() {
             {t.subtitle}
           </p>
         </div>
-        
+
         {error && (
           <div className="mb-6 rounded-xl bg-red-500/10 border border-red-500/20 p-3 text-red-400 text-sm font-medium animate-pulse text-center">
             ⚠️ {error}
           </div>
         )}
-        
+
         <div className="space-y-5">
           <div>
             <label htmlFor="nombre" className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">{t.nameLabel}</label>
@@ -123,9 +126,7 @@ export default function Register() {
               id="nombre"
               type="text"
               placeholder={t.namePlaceholder}
-              className={`w-full rounded-xl border p-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
-                darkMode ? 'border-slate-700 bg-slate-800 text-white placeholder-slate-500' : 'border-slate-200 bg-slate-50 text-slate-900 placeholder-slate-400'
-              }`}
+              className={`w-full rounded-xl border p-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${darkMode ? 'border-slate-700 bg-slate-800 text-white placeholder-slate-500' : 'border-slate-200 bg-slate-50 text-slate-900 placeholder-slate-400'}`}
               value={formData.nombre}
               onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
               required
@@ -139,9 +140,7 @@ export default function Register() {
               id="email"
               type="email"
               placeholder="operario@voxstock.com"
-              className={`w-full rounded-xl border p-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
-                darkMode ? 'border-slate-700 bg-slate-800 text-white placeholder-slate-500' : 'border-slate-200 bg-slate-50 text-slate-900 placeholder-slate-400'
-              }`}
+              className={`w-full rounded-xl border p-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${darkMode ? 'border-slate-700 bg-slate-800 text-white placeholder-slate-500' : 'border-slate-200 bg-slate-50 text-slate-900 placeholder-slate-400'}`}
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               required
@@ -155,33 +154,25 @@ export default function Register() {
               id="password"
               type="password"
               placeholder={t.passPlaceholder}
-              className={`w-full rounded-xl border p-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
-                darkMode ? 'border-slate-700 bg-slate-800 text-white placeholder-slate-500' : 'border-slate-200 bg-slate-50 text-slate-900 placeholder-slate-400'
-              }`}
+              className={`w-full rounded-xl border p-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${darkMode ? 'border-slate-700 bg-slate-800 text-white placeholder-slate-500' : 'border-slate-200 bg-slate-50 text-slate-900 placeholder-slate-400'}`}
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               required
               disabled={loading}
             />
-            
-            {/* MEDIDOR DE SEGURIDAD VISUAL */}
+
             {formData.password.length > 0 && (
               <div className="mt-2">
                 <div className="flex justify-between text-[10px] uppercase font-bold tracking-wider mb-1">
                   <span className={darkMode ? "text-slate-400" : "text-slate-500"}>
                     {t.strengthLabel}
                   </span>
-                  <span className={`transition-colors ${
-                    passStrength.text === t.strength.weak ? "text-red-500" : 
-                    passStrength.text === t.strength.medium ? "text-yellow-500" : "text-emerald-500"
-                  }`}>
+                  <span className={`transition-colors ${passStrength.text === t.strength.weak ? "text-red-500" : passStrength.text === t.strength.medium ? "text-yellow-500" : "text-emerald-500"}`}>
                     {passStrength.text}
                   </span>
                 </div>
                 <div className={`h-1.5 w-full rounded-full overflow-hidden ${darkMode ? 'bg-slate-700' : 'bg-slate-200'}`}>
-                  <div 
-                    className={`h-full rounded-full transition-all duration-300 ease-out ${passStrength.color} ${passStrength.width}`}
-                  ></div>
+                  <div className={`h-full rounded-full transition-all duration-300 ease-out ${passStrength.color} ${passStrength.width}`}></div>
                 </div>
               </div>
             )}
@@ -193,9 +184,7 @@ export default function Register() {
               id="confirmPassword"
               type="password"
               placeholder={t.confirmPlaceholder}
-              className={`w-full rounded-xl border p-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
-                darkMode ? 'border-slate-700 bg-slate-800 text-white placeholder-slate-500' : 'border-slate-200 bg-slate-50 text-slate-900 placeholder-slate-400'
-              }`}
+              className={`w-full rounded-xl border p-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${darkMode ? 'border-slate-700 bg-slate-800 text-white placeholder-slate-500' : 'border-slate-200 bg-slate-50 text-slate-900 placeholder-slate-400'}`}
               value={formData.confirmPassword}
               onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
               required
@@ -203,15 +192,11 @@ export default function Register() {
             />
           </div>
         </div>
-        
-        <button 
-          type="submit" 
+
+        <button
+          type="submit"
           disabled={loading}
-          className={`w-full mt-8 rounded-xl p-3.5 font-bold tracking-wide shadow-lg transition-all text-white flex items-center justify-center ${
-            loading 
-              ? 'bg-blue-800/50 cursor-not-allowed opacity-70' 
-              : 'bg-blue-600 hover:bg-blue-500 hover:shadow-blue-600/20 active:scale-[0.98]'
-          }`}
+          className={`w-full mt-8 rounded-xl p-3.5 font-bold tracking-wide shadow-lg transition-all text-white flex items-center justify-center ${loading ? 'bg-blue-800/50 cursor-not-allowed opacity-70' : 'bg-blue-600 hover:bg-blue-500 hover:shadow-blue-600/20 active:scale-[0.98]'}`}
         >
           {loading ? (
             <>
@@ -223,11 +208,11 @@ export default function Register() {
             </>
           ) : t.btnSubmit}
         </button>
-        
+
         <p className="mt-6 text-center text-sm text-slate-400">
           {t.footerText}{" "}
-          <Link 
-            to="/login" 
+          <Link
+            to="/login"
             className={`font-semibold text-blue-500 transition-colors ${loading ? "pointer-events-none opacity-50" : "hover:text-blue-400 hover:underline"}`}
           >
             {t.footerLink}

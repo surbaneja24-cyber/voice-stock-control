@@ -1,21 +1,24 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Mic, X, BookOpen, LogOut, Trash2, Plus } from "lucide-react"; 
+import { Mic, X, BookOpen, LogOut, Trash2, Plus, Info } from "lucide-react"; 
 import { useNavigate } from "react-router-dom";
 import { useHistoryStore } from "../store/historyStore";
 import { useThemeStore } from "../store/themeStore";
 import { useAuthStore } from "../store/authStore"; 
-import Dock from "../components/Dock";
 
 export default function Terminal() {
   const navigate = useNavigate();
   
-  // Estados Globales
   const addMovimiento = useHistoryStore((state) => state.addMovimiento);
   const darkMode = useThemeStore((state) => state.darkMode);
   const usuario = useAuthStore((state) => state.usuario); 
   const logoutAction = useAuthStore((state) => state.logout); 
 
-  // --- LÓGICA DE ONBOARDING PERSISTENTE ---
+  const token = localStorage.getItem("token");
+  const baseApiUrl = import.meta.env.VITE_BACKEND_URL 
+    || (window.location.hostname === "localhost" 
+        ? "http://localhost:5001" 
+        : `${window.location.protocol}//${window.location.hostname.replace("-5173", "-5001")}`);
+
   const getInitialSector = () => localStorage.getItem(`voxstock_sector_${usuario?.id}`) || "universal";
   const getInitialOnboarding = () => !localStorage.getItem(`voxstock_onboarding_${usuario?.id}`);
 
@@ -24,9 +27,9 @@ export default function Terminal() {
   
   const [grabando, setGrabando] = useState(false);
   const [mostrarModalCatalogo, setMostrarModalCatalogo] = useState(false);
+  const [mostrarModalAyuda, setMostrarModalAyuda] = useState(false); 
   const [listaProductos, setListaProductos] = useState([]);
   
-  // Estados para el CRUD del catálogo
   const [nuevoItemNombre, setNuevoItemNombre] = useState("");
   const [nuevoItemStock, setNuevoItemStock] = useState("");
 
@@ -53,11 +56,27 @@ export default function Terminal() {
     { id: "universal", nombre: "Catalogo Completo", icono: "[UN]" }
   ];
 
+  useEffect(() => {
+    if (!usuario || !token) {
+      navigate("/login");
+    }
+  }, [usuario, token, navigate]);
+
   const fetchCatalogo = useCallback(async () => {
-    if (!usuario?.id) return;
+    if (!usuario?.id || !token) return;
     try {
-      // OBLIGATORIO: Pasamos el usuario_id al backend
-      const res = await fetch(`/api/catalogo?usuario_id=${usuario.id}&sector=${sectorActivo}`);
+      const res = await fetch(`${baseApiUrl}/api/catalogo?sector=${sectorActivo}`, {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      });
+
+      if (res.status === 401) {
+        ejecutarCerrarSesion();
+        return;
+      }
+
       if (res.ok) {
         const data = await res.json();
         setListaProductos(data);
@@ -65,7 +84,7 @@ export default function Terminal() {
     } catch (error) {
       console.error("[ERROR] No se pudo cargar el catalogo:", error);
     }
-  }, [sectorActivo, usuario?.id]);
+  }, [sectorActivo, usuario?.id, token, baseApiUrl]);
 
   useEffect(() => {
     if (!mostrarModalSectores) {
@@ -73,28 +92,30 @@ export default function Terminal() {
     }
   }, [fetchCatalogo, mostrarModalSectores]);
 
-  // --- GESTIÓN DE CATÁLOGO PERSONALIZADO ---
-  const handleAgregarProducto = async (e) => {
+  const handleApproveProducto = async (e) => {
     e.preventDefault();
     if (!nuevoItemNombre.trim()) return;
 
     const payload = {
       nombre: nuevoItemNombre,
       stock: parseInt(nuevoItemStock) || 0,
-      sector: sectorActivo,
-      usuario_id: usuario.id
+      sector: sectorActivo
     };
 
     try {
-      const res = await fetch('/api/catalogo/item', {
+      const res = await fetch(`${baseApiUrl}/api/catalogo/item`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` 
+        },
         body: JSON.stringify(payload)
       });
+
       if (res.ok) {
         setNuevoItemNombre("");
         setNuevoItemStock("");
-        fetchCatalogo(); // Recargamos la lista
+        fetchCatalogo(); 
       } else {
         const err = await res.json();
         alert(err.detail);
@@ -107,8 +128,11 @@ export default function Terminal() {
   const handleEliminarProducto = async (productoId) => {
     if (!confirm("¿Estás seguro de eliminar este artículo de tu inventario?")) return;
     try {
-      const res = await fetch(`/api/catalogo/item/${productoId}?usuario_id=${usuario.id}`, {
-        method: 'DELETE'
+      const res = await fetch(`${baseApiUrl}/api/catalogo/item/${productoId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
       if (res.ok) fetchCatalogo();
     } catch (error) {
@@ -119,12 +143,10 @@ export default function Terminal() {
   const handleSelectSector = (sectorId) => {
     setSectorActivo(sectorId);
     setMostrarModalSectores(false);
-    // Persistencia: El usuario no volverá a ver esta pantalla al recargar
     localStorage.setItem(`voxstock_sector_${usuario?.id}`, sectorId);
     localStorage.setItem(`voxstock_onboarding_${usuario?.id}`, "done");
   };
 
-  // --- LÓGICA DE VOZ ---
   const iniciarGrabacion = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -143,11 +165,16 @@ export default function Terminal() {
         const formData = new FormData();
         formData.append("audio", audioBlob, "orden_operario.webm");
         formData.append("sector", sectorActivo); 
-        formData.append("usuario_id", usuario?.id); // <-- VITAL: Candado de seguridad
-        formData.append("usuario_nombre", usuario?.nombre || "Operario"); 
 
         try {
-          const respuesta = await fetch("/api/transcribir", { method: "POST", body: formData });
+          const respuesta = await fetch(`${baseApiUrl}/api/transcribir`, { 
+            method: "POST", 
+            headers: {
+              'Authorization': `Bearer ${token}`
+            },
+            body: formData 
+          });
+          
           const datos = await respuesta.json();
 
           if (respuesta.ok) {
@@ -159,8 +186,8 @@ export default function Terminal() {
 
             if (datos.estado === "completado") {
               addMovimiento({
-                dateTime: new Date().toLocaleString(),
-                user: usuario?.nombre || "Operario Anonimo", 
+                dateTime: new Date().toISOString(),
+                user: usuario?.nombre || "Operario Anónimo", 
                 action: datos.accion,
                 product: datos.producto,
                 quantity: datos.cantidad,
@@ -199,7 +226,8 @@ export default function Terminal() {
 
   const ejecutarCerrarSesion = () => {
     logoutAction();
-    navigate('/login');
+    localStorage.removeItem("token"); 
+    navigate('/');
   };
 
   const sectorActual = sectores.find(s => s.id === sectorActivo);
@@ -207,28 +235,28 @@ export default function Terminal() {
   const dockItems = [
     { 
       label: 'Ver Catalogo', 
-      icon: <BookOpen size={22} />, 
+      icon: <BookOpen size={20} />, 
       onClick: () => setMostrarModalCatalogo(true),
       colorClass: darkMode ? 'text-emerald-400 border-emerald-900/50 hover:bg-emerald-900/30 bg-emerald-900/10' : 'text-emerald-600 border-emerald-200 hover:bg-emerald-50 bg-emerald-50/50'
     },
     { 
       label: `Sector: ${sectorActual?.nombre}`, 
-      icon: <span className="text-xl leading-none font-mono font-bold">{sectorActual?.icono}</span>, 
-      onClick: () => setMostrarModalSectores(true), // Permite reabrirlo manualmente
+      icon: <span className="text-lg leading-none font-mono font-bold">{sectorActual?.icono}</span>, 
+      onClick: () => setMostrarModalSectores(true), 
       colorClass: darkMode ? 'text-blue-400 border-blue-900/50 hover:bg-blue-900/30 bg-blue-900/10' : 'text-blue-600 border-blue-200 hover:bg-blue-50 bg-blue-50/50'
     },
     { 
       label: 'Cerrar Sesión', 
-      icon: <LogOut size={22} />, 
+      icon: <LogOut size={20} />, 
       onClick: ejecutarCerrarSesion, 
       colorClass: darkMode ? 'text-red-400 border-red-900/50 hover:bg-red-900/30 bg-red-900/10' : 'text-red-600 border-red-200 hover:bg-red-50 bg-red-50/50'
     }
   ];
 
   return (
-    <div className="min-h-full flex flex-col items-center justify-center p-6 pb-32 relative">
-      <Dock items={dockItems} darkMode={darkMode} />
-
+    <div className="min-h-screen w-full flex flex-col items-center justify-start p-4 pt-20 pb-8 relative overflow-y-auto">
+      
+      {/* MODAL SECTORES */}
       {mostrarModalSectores && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className={`w-full max-w-4xl p-8 rounded-2xl shadow-2xl relative animate-in fade-in zoom-in duration-200 ${darkMode ? 'bg-slate-900 border border-slate-700' : 'bg-white border border-slate-200'}`}>
@@ -256,6 +284,7 @@ export default function Terminal() {
         </div>
       )}
 
+      {/* MODAL CATALOGO */}
       {mostrarModalCatalogo && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className={`w-full max-w-2xl max-h-[85vh] flex flex-col p-6 rounded-2xl shadow-2xl relative animate-in fade-in zoom-in duration-200 ${darkMode ? 'bg-slate-900 border border-slate-700' : 'bg-white border border-slate-200'}`}>
@@ -267,8 +296,7 @@ export default function Terminal() {
               <h2 className={`text-2xl font-bold tracking-tight flex items-center gap-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}><BookOpen className="text-blue-500"/> Tu Inventario ({sectorActual?.nombre})</h2>
             </div>
 
-            {/* FORMULARIO PARA AÑADIR PRODUCTOS */}
-            <form onSubmit={handleAgregarProducto} className={`mb-4 flex gap-2 p-3 rounded-xl border ${darkMode ? 'bg-slate-800/50 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
+            <form onSubmit={handleApproveProducto} className={`mb-4 flex gap-2 p-3 rounded-xl border ${darkMode ? 'bg-slate-800/50 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
               <input 
                 type="text" 
                 placeholder="Nuevo producto..." 
@@ -289,7 +317,6 @@ export default function Terminal() {
               </button>
             </form>
 
-            {/* LISTA DE PRODUCTOS CON BOTÓN DE BORRAR */}
             <div className="overflow-y-auto pr-2 space-y-2 custom-scrollbar">
               {listaProductos.length === 0 ? (
                 <p className={`text-center py-4 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>No hay productos en esta categoría.</p>
@@ -320,39 +347,117 @@ export default function Terminal() {
         </div>
       )}
 
-      <div className="flex flex-col items-center gap-10 w-full max-w-4xl mt-10 md:mt-0">
-        <div className="flex flex-col items-center text-center gap-3">
-          <span className={`px-4 py-1.5 rounded-full border text-xs font-bold uppercase tracking-widest mb-1 ${darkMode ? 'bg-blue-900/30 border-blue-800 text-blue-400' : 'bg-blue-50 border-blue-100 text-blue-600'}`}>
+      {/* MODAL INSTRUCCIONES DE USO */}
+      {mostrarModalAyuda && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className={`w-full max-w-md p-6 rounded-2xl shadow-2xl relative animate-in fade-in zoom-in duration-200 ${darkMode ? 'bg-slate-900 border border-slate-700' : 'bg-white border border-slate-200'}`}>
+            <button onClick={() => setMostrarModalAyuda(false)} className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
+              <X size={24} className={darkMode ? 'text-slate-400' : 'text-slate-600'} />
+            </button>
+            
+            <div className="mb-6">
+              <h2 className={`text-2xl font-bold tracking-tight flex items-center gap-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                <Info className="text-blue-500"/> ¿Cómo usar VoxStock?
+              </h2>
+            </div>
+
+            <div className="space-y-4">
+              <div className={`p-4 rounded-xl border ${darkMode ? 'bg-slate-800/30 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
+                <h3 className={`font-bold mb-1 ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>1. Mantén pulsado</h3>
+                <p className={`text-sm ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Toca y mantén presionado el icono del micrófono grande en el centro de la pantalla. No lo sueltes mientras hablas.</p>
+              </div>
+
+              <div className={`p-4 rounded-xl border ${darkMode ? 'bg-slate-800/30 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
+                <h3 className={`font-bold mb-1 ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>2. Dicta la orden</h3>
+                <p className={`text-sm ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Habla de forma natural. La Inteligencia Artificial entenderá el contexto.</p>
+                <div className={`mt-2 p-2 rounded text-xs font-mono italic ${darkMode ? 'bg-slate-950 text-blue-400' : 'bg-blue-50 text-blue-700'}`}>
+                  Ej: "Entraron dos palets de material general"
+                </div>
+                <div className={`mt-1 p-2 rounded text-xs font-mono italic ${darkMode ? 'bg-slate-950 text-red-400' : 'bg-red-50 text-red-700'}`}>
+                  Ej: "Restale 5 unidades a los tornillos"
+                </div>
+              </div>
+
+              <div className={`p-4 rounded-xl border ${darkMode ? 'bg-slate-800/30 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
+                <h3 className={`font-bold mb-1 ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>3. Suelta y espera</h3>
+                <p className={`text-sm ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Al soltar el botón, el audio se enviará al servidor. Revisa el panel de "Resolución del Sistema" para confirmar el éxito.</p>
+              </div>
+            </div>
+            
+            <button onClick={() => setMostrarModalAyuda(false)} className="w-full mt-6 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded-xl transition-all">
+              Entendido
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* CONTENIDO DE LA TERMINAL COMPRIMIDO PARA MÓVIL */}
+      <div className="flex flex-col items-center gap-4 md:gap-6 w-full max-w-4xl mt-0 md:mt-2">
+        <div className="flex flex-col items-center text-center gap-1.5">
+          <span className={`px-3 py-1 rounded-full border text-[10px] md:text-xs font-bold uppercase tracking-widest ${darkMode ? 'bg-blue-900/30 border-blue-800 text-blue-400' : 'bg-blue-50 border-blue-100 text-blue-600'}`}>
             Modo Operario: {sectorActual?.nombre.toUpperCase()}
           </span>
-          <h1 className={`text-4xl md:text-5xl font-extrabold tracking-tight ${darkMode ? 'text-white' : 'text-slate-900'}`}>Terminal de Entrada</h1>
-          <p className={`text-lg max-w-lg ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Operador: {usuario?.nombre || "No identificado"}</p>
+          <h1 className={`text-2xl md:text-4xl font-extrabold tracking-tight leading-none mt-1 ${darkMode ? 'text-white' : 'text-slate-900'}`}>Terminal de Entrada</h1>
+          <p className={`text-sm ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Operador: {usuario?.nombre || "No identificado"}</p>
         </div>
 
-        <div className="flex flex-col items-center gap-8 relative">
-          {grabando && <div className="absolute inset-0 bg-blue-500/20 rounded-full blur-3xl animate-pulse -z-10 w-72 h-72 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></div>}
+        <div className="flex flex-col items-center gap-3 relative">
+          {grabando && <div className="absolute inset-0 bg-blue-500/20 rounded-full blur-3xl animate-pulse -z-10 w-48 h-48 md:w-64 md:h-64 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></div>}
           <button
-            className={`w-44 h-44 rounded-full flex items-center justify-center border transition-all duration-300 z-10 ${grabando ? 'scale-95 bg-blue-600 border-blue-500 shadow-[0_0_40px_rgba(37,99,235,0.4)]' : darkMode ? 'bg-slate-900 border-slate-700 shadow-xl hover:scale-105 hover:border-slate-600' : 'bg-white border-slate-200 shadow-xl hover:scale-105 hover:border-slate-300'}`}
+            className={`w-28 h-28 md:w-32 md:h-32 rounded-full flex items-center justify-center border transition-all duration-300 z-10 ${grabando ? 'scale-95 bg-blue-600 border-blue-500 shadow-[0_0_30px_rgba(37,99,235,0.4)]' : darkMode ? 'bg-slate-900 border-slate-700 shadow-xl hover:scale-105 hover:border-slate-600' : 'bg-white border-slate-200 shadow-xl hover:scale-105 hover:border-slate-300'}`}
             onMouseDown={iniciarGrabacion} onMouseUp={detenerGrabacion} onMouseLeave={detenerGrabacion} onTouchStart={iniciarGrabacion} onTouchEnd={detenerGrabacion}
           >
-            <Mic size={55} strokeWidth={1.5} color={grabando ? "white" : (darkMode ? "#94a3b8" : "#64748b")} className={`transition-all ${grabando ? 'animate-bounce' : ''}`} />
+            <Mic size={38} strokeWidth={1.5} color={grabando ? "white" : (darkMode ? "#94a3b8" : "#64748b")} className={`transition-all ${grabando ? 'animate-bounce' : ''}`} />
           </button>
-          <span className={`font-bold tracking-wider text-sm uppercase ${grabando ? 'text-blue-500' : (darkMode ? 'text-slate-500' : 'text-slate-400')}`}>{grabando ? "Escuchando..." : "Esperando orden"}</span>
+          <span className={`font-bold tracking-wider text-[10px] uppercase ${grabando ? 'text-blue-500' : (darkMode ? 'text-slate-500' : 'text-slate-400')}`}>{grabando ? "Escuchando..." : "Esperando orden"}</span>
         </div>
 
-        <div className={`w-full max-w-2xl mt-2 p-8 rounded-2xl border shadow-lg transition-colors ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-          <div className="mb-6 pb-6 border-b border-dashed border-slate-300 dark:border-slate-700">
-            <h3 className={`text-xs font-bold uppercase tracking-widest mb-2 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Transcripcion de Audio</h3>
-            <p className={`text-lg italic ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>"{respuestaIA.transcripcion}"</p>
+        <div className={`w-full max-w-2xl p-4 md:p-6 rounded-2xl border shadow-lg transition-colors ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+          <div className="mb-3 pb-3 border-b border-dashed border-slate-300 dark:border-slate-700">
+            <h3 className={`text-[9px] md:text-[10px] font-bold uppercase tracking-widest mb-1 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Transcripcion de Audio</h3>
+            <p className={`text-sm md:text-base italic ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>"{respuestaIA.transcripcion}"</p>
           </div>
-          <div className="flex items-center gap-3 mb-4">
-            <div className={`w-2.5 h-2.5 rounded-full animate-pulse ${respuestaIA.estado === 'error' ? 'bg-red-500' : respuestaIA.estado === 'completado' ? 'bg-emerald-500' : 'bg-blue-600'}`}></div>
-            <h3 className={`text-sm font-bold uppercase tracking-wider ${darkMode ? 'text-slate-300' : 'text-slate-800'}`}>Resolucion del Sistema</h3>
+          <div className="flex items-center gap-2 mb-2">
+            <div className={`w-2 h-2 rounded-full animate-pulse ${respuestaIA.estado === 'error' ? 'bg-red-500' : respuestaIA.estado === 'completado' ? 'bg-emerald-500' : 'bg-blue-600'}`}></div>
+            <h3 className={`text-[10px] md:text-xs font-bold uppercase tracking-wider ${darkMode ? 'text-slate-300' : 'text-slate-800'}`}>Resolucion del Sistema</h3>
           </div>
-          <div className={`p-4 rounded-xl ${respuestaIA.estado === 'error' ? (darkMode ? 'bg-red-950/30 text-red-400 border border-red-900/50' : 'bg-red-50 text-red-700 border border-red-100') : respuestaIA.estado === 'completado' ? (darkMode ? 'bg-emerald-950/30 text-emerald-400 border border-emerald-900/50' : 'bg-emerald-50 text-emerald-700 border border-emerald-100') : (darkMode ? 'text-slate-400' : 'text-slate-500')}`}>
-            <p className="text-lg leading-relaxed font-medium whitespace-pre-wrap">{respuestaIA.mensaje || "Esperando instrucciones por voz..."}</p>
+          <div className={`p-3 md:p-4 rounded-xl ${respuestaIA.estado === 'error' ? (darkMode ? 'bg-red-950/30 text-red-400 border border-red-900/50' : 'bg-red-50 text-red-700 border border-red-100') : respuestaIA.estado === 'completado' ? (darkMode ? 'bg-emerald-950/30 text-emerald-400 border border-emerald-900/50' : 'bg-emerald-50 text-emerald-700 border border-emerald-100') : (darkMode ? 'text-slate-400' : 'text-slate-500')}`}>
+            <p className="text-sm md:text-base leading-relaxed font-medium whitespace-pre-wrap">{respuestaIA.mensaje || "Esperando instrucciones por voz..."}</p>
           </div>
         </div>
+
+        {/* PANEL DE CONTROL ESTÁTICO (Más compacto) */}
+        <div className="w-full max-w-2xl mt-1 md:mt-2 flex flex-col gap-2">
+          <div className="grid grid-cols-3 gap-2">
+            {dockItems.map((item, index) => (
+              <button
+                key={index}
+                onClick={item.onClick}
+                className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all hover:scale-105 active:scale-95 shadow-sm ${item.colorClass}`}
+              >
+                <div className="mb-1">
+                  {item.icon}
+                </div>
+                <span className="text-[9px] md:text-[10px] font-bold uppercase tracking-wider text-center leading-tight">
+                  {item.label}
+                </span>
+              </button>
+            ))}
+          </div>
+          
+          <button
+            onClick={() => setMostrarModalAyuda(true)}
+            className={`w-full flex items-center justify-center gap-2 p-3 rounded-xl border transition-all active:scale-[0.98] ${
+              darkMode 
+                ? 'text-slate-400 border-slate-800 hover:bg-slate-800/50 bg-slate-900/30' 
+                : 'text-slate-500 border-slate-200 hover:bg-slate-50 bg-white'
+            }`}
+          >
+            <Info size={16} />
+            <span className="text-[10px] font-bold uppercase tracking-wider">¿Cómo usar la terminal?</span>
+          </button>
+        </div>
+
       </div>
     </div>
   );

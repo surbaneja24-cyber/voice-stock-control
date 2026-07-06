@@ -28,9 +28,9 @@ export default function Pricing() {
 
   useEffect(() => {
     const backendUrl = window.location.hostname === "localhost" 
-      ? "http://localhost:5001/api/pricing"
-      : `${window.location.protocol}//${window.location.hostname.replace(window.location.port, "5001")}/api/pricing`;
-
+  ? "http://localhost:5001/api/registro"
+  : `${window.location.protocol}//${window.location.hostname.replace("-5173", "-5001")}/api/registro`;
+  
     fetch(backendUrl)
       .then((res) => {
         if (!res.ok) throw new Error("Fallo al obtener la matriz de precios del servidor.");

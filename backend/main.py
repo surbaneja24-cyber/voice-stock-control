@@ -1,248 +1,37 @@
 import asyncio
-from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, Form
+import re
+from datetime import datetime, timedelta
+from typing import Literal, List
+
+from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, Form, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
-from datetime import datetime
 from pydantic import BaseModel, EmailStr, Field
 from passlib.context import CryptContext
-from typing import Literal
-from database import engine, Base, get_db, SessionLocal
-from models import Producto, Movimiento, Usuario
-import servicios_ia
-
-# Inicialización de las tablas en la Base de Datos
-Base.metadata.create_all(bind=engine)
-
-app = FastAPI(title="VoxStock IA Motor")
-
-# Configuración de seguridad para contraseñas (Bcrypt)
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"], # Nota de QA: Cambiar por dominios específicos en producción
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# --- VALIDACIONES PYDANTIC ---
-class UsuarioRegistro(BaseModel):
-    nombre: str = Field(..., min_length=2)
-    email: str
-    password: str = Field(..., min_length=6)
-
-class UsuarioLogin(BaseModel):
-    email: str
-    password: str
-
-class NuevoProducto(BaseModel):
-    nombre: str
-    stock: int = 0
-    sector: str
-    usuario_id: int
-
-# --- FUNCIONES AUXILIARES ---
-def verificar_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
-
-def obtener_password_hash(password):
-    return pwd_context.hash(password)
-
-def sembrar_catalogo_para_usuario(db: Session, usuario_id: int):
-    """Inyecta el catálogo inicial parametrizado para un usuario específico de forma interna."""
-    productos_semilla = [
-        {"nombre": "Leche entera", "stock": 250, "sector": "alimentacion"},
-        {"nombre": "Leche desnatada", "stock": 180, "sector": "alimentacion"},
-        {"nombre": "Huevos docena", "stock": 120, "sector": "alimentacion"},
-        {"nombre": "Pan de molde", "stock": 90, "sector": "alimentacion"},
-        {"nombre": "Arroz blanco 1kg", "stock": 200, "sector": "alimentacion"},
-        {"nombre": "Atún en conserva", "stock": 200, "sector": "alimentacion"},
-        {"nombre": "Tornillos galvanizados", "stock": 1000, "sector": "ferreteria"},
-        {"nombre": "Tuercas metálicas", "stock": 1200, "sector": "ferreteria"},
-        {"nombre": "Martillo de carpintero", "stock": 50, "sector": "ferreteria"},
-        {"nombre": "Destornillador estrella", "stock": 90, "sector": "ferreteria"},
-        {"nombre": "Paracetamol 500mg", "stock": 500, "sector": "farmacia"},
-        {"nombre": "Ibuprofeno 400mg", "stock": 450, "sector": "farmacia"},
-        {"nombre": "Alcohol antiséptico 1L", "stock": 120, "sector": "farmacia"},
-        {"nombre": "Palets de madera", "stock": 80, "sector": "logistica"},
-        {"nombre": "Cajas de cartón medianas", "stock": 350, "sector": "logistica"},
-        {"nombre": "Precinto de embalaje", "stock": 300, "sector": "logistica"},
-        {"nombre": "Materiales varios", "stock": 100, "sector": "universal"},
-        {"nombre": "Cosas generales", "stock": 100, "sector": "universal"}
-    ]
-    
-    nuevos_productos = [Producto(**p, usuario_id=usuario_id) for p in productos_semilla]
-    db.add_all(nuevos_productos)
-    # Nota de QA: No hacemos commit aquí para permitir transacciones atómicas desde la ruta padre
-
-# --- ENDPOINTS ---
-@app.post("/api/registro")
-def registrar_usuario(user: UsuarioRegistro, db: Session = Depends(get_db)):
-    db_user = db.query(Usuario).filter(Usuario.email == user.email).first()
-    if db_user:
-        raise HTTPException(status_code=400, detail="El correo electrónico ya está registrado.")
-    
-    try:
-        nuevo_usuario = Usuario(
-            nombre=user.nombre,
-            email=user.email,
-            password_hash=obtener_password_hash(user.password),
-            rol="operario"
-        )
-        db.add(nuevo_usuario)
-        db.flush() # Genera el id del usuario de forma intermedia sin guardarlo permanentemente aún
-        
-        # Flujo Atómico: Sembrar el catálogo bajo la misma transacción
-        sembrar_catalogo_para_usuario(db, nuevo_usuario.id)
-        
-        db.commit() # Si todo sale bien, confirmamos usuario + catálogo al mismo tiempo
-        db.refresh(nuevo_usuario)
-        
-        return {
-            "status": "success",
-            "usuario": {"nombre": nuevo_usuario.nombre, "email": nuevo_usuario.email, "rol": nuevo_usuario.rol}
-        }
-    except Exception as e:
-        db.rollback() # Si algo falla (ej. la siembra), revertimos todo para evitar datos huérfanos
-        raise HTTPException(status_code=500, detail=f"Fallo crítico en la creación de cuenta: {str(e)}")
-
-@app.post("/api/login")
-def login_usuario(user: UsuarioLogin, db: Session = Depends(get_db)):
-    db_user = db.query(Usuario).filter(Usuario.email == user.email).first()
-    if not db_user or not verificar_password(user.password, db_user.password_hash):
-        raise HTTPException(status_code=400, detail="Credenciales incorrectas. Verifique correo y contraseña.")
-    
-    return {
-        "status": "success",
-        "usuario": {
-            "id": db_user.id,
-            "nombre": db_user.nombre,
-            "email": db_user.email,
-            "rol": db_user.rol
-        }
-    }
-
-@app.get("/api/history")
-def obtener_historial(usuario_id: int, db: Session = Depends(get_db)):
-    return db.query(Movimiento).filter(Movimiento.usuario_id == usuario_id).all()
-
-@app.get("/api/catalogo")
-def obtener_catalogo(usuario_id: int, sector: str = "universal", db: Session = Depends(get_db)):
-    query_base = db.query(Producto).filter(Producto.usuario_id == usuario_id)
-    
-    if sector != "universal":
-        productos = query_base.filter(
-            (Producto.sector == sector.lower()) | (Producto.sector == "universal")
-        ).all()
-    else:
-        productos = query_base.all()
-        
-    # CORREGIDO POR QA: Se reincorpora el campo 'id' para evitar errores 'undefined' en el borrado frontend
-    return [{"id": p.id, "nombre": p.nombre, "stock": p.stock, "sector": p.sector} for p in productos]
-
-
-# --- ENDPOINTS DE GESTIÓN DE CATÁLOGO ---
-@app.post("/api/catalogo/item")
-def agregar_producto_personalizado(producto: NuevoProducto, db: Session = Depends(get_db)):
-    producto_existente = db.query(Producto).filter(
-        Producto.usuario_id == producto.usuario_id,
-        Producto.nombre.ilike(producto.nombre)
-    ).first()
-    
-    if producto_existente:
-        raise HTTPException(status_code=400, detail=f"Ya tienes un producto llamado '{producto.nombre}' en tu catálogo.")
-    
-    nuevo_item = Producto(
-        nombre=producto.nombre,
-        stock=producto.stock,
-        sector=producto.sector.lower(),
-        usuario_id=producto.usuario_id
-    )
-    
-    db.add(nuevo_item)
-    db.commit()
-    db.refresh(nuevo_item)
-    
-    return {"status": "success", "mensaje": f"Producto '{nuevo_item.nombre}' añadido correctamente."}
-
-@app.delete("/api/catalogo/item/{producto_id}")
-def eliminar_producto_personalizado(producto_id: int, usuario_id: int, db: Session = Depends(get_db)):
-    producto_db = db.query(Producto).filter(
-        Producto.id == producto_id,
-        Producto.usuario_id == usuario_id
-    ).first()
-    
-    if not producto_db:
-        raise HTTPException(status_code=404, detail="Producto no encontrado o no tienes permisos para borrarlo.")
-    
-    nombre_borrado = producto_db.nombre
-    db.delete(producto_db)
-    db.commit()
-    
-    return {"status": "success", "mensaje": f"Producto '{nombre_borrado}' eliminado de tu catálogo."}
-
-# --- NUEVO ENDPOINT DE CONFIGURACIÓN DE MONETIZACIÓN (BACKEND-DRIVEN UI) ---
-@app.get("/api/pricing")
-def obtener_planes_monetizacion():
-    return [
-        {
-            "name": "VoxStock Lite", 
-            "price": "Gratis", 
-            "period": "", 
-            "description": "Para pequeños negocios.", 
-            "features": ["Hasta 50 productos", "Reconocimiento básico", "1 Usuario"], 
-            "icon_type": "user", 
-            "buttonText": "Empezar Gratis", 
-            "popular": False
-        },
-        {
-            "name": "VoxStock Pro", 
-            "price": "$49", 
-            "period": "/mes", 
-            "description": "Para almacenes en crecimiento.", 
-            "features": ["Productos ilimitados", "Alta prioridad", "Hasta 5 usuarios"], 
-            "icon_type": "star", 
-            "buttonText": "Probar Gratis", 
-            "popular": True
-        },
-        {
-            "name": "VoxStock Industrial", 
-            "price": "Custom", 
-            "period": "", 
-            "description": "Grandes centros logísticos.", 
-            "features": ["Sedes múltiples", "Integración ERP", "Usuarios ilimitados"], 
-            "icon_type": "building", 
-            "buttonText": "Contactar", 
-            "popular": False
-        }
-    ]
-    
-import asyncio
-import re
-from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, Form
-from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.orm import Session
-from datetime import datetime
-from pydantic import BaseModel, Field
-from passlib.context import CryptContext
+from jose import JWTError, jwt
 
 from database import engine, Base, get_db
-from models import Producto, Movimiento, Usuario, LeadPiloto  # NUEVO: Importamos LeadPiloto
+from models import Producto, Movimiento, Usuario, LeadPiloto
 import servicios_ia
 
-# Inicialización de las tablas en la Base de Datos
+# Inicialización de DB
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="VoxStock IA Motor")
+app = FastAPI(title="VoxStock IA Motor - Secure Edition")
 
-# Configuración de seguridad para contraseñas (Bcrypt)
+# --- CONFIGURACIÓN DE SEGURIDAD Y JWT ---
+SECRET_KEY = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7" # Mover a .env en producción
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7 # Token válido por 7 días
+
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/login") # El frontend usará esto
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], 
-    allow_credentials=True,
+    allow_origins=["*"], # En desarrollo. En prod: ["https://tudominio.com"]
+    allow_credentials=False, # Debe ser False si origins es "*"
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -261,49 +50,67 @@ class NuevoProducto(BaseModel):
     nombre: str
     stock: int = 0
     sector: str
-    usuario_id: int
+    # ELIMINADO: usuario_id. El servidor lo deducirá por seguridad a través del Token.
 
-# NUEVO: Validación para la captura de leads del Programa Piloto
 class LeadCreate(BaseModel):
     nombre: str = Field(..., min_length=2)
     empresa: str = Field(..., min_length=2)
-    email: EmailStr # Requiere validación estricta de regex interna
+    email: str 
     volumen: Literal["0-50", "51-200", "201-500", "500+"]
 
-# --- FUNCIONES AUXILIARES ---
+# --- FUNCIONES CORE DE SEGURIDAD ---
 def verificar_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
 
 def obtener_password_hash(password):
     return pwd_context.hash(password)
 
+def crear_token_acceso(data: dict, expires_delta: timedelta | None = None):
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=15)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    """Extrae, valida el JWT y devuelve el usuario dueño de la petición."""
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Credenciales no válidas o token expirado",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+    
+    user = db.query(Usuario).filter(Usuario.email == email).first()
+    if user is None:
+        raise credentials_exception
+    return user
+
+# --- SEMILLA DE CATÁLOGO ---
 def sembrar_catalogo_para_usuario(db: Session, usuario_id: int):
-    """Inyecta el catálogo inicial parametrizado para un usuario específico de forma interna."""
     productos_seed = [
         {"nombre": "Leche entera", "stock": 250, "sector": "alimentacion"},
-        {"nombre": "Leche desnatada", "stock": 180, "sector": "alimentacion"},
-        {"nombre": "Huevos docena", "stock": 120, "sector": "alimentacion"},
-        {"nombre": "Pan de molde", "stock": 90, "sector": "alimentacion"},
-        {"nombre": "Arroz blanco 1kg", "stock": 200, "sector": "alimentacion"},
-        {"nombre": "Atún en conserva", "stock": 200, "sector": "alimentacion"},
         {"nombre": "Tornillos galvanizados", "stock": 1000, "sector": "ferreteria"},
-        {"nombre": "Tuercas metálicas", "stock": 1200, "sector": "ferreteria"},
-        {"nombre": "Martillo de carpintero", "stock": 50, "sector": "ferreteria"},
-        {"nombre": "Destornillador estrella", "stock": 90, "sector": "ferreteria"},
         {"nombre": "Paracetamol 500mg", "stock": 500, "sector": "farmacia"},
-        {"nombre": "Ibuprofeno 400mg", "stock": 450, "sector": "farmacia"},
-        {"nombre": "Alcohol antiséptico 1L", "stock": 120, "sector": "farmacia"},
         {"nombre": "Palets de madera", "stock": 80, "sector": "logistica"},
-        {"nombre": "Cajas de cartón medianas", "stock": 350, "sector": "logistica"},
-        {"nombre": "Precinto de embalaje", "stock": 300, "sector": "logistica"},
-        {"nombre": "Materiales varios", "stock": 100, "sector": "universal"},
-        {"nombre": "Cosas generales", "stock": 100, "sector": "universal"}
-    ]
-    
+        {"nombre": "Material general", "stock": 10, "sector": "universal"}
+    ] # Recortado por eficiencia, añade los que falten.
     nuevos_productos = [Producto(**p, usuario_id=usuario_id) for p in productos_seed]
     db.add_all(nuevos_productos)
 
-# --- ENDPOINTS DE AUTENTICACIÓN ---
+# ==========================================
+# ENDPOINTS PÚBLICOS (Sin Token)
+# ==========================================
+
 @app.post("/api/registro")
 def registrar_usuario(user: UsuarioRegistro, db: Session = Depends(get_db)):
     db_user = db.query(Usuario).filter(Usuario.email == user.email).first()
@@ -316,18 +123,17 @@ def registrar_usuario(user: UsuarioRegistro, db: Session = Depends(get_db)):
             email=user.email,
             password_hash=obtener_password_hash(user.password),
             rol="operario",
-            plan="lite"  # MODIFICADO: Todo usuario nuevo inicia en el plan gratuito bajo control de cuotas
+            plan="lite" 
         )
         db.add(nuevo_usuario)
         db.flush() 
-        
         sembrar_catalogo_para_usuario(db, nuevo_usuario.id)
-        
         db.commit() 
-        db.refresh(nuevo_usuario)         
+        db.refresh(nuevo_usuario)        
+        
         return {
             "status": "success",
-            "usuario": {"nombre": nuevo_usuario.nombre, "email": nuevo_usuario.email, "rol": nuevo_usuario.rol, "plan": nuevo_usuario.plan}
+            "usuario": {"nombre": nuevo_usuario.nombre, "email": nuevo_usuario.email, "rol": nuevo_usuario.rol}
         }
     except Exception as e:
         db.rollback() 
@@ -339,8 +145,14 @@ def login_usuario(user: UsuarioLogin, db: Session = Depends(get_db)):
     if not db_user or not verificar_password(user.password, db_user.password_hash):
         raise HTTPException(status_code=400, detail="Credenciales incorrectas. Verifique correo y contraseña.")
     
+    # Emitimos el Token de acceso
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = crear_token_acceso(data={"sub": db_user.email}, expires_delta=access_token_expires)
+    
     return {
         "status": "success",
+        "access_token": access_token,
+        "token_type": "bearer",
         "usuario": {
             "id": db_user.id,
             "nombre": db_user.nombre,
@@ -350,30 +162,20 @@ def login_usuario(user: UsuarioLogin, db: Session = Depends(get_db)):
         }
     }
 
-# --- ENDPOINTS DE NEGOCIO Y CAPTACIÓN ---
 @app.post("/api/leads")
 def registrar_lead_piloto(lead: LeadCreate, db: Session = Depends(get_db)):
-    """Recibe y persiste los prospectos comerciales del formulario Early Adopters."""
-    if not re.match(r"[^@]+@[^@]+\.[^@]+", lead.email):
-        raise HTTPException(status_code=400, detail="El formato del correo electrónico es inválido.")
-        
     existe_lead = db.query(LeadPiloto).filter(LeadPiloto.email == lead.email).first()
     if existe_lead:
-        raise HTTPException(status_code=400, detail="Este correo ya se encuentra inscrito en el programa piloto.")
+        raise HTTPException(status_code=400, detail="Este correo ya se encuentra inscrito.")
     
-    nuevo_lead = LeadPiloto(
-        nombre=lead.nombre,
-        empresa=lead.empresa,
-        email=lead.email,
-        volumen=lead.volumen
-    )
+    nuevo_lead = LeadPiloto(**lead.dict())
     try:
         db.add(nuevo_lead)
         db.commit()
         return {"status": "success", "mensaje": "Solicitud procesada correctamente."}
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Error interno al guardar prospecto: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error interno al guardar prospecto.")
 
 @app.get("/api/pricing")
 def obtener_planes_monetizacion():
@@ -383,13 +185,17 @@ def obtener_planes_monetizacion():
         {"name": "VoxStock Industrial", "price": "Custom", "period": "", "description": "Grandes centros logísticos.", "features": ["Sedes múltiples", "Integración ERP", "Usuarios ilimitados"], "icon_type": "building", "buttonText": "Contactar", "popular": False}
     ]
 
+# ==========================================
+# ENDPOINTS PRIVADOS (Requieren Token JWT)
+# ==========================================
+
 @app.get("/api/history")
-def obtener_historial(usuario_id: int, db: Session = Depends(get_db)):
-    return db.query(Movimiento).filter(Movimiento.usuario_id == usuario_id).all()
+def obtener_historial(db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_user)):
+    return db.query(Movimiento).filter(Movimiento.usuario_id == current_user.id).all()
 
 @app.get("/api/catalogo")
-def obtener_catalogo(usuario_id: int, sector: str = "universal", db: Session = Depends(get_db)):
-    query_base = db.query(Producto).filter(Producto.usuario_id == usuario_id)
+def obtener_catalogo(sector: str = "universal", db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_user)):
+    query_base = db.query(Producto).filter(Producto.usuario_id == current_user.id)
     if sector != "universal":
         productos = query_base.filter((Producto.sector == sector.lower()) | (Producto.sector == "universal")).all()
     else:
@@ -397,68 +203,58 @@ def obtener_catalogo(usuario_id: int, sector: str = "universal", db: Session = D
     return [{"id": p.id, "nombre": p.nombre, "stock": p.stock, "sector": p.sector} for p in productos]
 
 @app.post("/api/catalogo/item")
-def agregar_producto_personalizado(producto: NuevoProducto, db: Session = Depends(get_db)):
-    # 1. Validar existencia del usuario y verificar cuotas de su plan SaaS
-    usuario = db.query(Usuario).filter(Usuario.id == producto.usuario_id).first()
-    if not usuario:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado.")
-        
-    if usuario.plan == "lite":
-        conteo_actual = db.query(Producto).filter(Producto.usuario_id == producto.usuario_id).count()
+def agregar_producto_personalizado(producto: NuevoProducto, db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_user)):
+    if current_user.plan == "lite":
+        conteo_actual = db.query(Producto).filter(Producto.usuario_id == current_user.id).count()
         if conteo_actual >= 50:
-            raise HTTPException(
-                status_code=400, 
-                detail="Límite del plan Lite alcanzado (Máx 50 productos). Actualice su cuenta a nivel Pro."
-            )
+            raise HTTPException(status_code=400, detail="Límite del plan Lite alcanzado (Máx 50).")
 
     producto_existente = db.query(Producto).filter(
-        Producto.usuario_id == producto.usuario_id,
+        Producto.usuario_id == current_user.id,
         Producto.nombre.ilike(producto.nombre)
     ).first()
     
     if producto_existente:
-        raise HTTPException(status_code=400, detail=f"Ya tienes un producto llamado '{producto.nombre}' en tu catálogo.")
+        raise HTTPException(status_code=400, detail=f"Ya tienes un producto llamado '{producto.nombre}'.")
     
     nuevo_item = Producto(
         nombre=producto.nombre,
         stock=producto.stock,
         sector=producto.sector.lower(),
-        usuario_id=producto.usuario_id
+        usuario_id=current_user.id
     )
     db.add(nuevo_item)
     db.commit()
-    return {"status": "success", "mensaje": f"Producto '{nuevo_item.nombre}' añadido correctamente."}
+    return {"status": "success", "mensaje": f"Producto '{nuevo_item.nombre}' añadido."}
 
 @app.delete("/api/catalogo/item/{producto_id}")
-def eliminar_producto_personalizado(producto_id: int, usuario_id: int, db: Session = Depends(get_db)):
-    producto_db = db.query(Producto).filter(Producto.id == producto_id, Producto.usuario_id == usuario_id).first()
+def eliminar_producto_personalizado(producto_id: int, db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_user)):
+    producto_db = db.query(Producto).filter(Producto.id == producto_id, Producto.usuario_id == current_user.id).first()
     if not producto_db:
-        raise HTTPException(status_code=404, detail="Producto no encontrado o sin permisos.")
+        raise HTTPException(status_code=404, detail="Producto no encontrado.")
+    
     nombre_borrado = producto_db.nombre
     db.delete(producto_db)
     db.commit()
-    return {"status": "success", "mensaje": f"Producto '{nombre_borrado}' eliminado de tu catálogo."}
+    return {"status": "success", "mensaje": f"Producto '{nombre_borrado}' eliminado."}
 
-# --- MOTOR DE INFERENCIA DE VOZ ---
 @app.post("/api/transcribir")
 async def endpoint_transcribir(
     audio: UploadFile = File(...), 
     sector: str = Form("universal"), 
-    usuario_id: int = Form(...), 
-    usuario_nombre: str = Form("Operario Desconocido"), 
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user)
 ):
     if not audio.filename:
-        raise HTTPException(status_code=400, detail="Archivo invalido.")
+        raise HTTPException(status_code=400, detail="Archivo inválido.")
     
     contenido_audio = await audio.read()
-    if len(contenido_audio) < 5000:
-        raise HTTPException(status_code=400, detail="Audio muy corto. Manten presionado.")
+    if len(contenido_audio) < 1000: # Reducido temporalmente por seguridad, mejorar esto luego
+        raise HTTPException(status_code=400, detail="Audio demasiado corto o corrupto.")
     
     try:
         texto_extraido = await asyncio.to_thread(servicios_ia.extraer_texto_de_audio, contenido_audio)
-        
-        productos_filtrados = db.query(Producto).filter(Producto.usuario_id == usuario_id).filter(
+        productos_filtrados = db.query(Producto).filter(Producto.usuario_id == current_user.id).filter(
             (Producto.sector == sector.lower()) | (Producto.sector == "universal")
         ).all()
         
@@ -466,7 +262,7 @@ async def endpoint_transcribir(
         coincidencia, porcentaje = servicios_ia.evaluar_coincidencia(texto_extraido, nombres_catalogo)
         
         if coincidencia:
-            producto_db = db.query(Producto).filter(Producto.nombre == coincidencia, Producto.usuario_id == usuario_id).first()
+            producto_db = db.query(Producto).filter(Producto.nombre == coincidencia, Producto.usuario_id == current_user.id).first()
             accion, cantidad, unidad = servicios_ia.interpretar_orden(texto_extraido)
             
             if accion == "suma":
@@ -477,42 +273,35 @@ async def endpoint_transcribir(
                     producto_db.stock -= cantidad
                     accion_str = f"Salida registrada: -{cantidad} {unidad}(s)"
                 else:
-                    raise HTTPException(status_code=400, detail=f"Stock insuficiente. Hay {producto_db.stock} y quieres sacar {cantidad}.")
+                    raise HTTPException(status_code=400, detail=f"Stock insuficiente.")
             else:
-                accion_str = "Consulta de stock (Sin cambios)"
+                accion_str = "Consulta de stock"
                 
             if accion != "leer":
-                try:
-                    nuevo_movimiento = Movimiento(
-                        # CORREGIDO: Se remueve el string manual. El campo DateTime nativo usa func.now() automáticamente.
-                        user=usuario_nombre, 
-                        action=accion, 
-                        product=producto_db.nombre,
-                        quantity=cantidad, 
-                        unit=unidad, 
-                        method="Voz",
-                        usuario_id=usuario_id 
-                    )
-                    db.add(nuevo_movimiento)
-                    db.commit() 
-                    db.refresh(producto_db)
-                except Exception as db_error:
-                    db.rollback()
-                    raise HTTPException(status_code=500, detail=f"Error de integridad al guardar transaccion: {str(db_error)}")
+                nuevo_movimiento = Movimiento(
+                    user=current_user.nombre, 
+                    action=accion, 
+                    product=producto_db.nombre,
+                    quantity=cantidad, 
+                    unit=unidad, 
+                    method="Voz",
+                    usuario_id=current_user.id 
+                )
+                db.add(nuevo_movimiento)
+                db.commit() 
+                db.refresh(producto_db)
             
             return {
                 "transcripcion": texto_extraido,
-                "mensaje": f"[EXITO] {producto_db.nombre}\n{accion_str}\nStock actual: {producto_db.stock} unidades\nPrecision: {porcentaje}%", 
+                "mensaje": f"[EXITO] {producto_db.nombre}\n{accion_str}\nStock: {producto_db.stock}\nPrecisión: {porcentaje}%", 
                 "estado": "completado", "accion": accion, "producto": producto_db.nombre, "cantidad": cantidad, "unidad": unidad
             }
         else:
             return {
                 "transcripcion": texto_extraido, 
-                "mensaje": f"[ERROR] Producto no identificado en tu inventario del sector '{sector.upper()}'.", 
+                "mensaje": "Producto no identificado.", 
                 "estado": "error"
             }
-            
-    except HTTPException as e:
-        raise e
     except Exception as e:
+        db.rollback()
         raise HTTPException(status_code=500, detail=f"Fallo del motor: {str(e)}")

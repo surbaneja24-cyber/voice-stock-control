@@ -1,24 +1,36 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { GoArrowUpRight } from "react-icons/go";
-import { Moon, Sun, Languages } from "lucide-react"; // AÑADIDO: Icono de idioma
+import { Moon, Sun, Languages, LogOut } from "lucide-react"; 
 import { useNavigate } from "react-router-dom";
 import { useThemeStore } from "../store/themeStore";
-
-// NUEVOS IMPORTS PARA INTERNACIONALIZACIÓN
 import { useLanguageStore } from "../store/languageStore";
+import { useAuthStore } from "../store/authStore";
 import { translations } from "../utils/translations";
 
 export default function Navbar({ logo, logoAlt = "VoxStock" }) {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
+  
   const { darkMode, toggleTheme } = useThemeStore();
-
-  // EXTRAEMOS EL ESTADO DE IDIOMA Y EL DICCIONARIO
   const { language, toggleLanguage } = useLanguageStore();
-  const t = translations[language].navbar;
+  
+  // Estado de Autenticación
+  const usuario = useAuthStore((state) => state.usuario);
+  const logoutAction = useAuthStore((state) => state.logout);
+  
+  // Fallback seguro para el diccionario
+  const t = translations[language]?.navbar || translations["es"].navbar;
 
-  // Menú dinámico adaptado al idioma
+  const handleCerrarSesion = () => {
+    // 1. Destruir el estado global en memoria
+    logoutAction();
+    // 2. Destruir la llave criptográfica física
+    localStorage.removeItem("token");
+    // 3. Expulsar al usuario
+    navigate("/login");
+  };
+
   const menuItems = [
     {
       label: t.descubre,
@@ -84,11 +96,11 @@ export default function Navbar({ logo, logoAlt = "VoxStock" }) {
             />
           </button>
 
-          {/* LOGOTIPO INTERACTIVO (CORREGIDO) */}
+          {/* LOGOTIPO INTERACTIVO */}
           <button
             onClick={() => {
               navigate("/");
-              setIsOpen(false); // Cierra el menú desplegable si estaba abierto en móviles
+              setIsOpen(false); 
             }}
             className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 cursor-pointer transition-all duration-200 hover:opacity-80 active:scale-95 z-20"
             aria-label="Volver al inicio"
@@ -106,8 +118,8 @@ export default function Navbar({ logo, logoAlt = "VoxStock" }) {
 
           {/* BOTONES DERECHA */}
           <div className="flex items-center gap-2 md:gap-3">
-            {/* NUEVO: BOTÓN DE IDIOMA */}
-            {/* BOTÓN DE IDIOMA CONFIGURADO PARA 3 IDIOMAS */}
+            
+            {/* Botón de Idioma */}
             <button
               onClick={toggleLanguage}
               className={`flex items-center gap-1.5 p-2 md:px-3 md:py-2 rounded-full md:rounded-lg border font-bold text-xs uppercase transition-all duration-300 ${
@@ -115,7 +127,7 @@ export default function Navbar({ logo, logoAlt = "VoxStock" }) {
                   ? "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700"
                   : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-200"
               }`}
-              title="Change Language"
+              title="Cambiar Idioma"
             >
               <Languages size={16} />
               <span className="hidden md:inline">
@@ -133,21 +145,34 @@ export default function Navbar({ logo, logoAlt = "VoxStock" }) {
                   ? "bg-slate-800 border-slate-700 text-yellow-400 hover:bg-slate-700"
                   : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-200"
               }`}
+              title="Cambiar Tema"
             >
               {darkMode ? <Sun size={18} /> : <Moon size={18} />}
             </button>
 
-            {/* Botón de Acceso */}
-            <button
-              onClick={() => navigate("/login")}
-              className={`hidden md:flex px-5 items-center justify-center h-10 rounded-lg font-semibold text-sm transition-all duration-300 shadow-md ${
-                darkMode
-                  ? "bg-white text-black hover:bg-slate-200"
-                  : "bg-slate-900 text-white hover:bg-slate-800"
-              }`}
-            >
-              {t.login}
-            </button>
+            {/* RENDERIZADO CONDICIONAL: LOGOUT vs LOGIN */}
+            {usuario ? (
+              <button
+                onClick={handleCerrarSesion}
+                className="flex items-center justify-center gap-2 px-3 md:px-4 h-10 bg-red-600/10 text-red-500 border border-red-500/20 hover:bg-red-600 hover:text-white rounded-lg transition-colors font-bold text-sm shadow-sm"
+                title="Cerrar Sesión"
+              >
+                <LogOut size={18} />
+                <span className="hidden md:inline">Salir</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => navigate("/login")}
+                className={`hidden md:flex px-5 items-center justify-center h-10 rounded-lg font-semibold text-sm transition-all duration-300 shadow-md ${
+                  darkMode
+                    ? "bg-white text-black hover:bg-slate-200"
+                    : "bg-slate-900 text-white hover:bg-slate-800"
+                }`}
+              >
+                {t.login || "Login"}
+              </button>
+            )}
+            
           </div>
         </div>
 

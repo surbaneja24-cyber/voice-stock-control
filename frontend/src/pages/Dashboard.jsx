@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useHistoryStore } from "../store/historyStore";
 import { useThemeStore } from "../store/themeStore";
-import { useAuthStore } from "../store/authStore"; // <-- NUEVO: Importación del cerebro global
+import { useAuthStore } from "../store/authStore"; 
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell,
 } from "recharts";
@@ -11,7 +12,9 @@ export default function Dashboard() {
   const setMovimientos = useHistoryStore((state) => state.setMovimientos);
   
   const darkMode = useThemeStore((state) => state.darkMode); 
-  const usuario = useAuthStore((state) => state.usuario); // <-- NUEVO: Identidad del usuario
+  const usuario = useAuthStore((state) => state.usuario); 
+  const logoutAction = useAuthStore((state) => state.logout);
+  const navigate = useNavigate();
 
   const [cargando, setCargando] = useState(true);
 
@@ -23,10 +26,20 @@ export default function Dashboard() {
   
   const operacionesRegistradas = totalEntradas + totalSalidas; 
   
-  const trendData = movimientos.slice(-20).map((mov) => ({
-    etiqueta: mov.dateTime.split(',')[1] || "00:00", 
-    cantidad: Number(mov.quantity || 0),
-  }));
+const trendData = movimientos.slice(-20).map((mov) => {
+    let horaFormateada = "00:00";
+    if (mov.dateTime) {
+      const fechaObj = new Date(mov.dateTime);
+      if (!isNaN(fechaObj.getTime())) {
+        horaFormateada = fechaObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      }
+    }
+    
+    return {
+      etiqueta: horaFormateada,
+      cantidad: Number(mov.quantity || 0),
+    };
+  });
   
   const categoryData = [
     { name: "Entradas", value: totalEntradas },
@@ -34,16 +47,33 @@ export default function Dashboard() {
   ];
 
   useEffect(() => {
-    // Escudo: No ejecutar si aún no sabemos quién es el usuario
-    if (!usuario?.id) return;
+    const token = localStorage.getItem("token");
+    if (!usuario?.id || !token) {
+      navigate("/login");
+      return;
+    }
 
     let isMounted = true; 
     setCargando(true);
 
-    // NUEVO: Inyección de seguridad por usuario
-    fetch(`/api/history?usuario_id=${usuario.id}`)
+    const baseApiUrl = import.meta.env.VITE_BACKEND_URL 
+      || (window.location.hostname === "localhost" 
+          ? "http://localhost:5001" 
+          : `${window.location.protocol}//${window.location.hostname.replace("-5173", "-5001")}`);
+
+    fetch(`${baseApiUrl}/api/history`, {
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    })
       .then((res) => {
-        if (!res.ok) throw new Error("Acceso denegado o error de red");
+        if (res.status === 401) {
+          logoutAction();
+          localStorage.removeItem("token");
+          navigate("/login");
+          throw new Error("Sesión expirada");
+        }
+        if (!res.ok) throw new Error("Error de red");
         return res.json();
       })
       .then((data) => {
@@ -51,31 +81,25 @@ export default function Dashboard() {
           if (Array.isArray(data)) {
             setMovimientos(data);
           } else {
-            console.warn("[WARNING] El servidor devolvio un formato no valido:", data);
+            console.warn("[WARNING] Formato inválido:", data);
             setMovimientos([]); 
           }
         }
       })
       .catch((err) => {
-        if (isMounted) {
-          console.error("[ERROR] Fallo de conexion con el backend:", err);
-        }
+        if (isMounted) console.error("[ERROR] Fallo de conexión:", err);
       })
       .finally(() => {
         if (isMounted) setCargando(false);
       });
 
-    return () => {
-      isMounted = false; 
-    };
-  }, [setMovimientos, usuario?.id]); // <-- Se re-ejecuta si cambia el usuario
+    return () => { isMounted = false; };
+  }, [setMovimientos, usuario?.id, navigate, logoutAction]);
 
   const COLORS = darkMode ? ["#10b981", "#ef4444"] : ["#059669", "#dc2626"];
 
   const cardClass = `p-6 rounded-2xl border shadow-sm transition-all duration-300 ${
-    darkMode 
-      ? 'bg-slate-900 border-slate-800 text-white' 
-      : 'bg-white border-slate-200 text-slate-900'
+    darkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
   }`;
 
   return (
@@ -166,7 +190,7 @@ export default function Dashboard() {
                 <div>
                   <p className="font-semibold text-base">{item.product}</p>
                   <p className={`text-xs mt-1 ${darkMode ? "text-slate-400" : "text-slate-500"}`}>
-                    {item.user} • {item.dateTime} • Motor: {item.method}
+                    {item.user} • {item.dateTime ? new Date(item.dateTime).toLocaleString() : 'N/A'} • Motor: {item.method}
                   </p>
                 </div>
                 <div className={`px-4 py-2 rounded-lg text-sm font-bold tracking-wide flex items-center gap-2 ${
