@@ -5,6 +5,7 @@ faster-whisper
 thefuzz
 python-multipart
 passlib[bcrypt]
+bcrypt==3.2.2
 email-validator
 pydantic
 python-jose[cryptography]
