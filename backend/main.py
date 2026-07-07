@@ -2,12 +2,11 @@ import asyncio
 import re
 from datetime import datetime, timedelta
 from typing import Literal, List
-
+from pydantic import BaseModel, Field, EmailStr
 from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, Form, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
-from pydantic import BaseModel, EmailStr, Field
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 
@@ -38,9 +37,14 @@ app.add_middleware(
 
 # --- VALIDACIONES PYDANTIC ---
 class UsuarioRegistro(BaseModel):
-    nombre: str = Field(..., min_length=2)
-    email: str
-    password: str = Field(..., min_length=6)
+    # Limitamos a 100 caracteres para evitar payloads masivos
+    nombre: str = Field(..., min_length=2, max_length=100)
+    
+    # Exige un formato de correo real (user@dominio.com)
+    email: EmailStr
+    
+    # Aquí matamos el bug de Bcrypt desde la raíz
+    password: str = Field(..., min_length=6, max_length=72)
 
 class UsuarioLogin(BaseModel):
     email: str
@@ -113,6 +117,10 @@ def sembrar_catalogo_para_usuario(db: Session, usuario_id: int):
 
 @app.post("/api/registro")
 def registrar_usuario(user: UsuarioRegistro, db: Session = Depends(get_db)):
+    # 1. Bloqueo inmediato de contraseñas problemáticas (Evita crashear passlib)
+    if not user.password or len(user.password) > 72:
+        raise HTTPException(status_code=400, detail="La contraseña no puede exceder los 72 caracteres de seguridad.")
+
     db_user = db.query(Usuario).filter(Usuario.email == user.email).first()
     if db_user:
         raise HTTPException(status_code=400, detail="El correo electrónico ya está registrado.")
@@ -137,7 +145,10 @@ def registrar_usuario(user: UsuarioRegistro, db: Session = Depends(get_db)):
         }
     except Exception as e:
         db.rollback() 
-        raise HTTPException(status_code=500, detail=f"Fallo crítico en la creación de cuenta: {str(e)}")
+        # El error real se imprime en consola (logs de Render) para depuración interna
+        print(f"[ERROR CRÍTICO REGISTRO]: {str(e)}") 
+        # El frontend recibe un mensaje saneado que no compromete la arquitectura
+        raise HTTPException(status_code=500, detail="Error interno al procesar el registro. Contacte al administrador del WMS.")
 
 @app.post("/api/login")
 def login_usuario(user: UsuarioLogin, db: Session = Depends(get_db)):
