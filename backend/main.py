@@ -30,8 +30,8 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/login") # El frontend usará
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # En desarrollo. En prod: ["https://tudominio.com"]
-    allow_credentials=False, # Debe ser False si origins es "*"
+    allow_origins=["https://voice-stock-control.vercel.app"], # La URL exacta de tu frontend
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
