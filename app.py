@@ -82,7 +82,7 @@ def register():
         return jsonify({"msg": "El usuario ya existe"}), 400
 
     # 4. Ahora sí, encriptar con seguridad
-    hashed_password = bcrypt.generate_password_hash(password).decode("utf-8")
+    hashed_password = get_password_hash(usuario.password)
 
     user = User(
         email=email,
