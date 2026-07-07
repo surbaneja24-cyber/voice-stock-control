@@ -1,3 +1,4 @@
+import os
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
@@ -6,15 +7,18 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-# Configuración
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///users.db"
+# =========================
+# CONFIGURACIÓN
+# =========================
+# Leemos la URL de la base de datos desde el entorno para producción (Render).
+# Si no existe (entorno local), usa SQLite como respaldo temporal.
+app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "sqlite:///users.db")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 # Extensiones
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 CORS(app)
-
 
 # =========================
 # MODELOS
@@ -25,14 +29,12 @@ class User(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(255), nullable=False)
 
-
 class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     sku = db.Column(db.String(50), unique=True, nullable=False)
     quantity = db.Column(db.Integer, nullable=False, default=0)
     location = db.Column(db.String(50))
-
 
 class Movement(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -44,20 +46,19 @@ class Movement(db.Model):
         default=datetime.utcnow
     )
 
-
 # =========================
-# RUTAS GENERALES
+# RUTAS DE ESTADO
 # =========================
 
 @app.route("/")
 def home():
-    return jsonify({"msg": "Servidor funcionando"})
-
+    return jsonify({"msg": "Servidor API funcionando correctamente"})
 
 # =========================
 # AUTH
 # =========================
-@app.route("/register", methods=["POST"])
+
+@app.route("/api/registro", methods=["POST"])
 def register():
     data = request.get_json()
 
@@ -68,21 +69,21 @@ def register():
     if not email or not password:
         return jsonify({"msg": "Email y contraseña obligatorios"}), 400
     
-    # 2. Asegurarnos de que el password sea un string (texto)
+    # 2. Asegurarnos de que el password sea un string
     if not isinstance(password, str):
         return jsonify({"msg": "Formato de contraseña inválido"}), 400
 
-    # 3. Aplicar el límite de 72 bytes de bcrypt para evitar el crash
+    # 3. Validación estricta del límite de Bcrypt (Evita el Error 500)
     if len(password) > 72:
-        password = password[:72] # Cortamos a 72 caracteres como sugiere el error
+        return jsonify({"msg": "La contraseña excede el límite máximo de 72 caracteres"}), 400
 
     existing_user = User.query.filter_by(email=email).first()
 
     if existing_user:
         return jsonify({"msg": "El usuario ya existe"}), 400
 
-    # 4. Ahora sí, encriptar con seguridad
-    hashed_password = get_password_hash(usuario.password)
+    # 4. Encriptación segura corrigiendo el error de sintaxis anterior
+    hashed_password = bcrypt.generate_password_hash(password).decode("utf-8")
 
     user = User(
         email=email,
@@ -94,7 +95,7 @@ def register():
 
     return jsonify({"msg": "Usuario registrado"}), 201
 
-@app.route("/login", methods=["POST"])
+@app.route("/api/login", methods=["POST"])
 def login():
     data = request.get_json()
 
@@ -115,12 +116,11 @@ def login():
         "email": user.email
     })
 
-
 # =========================
 # PRODUCTOS
 # =========================
 
-@app.route("/products", methods=["POST"])
+@app.route("/api/products", methods=["POST"])
 def create_product():
     data = request.get_json()
 
@@ -143,13 +143,11 @@ def create_product():
 
     return jsonify({"msg": "Producto creado"}), 201
 
-
-@app.route("/products", methods=["GET"])
+@app.route("/api/products", methods=["GET"])
 def get_products():
     products = Product.query.all()
 
     result = []
-
     for product in products:
         result.append({
             "id": product.id,
@@ -161,11 +159,9 @@ def get_products():
 
     return jsonify(result)
 
-
-@app.route("/products/<int:product_id>/add", methods=["PUT"])
+@app.route("/api/products/<int:product_id>/add", methods=["PUT"])
 def add_stock(product_id):
     data = request.get_json()
-
     product = Product.query.get(product_id)
 
     if not product:
@@ -192,11 +188,9 @@ def add_stock(product_id):
         "new_quantity": product.quantity
     })
 
-
-@app.route("/products/<int:product_id>/remove", methods=["PUT"])
+@app.route("/api/products/<int:product_id>/remove", methods=["PUT"])
 def remove_stock(product_id):
     data = request.get_json()
-
     product = Product.query.get(product_id)
 
     if not product:
@@ -226,17 +220,15 @@ def remove_stock(product_id):
         "new_quantity": product.quantity
     })
 
-
 # =========================
 # HISTORIAL
 # =========================
 
-@app.route("/movements", methods=["GET"])
+@app.route("/api/movements", methods=["GET"])
 def get_movements():
     movements = Movement.query.all()
 
     result = []
-
     for movement in movements:
         result.append({
             "id": movement.id,
@@ -248,14 +240,12 @@ def get_movements():
 
     return jsonify(result)
 
-
 # =========================
-# BASE DE DATOS
+# INICIALIZACIÓN DB
 # =========================
 
 with app.app_context():
     db.create_all()
-
 
 # =========================
 # INICIO
