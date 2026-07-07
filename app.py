@@ -57,25 +57,32 @@ def home():
 # =========================
 # AUTH
 # =========================
-
 @app.route("/register", methods=["POST"])
 def register():
     data = request.get_json()
 
+    # 1. Validar que los datos existan
     email = data.get("email")
     password = data.get("password")
 
     if not email or not password:
         return jsonify({"msg": "Email y contraseña obligatorios"}), 400
+    
+    # 2. Asegurarnos de que el password sea un string (texto)
+    if not isinstance(password, str):
+        return jsonify({"msg": "Formato de contraseña inválido"}), 400
+
+    # 3. Aplicar el límite de 72 bytes de bcrypt para evitar el crash
+    if len(password) > 72:
+        password = password[:72] # Cortamos a 72 caracteres como sugiere el error
 
     existing_user = User.query.filter_by(email=email).first()
 
     if existing_user:
         return jsonify({"msg": "El usuario ya existe"}), 400
 
-    hashed_password = bcrypt.generate_password_hash(
-        password
-    ).decode("utf-8")
+    # 4. Ahora sí, encriptar con seguridad
+    hashed_password = bcrypt.generate_password_hash(password).decode("utf-8")
 
     user = User(
         email=email,
@@ -86,7 +93,6 @@ def register():
     db.session.commit()
 
     return jsonify({"msg": "Usuario registrado"}), 201
-
 
 @app.route("/login", methods=["POST"])
 def login():
