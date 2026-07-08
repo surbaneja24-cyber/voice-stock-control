@@ -1,18 +1,18 @@
 import asyncio
-import re
 from datetime import datetime, timedelta
 from typing import Literal, List
 from pydantic import BaseModel, Field, EmailStr
-from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, Form, status
+from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from jose import JWTError, jwt
+import re
+from thefuzz import process
 
 from database import engine, Base, get_db
 from models import Producto, Movimiento, Usuario, LeadPiloto
-import servicios_ia
 
 # Inicialización de DB
 Base.metadata.create_all(bind=engine)
@@ -22,14 +22,14 @@ app = FastAPI(title="VoxStock IA Motor - Secure Edition")
 # --- CONFIGURACIÓN DE SEGURIDAD Y JWT ---
 SECRET_KEY = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7" # Mover a .env en producción
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7 # Token válido por 7 días
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7 
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/login") # El frontend usará esto
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/login") 
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://voice-stock-control.vercel.app"], # La URL exacta de tu frontend
+    allow_origins=["https://voice-stock-control.vercel.app"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -37,13 +37,8 @@ app.add_middleware(
 
 # --- VALIDACIONES PYDANTIC ---
 class UsuarioRegistro(BaseModel):
-    # Limitamos a 100 caracteres para evitar payloads masivos
     nombre: str = Field(..., min_length=2, max_length=100)
-    
-    # Exige un formato de correo real (user@dominio.com)
     email: EmailStr
-    
-    # Aquí matamos el bug de Bcrypt desde la raíz
     password: str = Field(..., min_length=6, max_length=72)
 
 class UsuarioLogin(BaseModel):
@@ -54,13 +49,24 @@ class NuevoProducto(BaseModel):
     nombre: str
     stock: int = 0
     sector: str
-    # ELIMINADO: usuario_id. El servidor lo deducirá por seguridad a través del Token.
 
 class LeadCreate(BaseModel):
     nombre: str = Field(..., min_length=2)
     empresa: str = Field(..., min_length=2)
     email: str 
     volumen: Literal["0-50", "51-200", "201-500", "500+"]
+
+# Nuevo esquema para recibir texto limpio desde React
+class ComandoPayload(BaseModel):
+    comando: str = Field(..., max_length=200)
+    sector: str
+
+# --- DICCIONARIO DE NÚMEROS ---
+MAPEO_NUMEROS = {
+    "un": 1, "uno": 1, "una": 1, "dos": 2, "tres": 3, "cuatro": 4, 
+    "cinco": 5, "seis": 6, "siete": 7, "ocho": 8, "nueve": 9, "diez": 10,
+    "once": 11, "doce": 12, "veinte": 20, "cincuenta": 50, "cien": 100
+}
 
 # --- FUNCIONES CORE DE SEGURIDAD ---
 def verificar_password(plain_password, hashed_password):
@@ -80,7 +86,6 @@ def crear_token_acceso(data: dict, expires_delta: timedelta | None = None):
     return encoded_jwt
 
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-    """Extrae, valida el JWT y devuelve el usuario dueño de la petición."""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Credenciales no válidas o token expirado",
@@ -97,7 +102,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     user = db.query(Usuario).filter(Usuario.email == email).first()
     if user is None:
         raise credentials_exception
-    return user
+    return user 
 
 # --- SEMILLA DE CATÁLOGO ---
 def sembrar_catalogo_para_usuario(db: Session, usuario_id: int):
@@ -107,7 +112,7 @@ def sembrar_catalogo_para_usuario(db: Session, usuario_id: int):
         {"nombre": "Paracetamol 500mg", "stock": 500, "sector": "farmacia"},
         {"nombre": "Palets de madera", "stock": 80, "sector": "logistica"},
         {"nombre": "Material general", "stock": 10, "sector": "universal"}
-    ] # Recortado por eficiencia, añade los que falten.
+    ] 
     nuevos_productos = [Producto(**p, usuario_id=usuario_id) for p in productos_seed]
     db.add_all(nuevos_productos)
 
@@ -117,7 +122,6 @@ def sembrar_catalogo_para_usuario(db: Session, usuario_id: int):
 
 @app.post("/api/registro")
 def registrar_usuario(user: UsuarioRegistro, db: Session = Depends(get_db)):
-    # 1. Bloqueo inmediato de contraseñas problemáticas (Evita crashear passlib)
     if not user.password or len(user.password) > 72:
         raise HTTPException(status_code=400, detail="La contraseña no puede exceder los 72 caracteres de seguridad.")
 
@@ -145,9 +149,7 @@ def registrar_usuario(user: UsuarioRegistro, db: Session = Depends(get_db)):
         }
     except Exception as e:
         db.rollback() 
-        # El error real se imprime en consola (logs de Render) para depuración interna
         print(f"[ERROR CRÍTICO REGISTRO]: {str(e)}") 
-        # El frontend recibe un mensaje saneado que no compromete la arquitectura
         raise HTTPException(status_code=500, detail="Error interno al procesar el registro. Contacte al administrador del WMS.")
 
 @app.post("/api/login")
@@ -156,7 +158,6 @@ def login_usuario(user: UsuarioLogin, db: Session = Depends(get_db)):
     if not db_user or not verificar_password(user.password, db_user.password_hash):
         raise HTTPException(status_code=400, detail="Credenciales incorrectas. Verifique correo y contraseña.")
     
-    # Emitimos el Token de acceso
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = crear_token_acceso(data={"sub": db_user.email}, expires_delta=access_token_expires)
     
@@ -197,7 +198,7 @@ def obtener_planes_monetizacion():
     ]
 
 # ==========================================
-# ENDPOINTS PRIVADOS (Requieren Token JWT)
+# ENDPOINTS PRIVADOS (Requieren Token JWT) 
 # ==========================================
 
 @app.get("/api/history")
@@ -249,70 +250,97 @@ def eliminar_producto_personalizado(producto_id: int, db: Session = Depends(get_
     db.commit()
     return {"status": "success", "mensaje": f"Producto '{nombre_borrado}' eliminado."}
 
-@app.post("/api/transcribir")
-async def endpoint_transcribir(
-    audio: UploadFile = File(...), 
-    sector: str = Form("universal"), 
-    db: Session = Depends(get_db),
-    current_user: Usuario = Depends(get_current_user)
-):
-    if not audio.filename:
-        raise HTTPException(status_code=400, detail="Archivo inválido.")
+# --- EL NUEVO MOTOR DE PROCESAMIENTO NLP ---
+@app.post("/api/procesar-comando")
+def procesar_comando(payload: ComandoPayload, db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_user)):
+    texto = payload.comando.lower()
     
-    contenido_audio = await audio.read()
-    if len(contenido_audio) < 1000: # Reducido temporalmente por seguridad, mejorar esto luego
-        raise HTTPException(status_code=400, detail="Audio demasiado corto o corrupto.")
+    # 1. Determinar Acción
+    palabras_ingreso = ["añadir", "añade", "suma", "sumar", "entrar", "entrada", "agrega", "agregar"]
+    palabras_salida = ["quitar", "quita", "resta", "restar", "sacar", "saca", "elimina", "salida"]
     
-    try:
-        texto_extraido = await asyncio.to_thread(servicios_ia.extraer_texto_de_audio, contenido_audio)
-        productos_filtrados = db.query(Producto).filter(Producto.usuario_id == current_user.id).filter(
-            (Producto.sector == sector.lower()) | (Producto.sector == "universal")
-        ).all()
+    es_ingreso = any(p in texto for p in palabras_ingreso)
+    es_salida = any(p in texto for p in palabras_salida)
+    
+    if es_ingreso and es_salida:
+        return {"estado": "error", "mensaje": "Comando confuso: indica entrada o salida, no ambas."}
+    if not es_ingreso and not es_salida:
+        return {"estado": "error", "mensaje": "No entendí la acción. Di 'añadir' o 'quitar'."}
         
-        nombres_catalogo = [p.nombre for p in productos_filtrados]
-        coincidencia, porcentaje = servicios_ia.evaluar_coincidencia(texto_extraido, nombres_catalogo)
-        
-        if coincidencia:
-            producto_db = db.query(Producto).filter(Producto.nombre == coincidencia, Producto.usuario_id == current_user.id).first()
-            accion, cantidad, unidad = servicios_ia.interpretar_orden(texto_extraido)
-            
-            if accion == "suma":
-                producto_db.stock += cantidad
-                accion_str = f"Entrada registrada: +{cantidad} {unidad}(s)"
-            elif accion == "resta":
-                if producto_db.stock >= cantidad:
-                    producto_db.stock -= cantidad
-                    accion_str = f"Salida registrada: -{cantidad} {unidad}(s)"
-                else:
-                    raise HTTPException(status_code=400, detail=f"Stock insuficiente.")
-            else:
-                accion_str = "Consulta de stock"
+    accion = "suma" if es_ingreso else "resta"
+    
+    # 2. Extraer Cantidad
+    cantidad = 0
+    match_digito = re.search(r'\d+', texto)
+    if match_digito:
+        cantidad = int(match_digito.group())
+    else:
+        for palabra, valor in MAPEO_NUMEROS.items():
+            if re.search(rf'\b{palabra}\b', texto):
+                cantidad = valor
+                break
                 
-            if accion != "leer":
-                nuevo_movimiento = Movimiento(
-                    user=current_user.nombre, 
-                    action=accion, 
-                    product=producto_db.nombre,
-                    quantity=cantidad, 
-                    unit=unidad, 
-                    method="Voz",
-                    usuario_id=current_user.id 
-                )
-                db.add(nuevo_movimiento)
-                db.commit() 
-                db.refresh(producto_db)
-            
-            return {
-                "transcripcion": texto_extraido,
-                "mensaje": f"[EXITO] {producto_db.nombre}\n{accion_str}\nStock: {producto_db.stock}\nPrecisión: {porcentaje}%", 
-                "estado": "completado", "accion": accion, "producto": producto_db.nombre, "cantidad": cantidad, "unidad": unidad
-            }
+    if cantidad <= 0:
+        return {"estado": "error", "mensaje": "No escuché una cantidad válida."}
+
+    # 3. Limpiar texto 
+    texto_limpio = re.sub(r'\d+', '', texto)
+    for palabra in palabras_ingreso + palabras_salida + list(MAPEO_NUMEROS.keys()):
+        texto_limpio = re.sub(rf'\b{palabra}\b', '', texto_limpio)
+    texto_limpio = texto_limpio.strip()
+
+    # 4. Búsqueda Difusa en Catálogo del Usuario
+    productos_db = db.query(Producto).filter(
+        Producto.usuario_id == current_user.id,
+        ((Producto.sector == payload.sector.lower()) | (Producto.sector == 'universal'))
+    ).all()
+    
+    if not productos_db:
+        return {"estado": "error", "mensaje": f"No hay productos registrados en este sector."}
+        
+    nombres_productos = [p.nombre.lower() for p in productos_db]
+    mejor_coincidencia, puntuacion = process.extractOne(texto_limpio, nombres_productos)
+    
+    if puntuacion < 65:
+        return {"estado": "error", "mensaje": f"No encontré el producto. Lo más parecido es '{mejor_coincidencia}' pero no estoy seguro."}
+        
+    producto_objetivo = next(p for p in productos_db if p.nombre.lower() == mejor_coincidencia)
+    
+    # 5. Ejecutar la lógica y guardar el Movimiento
+    try:
+        if accion == "resta":
+            if producto_objetivo.stock < cantidad:
+                return {"estado": "error", "mensaje": f"Stock insuficiente. Solo hay {producto_objetivo.stock} de {producto_objetivo.nombre}."}
+            producto_objetivo.stock -= cantidad
+            accion_str = f"Salida registrada: -{cantidad} ud(s)"
         else:
-            return {
-                "transcripcion": texto_extraido, 
-                "mensaje": "Producto no identificado.", 
-                "estado": "error"
-            }
+            producto_objetivo.stock += cantidad
+            accion_str = f"Entrada registrada: +{cantidad} ud(s)"
+            
+        # Generar el registro en el historial
+        nuevo_movimiento = Movimiento(
+            user=current_user.nombre, 
+            action=accion, 
+            product=producto_objetivo.nombre,
+            quantity=cantidad, 
+            unit="ud", 
+            method="Voz",
+            usuario_id=current_user.id 
+        )
+        
+        db.add(nuevo_movimiento)
+        db.commit()
+        db.refresh(producto_objetivo)
+        
+        return {
+            "estado": "completado",
+            "mensaje": f"[ÉXITO] {producto_objetivo.nombre}\n{accion_str}\nStock actual: {producto_objetivo.stock}\nPrecisión: {puntuacion}%",
+            "accion": "entrada" if accion == "suma" else "salida",
+            "producto": producto_objetivo.nombre,
+            "cantidad": cantidad,
+            "unidad": "ud"
+        }
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Fallo del motor: {str(e)}")
+        print(f"[ERROR MOTOR NLP]: {str(e)}")
+        return {"estado": "error", "mensaje": "Error interno al actualizar el inventario."}

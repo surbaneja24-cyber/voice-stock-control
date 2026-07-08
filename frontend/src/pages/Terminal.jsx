@@ -1,9 +1,10 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Mic, X, BookOpen, LogOut, Trash2, Plus, Info } from "lucide-react"; 
 import { useNavigate } from "react-router-dom";
 import { useHistoryStore } from "../store/historyStore";
 import { useThemeStore } from "../store/themeStore";
 import { useAuthStore } from "../store/authStore"; 
+import useVoiceCommand from "../hooks/useVoiceCommand"; // <-- IMPORTACIÓN DEL HOOK
 
 export default function Terminal() {
   const navigate = useNavigate();
@@ -25,7 +26,6 @@ export default function Terminal() {
   const [sectorActivo, setSectorActivo] = useState(getInitialSector());
   const [mostrarModalSectores, setMostrarModalSectores] = useState(getInitialOnboarding());
   
-  const [grabando, setGrabando] = useState(false);
   const [mostrarModalCatalogo, setMostrarModalCatalogo] = useState(false);
   const [mostrarModalAyuda, setMostrarModalAyuda] = useState(false); 
   const [listaProductos, setListaProductos] = useState([]);
@@ -39,8 +39,8 @@ export default function Terminal() {
     estado: "idle" 
   });
 
-  const mediaRecorderRef = useRef(null);
-  const fragmentosDeAudio = useRef([]);
+  // INTEGRACIÓN DEL HOOK DE VOZ
+  const { transcript, isListening, error: micError, startListening, stopListening } = useVoiceCommand();
 
   const sectores = [
     { id: "alimentacion", nombre: "Alimentacion", icono: "[AL]" },
@@ -92,12 +92,76 @@ export default function Terminal() {
     }
   }, [fetchCatalogo, mostrarModalSectores]);
 
+  // VIGILANTE DE TRANSCRIPCIÓN: Cuando el hook escupe texto, lo enviamos al backend
+  useEffect(() => {
+    if (transcript) {
+      procesarComandoIA(transcript);
+    }
+  }, [transcript]);
+
+  // NUEVA FUNCIÓN: Envía texto JSON, ya no envía audio
+  const procesarComandoIA = async (textoComando) => {
+    setRespuestaIA({ 
+      transcripcion: textoComando, 
+      mensaje: "Procesando intención con IA...", 
+      estado: "idle" 
+    });
+
+    try {
+      // Nota: Cambié el endpoint de /transcribir a /procesar-comando 
+      // porque el backend ahora recibe texto, no audio.
+      const respuesta = await fetch(`${baseApiUrl}/api/procesar-comando`, { 
+        method: "POST", 
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          comando: textoComando,
+          sector: sectorActivo
+        }) 
+      });
+      
+      const datos = await respuesta.json();
+
+      if (respuesta.ok) {
+        setRespuestaIA({ 
+          transcripcion: textoComando, 
+          mensaje: datos.mensaje, 
+          estado: datos.estado 
+        });
+
+        if (datos.estado === "completado") {
+          addMovimiento({
+            dateTime: new Date().toISOString(),
+            user: usuario?.nombre || "Operario Anónimo", 
+            action: datos.accion,
+            product: datos.producto,
+            quantity: datos.cantidad,
+            unit: datos.unidad,
+            method: "Voice",
+          });
+          fetchCatalogo();
+        }
+      } else {
+        setRespuestaIA({ 
+          transcripcion: textoComando, 
+          mensaje: "Fallo del motor: " + (datos.detail || datos.error), 
+          estado: "error" 
+        });
+      }
+    } catch (error) {
+      console.error("[CRITICO] Fallo de red:", error);
+      setRespuestaIA({ transcripcion: "Fallo de red.", mensaje: "Error Critico: Servidor inalcanzable.", estado: "error" });
+    }
+  };
+
   const handleApproveProducto = async (e) => {
     e.preventDefault();
     if (!nuevoItemNombre.trim()) return;
 
     const payload = {
-      nombre: nuevoItemNombre,
+      nombre: nuevoItemNombre,      
       stock: parseInt(nuevoItemStock) || 0,
       sector: sectorActivo
     };
@@ -145,83 +209,6 @@ export default function Terminal() {
     setMostrarModalSectores(false);
     localStorage.setItem(`voxstock_sector_${usuario?.id}`, sectorId);
     localStorage.setItem(`voxstock_onboarding_${usuario?.id}`, "done");
-  };
-
-  const iniciarGrabacion = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      fragmentosDeAudio.current = [];
-
-      mediaRecorder.ondataavailable = (evento) => {
-        if (evento.data.size > 0) fragmentosDeAudio.current.push(evento.data);
-      };
-
-      mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(fragmentosDeAudio.current, { type: 'audio/webm' });
-        setRespuestaIA(prev => ({...prev, mensaje: "Procesando audio con IA...", estado: "idle"}));
-
-        const formData = new FormData();
-        formData.append("audio", audioBlob, "orden_operario.webm");
-        formData.append("sector", sectorActivo); 
-
-        try {
-          const respuesta = await fetch(`${baseApiUrl}/api/transcribir`, { 
-            method: "POST", 
-            headers: {
-              'Authorization': `Bearer ${token}`
-            },
-            body: formData 
-          });
-          
-          const datos = await respuesta.json();
-
-          if (respuesta.ok) {
-            setRespuestaIA({ 
-              transcripcion: datos.transcripcion || "Audio procesado", 
-              mensaje: datos.mensaje, 
-              estado: datos.estado 
-            });
-
-            if (datos.estado === "completado") {
-              addMovimiento({
-                dateTime: new Date().toISOString(),
-                user: usuario?.nombre || "Operario Anónimo", 
-                action: datos.accion,
-                product: datos.producto,
-                quantity: datos.cantidad,
-                unit: datos.unidad,
-                method: "Voice",
-              });
-              fetchCatalogo();
-            }
-          } else {
-            setRespuestaIA({ 
-              transcripcion: "Error en la transmision.", 
-              mensaje: "Fallo del motor: " + (datos.detail || datos.error), 
-              estado: "error" 
-            });
-          }
-        } catch (error) {
-          console.error("[CRITICO] Fallo de red:", error);
-          setRespuestaIA({ transcripcion: "Fallo de red.", mensaje: "Error Critico: Servidor inalcanzable.", estado: "error" });
-        }
-        stream.getTracks().forEach(track => track.stop());
-      };
-
-      mediaRecorder.start();
-      setGrabando(true);
-    } catch (error) {
-      alert("Error: No se pudo acceder al microfono. Verifica los permisos.");
-    }
-  };
-
-  const detenerGrabacion = () => {
-    if (mediaRecorderRef.current && grabando) {
-      mediaRecorderRef.current.stop();
-      setGrabando(false);
-    }
   };
 
   const ejecutarCerrarSesion = () => {
@@ -297,7 +284,7 @@ export default function Terminal() {
             </div>
 
             <form onSubmit={handleApproveProducto} className={`mb-4 flex gap-2 p-3 rounded-xl border ${darkMode ? 'bg-slate-800/50 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
-              <input 
+              <input                
                 type="text" 
                 placeholder="Nuevo producto..." 
                 value={nuevoItemNombre}
@@ -402,14 +389,21 @@ export default function Terminal() {
         </div>
 
         <div className="flex flex-col items-center gap-3 relative">
-          {grabando && <div className="absolute inset-0 bg-blue-500/20 rounded-full blur-3xl animate-pulse -z-10 w-48 h-48 md:w-64 md:h-64 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></div>}
+          {/* Mostramos errores de micrófono si los hay */}
+          {micError && <p className="text-red-500 text-xs font-bold mb-2">{micError}</p>}
+          
+          {isListening && <div className="absolute inset-0 bg-blue-500/20 rounded-full blur-3xl animate-pulse -z-10 w-48 h-48 md:w-64 md:h-64 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></div>}
           <button
-            className={`w-28 h-28 md:w-32 md:h-32 rounded-full flex items-center justify-center border transition-all duration-300 z-10 ${grabando ? 'scale-95 bg-blue-600 border-blue-500 shadow-[0_0_30px_rgba(37,99,235,0.4)]' : darkMode ? 'bg-slate-900 border-slate-700 shadow-xl hover:scale-105 hover:border-slate-600' : 'bg-white border-slate-200 shadow-xl hover:scale-105 hover:border-slate-300'}`}
-            onMouseDown={iniciarGrabacion} onMouseUp={detenerGrabacion} onMouseLeave={detenerGrabacion} onTouchStart={iniciarGrabacion} onTouchEnd={detenerGrabacion}
+            className={`w-28 h-28 md:w-32 md:h-32 rounded-full flex items-center justify-center border transition-all duration-300 z-10 ${isListening ? 'scale-95 bg-blue-600 border-blue-500 shadow-[0_0_30px_rgba(37,99,235,0.4)]' : darkMode ? 'bg-slate-900 border-slate-700 shadow-xl hover:scale-105 hover:border-slate-600' : 'bg-white border-slate-200 shadow-xl hover:scale-105 hover:border-slate-300'}`}
+            onMouseDown={startListening} 
+            onMouseUp={stopListening} 
+            onMouseLeave={stopListening} 
+            onTouchStart={startListening} 
+            onTouchEnd={stopListening}
           >
-            <Mic size={38} strokeWidth={1.5} color={grabando ? "white" : (darkMode ? "#94a3b8" : "#64748b")} className={`transition-all ${grabando ? 'animate-bounce' : ''}`} />
+            <Mic size={38} strokeWidth={1.5} color={isListening ? "white" : (darkMode ? "#94a3b8" : "#64748b")} className={`transition-all ${isListening ? 'animate-bounce' : ''}`} />
           </button>
-          <span className={`font-bold tracking-wider text-[10px] uppercase ${grabando ? 'text-blue-500' : (darkMode ? 'text-slate-500' : 'text-slate-400')}`}>{grabando ? "Escuchando..." : "Esperando orden"}</span>
+          <span className={`font-bold tracking-wider text-[10px] uppercase ${isListening ? 'text-blue-500' : (darkMode ? 'text-slate-500' : 'text-slate-400')}`}>{isListening ? "Escuchando..." : "Esperando orden"}</span>
         </div>
 
         <div className={`w-full max-w-2xl p-4 md:p-6 rounded-2xl border shadow-lg transition-colors ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
