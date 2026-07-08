@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useHistoryStore } from "../store/historyStore";
 import { useThemeStore } from "../store/themeStore";
 import { useAuthStore } from "../store/authStore"; 
-import useVoiceCommand from "../hooks/useVoiceCommand"; // <-- IMPORTACIÓN DEL HOOK
+import useVoiceCommand from "../utils/useVoiceCommand"; // <-- IMPORTACIÓN DEL HOOK
 
 export default function Terminal() {
   const navigate = useNavigate();
