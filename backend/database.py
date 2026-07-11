@@ -1,25 +1,32 @@
 # ==============================================================================
 # ARCHIVO: database.py
-# PROPÓSITO: Configuración del motor de persistencia y control de concurrencia.
+# PROPÓSITO: Configuración del motor de persistencia Neon (PostgreSQL).
 # ==============================================================================
 
 import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
+from dotenv import load_dotenv
 
-# 1. Determinación estricta de la ruta del archivo de base de datos
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATABASE_FILE = os.path.join(BASE_DIR, 'inventario.db')
-SQLALCHEMY_DATABASE_URL = f"sqlite:///{DATABASE_FILE}"
+# Carga de variables de entorno para desarrollo local desde archivo .env
+load_dotenv()
 
-# 2. Inicialización del motor con programación defensiva contra bloqueos concurrentes
-# Se inyecta 'timeout': 15 para forzar a SQLite a esperar en cola antes de fallar con 'database is locked'.
+# 1. Obtención y saneamiento de la URL de producción
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+if not DATABASE_URL:
+    raise ValueError("CRÍTICO: La variable de entorno DATABASE_URL no está configurada.")
+
+# SQLAlchemy 2.0 exige estrictamente el dialecto 'postgresql://'
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+# 2. Inicialización del motor optimizado para la nube (Neon)
 engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, 
-    connect_args={
-        "check_same_thread": False,
-        "timeout": 15
-    }
+    DATABASE_URL,
+    pool_pre_ping=True,  # Verifica si la conexión sigue viva antes de cada consulta
+    pool_size=5,         # Límite seguro de conexiones simultáneas para la capa gratuita
+    max_overflow=2       # Conexiones extra permitidas en picos de tráfico
 )
 
 # 3. Fábrica de sesiones aisladas
