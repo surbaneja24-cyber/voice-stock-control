@@ -209,19 +209,19 @@ export default function Terminal() {
           <h1 className={`text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight leading-none mt-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>Terminal Principal</h1>
       </div>
 
-      {/* ÁREA CENTRAL (Más prominente y equilibrada) */}
-      <div className="flex-1 w-full max-w-3xl flex flex-col justify-center gap-4 px-2 sm:px-0 min-h-0 mb-6">
-        <div className={`w-full p-6 sm:p-8 rounded-3xl border shadow-xl transition-colors flex flex-col justify-center min-h-[200px] sm:min-h-[250px] ${darkMode ? 'bg-[#151C2C] border-slate-800/50' : 'bg-white border-slate-200'}`}>
-          <div className="mb-4 sm:mb-6 pb-4 sm:pb-6 border-b border-dashed border-slate-400/30 dark:border-slate-700">
-            <h3 className={`text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-2 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Última Orden Procesada</h3>
-            <p className={`text-lg sm:text-xl italic font-medium ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>"{respuestaIA.transcripcion}"</p>
+      {/* ÁREA CENTRAL (Fluida, sin alturas mínimas rígidas) */}
+      <div className="flex-1 w-full max-w-3xl flex flex-col justify-center gap-4 px-2 sm:px-0 min-h-0 mb-4 sm:mb-6">
+        <div className={`w-full p-5 sm:p-8 rounded-3xl border shadow-xl flex flex-col justify-center transition-colors ${darkMode ? 'bg-[#151C2C] border-slate-800/50' : 'bg-white border-slate-200'}`}>
+          <div className="mb-3 sm:mb-5 pb-3 sm:pb-5 border-b border-dashed border-slate-400/30 dark:border-slate-700">
+            <h3 className={`text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-1.5 sm:mb-2 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Última Orden Procesada</h3>
+            <p className={`text-base sm:text-xl italic font-medium ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>"{respuestaIA.transcripcion}"</p>
           </div>
-          <div className="flex items-center gap-3 mb-4">
+          <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
             <div className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full ${isProcessing ? 'animate-bounce bg-yellow-500' : 'animate-pulse'} ${respuestaIA.estado === 'error' ? 'bg-red-500' : respuestaIA.estado === 'completado' ? 'bg-emerald-500' : 'bg-blue-600'}`}></div>
-            <h3 className={`text-xs sm:text-sm font-bold uppercase tracking-wider ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Estado de Resolución</h3>
+            <h3 className={`text-[10px] sm:text-sm font-bold uppercase tracking-wider ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Estado de Resolución</h3>
           </div>
-          <div className={`p-4 sm:p-6 rounded-2xl flex-1 flex items-center justify-center transition-colors duration-300 border ${respuestaIA.estado === 'error' ? (darkMode ? 'bg-red-950/20 text-red-400 border-red-900/30' : 'bg-red-50 text-red-700 border-red-100') : respuestaIA.estado === 'completado' ? (darkMode ? 'bg-emerald-950/20 text-emerald-400 border-emerald-900/30' : 'bg-emerald-50 text-emerald-700 border-emerald-100') : (darkMode ? 'text-slate-400 bg-[#0B1120]/50 border-transparent' : 'text-slate-600 bg-slate-50 border-transparent')}`}>
-            <p className="text-base sm:text-lg leading-relaxed font-semibold whitespace-pre-wrap text-center">
+          <div className={`p-4 sm:p-6 rounded-2xl flex items-center justify-center transition-colors duration-300 border ${respuestaIA.estado === 'error' ? (darkMode ? 'bg-red-950/20 text-red-400 border-red-900/30' : 'bg-red-50 text-red-700 border-red-100') : respuestaIA.estado === 'completado' ? (darkMode ? 'bg-emerald-950/20 text-emerald-400 border-emerald-900/30' : 'bg-emerald-50 text-emerald-700 border-emerald-100') : (darkMode ? 'text-slate-400 bg-[#0B1120]/50 border-transparent' : 'text-slate-600 bg-slate-50 border-transparent')}`}>
+            <p className="text-sm sm:text-lg leading-relaxed font-semibold whitespace-pre-wrap text-center">
               {isProcessing ? "Estableciendo conexión con el servidor..." : (respuestaIA.mensaje || "Esperando instrucciones...")}
             </p>
           </div>
@@ -229,84 +229,90 @@ export default function Terminal() {
       </div>
 
       {/* ÁREA DE CONTROL INFERIOR */}
-      <div className="flex-shrink-0 w-full max-w-3xl flex flex-col items-center gap-6 sm:gap-8 pb-[env(safe-area-inset-bottom)]">
+      <div className="flex-shrink-0 w-full max-w-3xl flex flex-col items-center gap-4 sm:gap-6 pb-[env(safe-area-inset-bottom)]">
         
-        {/* ZONA DE INPUT (CONTENEDOR DE ALTURA FIJA PARA TRANSICIONES PERFECTAS) */}
-        <div className="w-full relative px-2 flex justify-center items-center h-[140px] sm:h-[180px]">
-          
-          {/* ----- MODO TEXTO (Animación por CSS puro) ----- */}
-          <div className={`absolute w-full px-2 sm:px-6 transition-all duration-500 ease-in-out ${modoTexto ? 'opacity-100 translate-y-0 z-20' : 'opacity-0 translate-y-12 pointer-events-none z-0'}`}>
-            <div className="w-full flex items-end relative">
-              
-              <button 
-                onClick={() => setModoTexto(false)}
-                className="absolute right-0 -top-14 sm:-top-16 p-3 sm:p-4 rounded-full border shadow-lg transition-all active:scale-90 flex items-center justify-center z-30 bg-slate-800 border-slate-700 text-slate-300 hover:text-white dark:bg-slate-800 dark:border-slate-700"
-                title="Volver a reconocimiento de voz"
-              >
-                <Mic size={24} className="sm:w-6 sm:h-6"/>
-              </button>
-
-              <form onSubmit={handleSubmitTexto} className="w-full flex gap-3 sm:gap-4">
+        {/* ZONA DE INPUT (Flexbox Limpio y Secuencial) */}
+        <div className="w-full px-2">
+          {modoTexto ? (
+            <div className="w-full flex animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <form onSubmit={handleSubmitTexto} className="w-full flex gap-2 sm:gap-3">
+                
+                {/* Botón de volver a micrófono a la izquierda */}
+                <button 
+                  type="button"
+                  onClick={() => setModoTexto(false)}
+                  className={`p-3 sm:p-4 rounded-2xl border shadow-sm transition-colors flex items-center justify-center flex-shrink-0 ${darkMode ? 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white' : 'bg-slate-100 border-slate-300 text-slate-500 hover:text-slate-900'}`}
+                  title="Volver a reconocimiento de voz"
+                >
+                  <Mic size={22} className="sm:w-6 sm:h-6"/>
+                </button>
+                
                 <input 
                   type="text" 
                   value={textoManual}
                   onChange={(e) => setTextoManual(e.target.value)}
                   placeholder="Ej: Sumar 5 al pallet..."
-                  className={`flex-1 px-5 py-4 sm:py-5 rounded-2xl text-base sm:text-lg border shadow-inner focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-[#151C2C] border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'} ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className={`flex-1 px-4 py-3 sm:py-4 rounded-2xl text-sm sm:text-base border shadow-inner focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-[#151C2C] border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'} ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
                   disabled={isProcessing}
+                  autoFocus
                 />
-                <button type="submit" disabled={isProcessing || !textoManual.trim()} className={`p-4 sm:p-5 rounded-2xl text-white shadow-xl transition-all flex items-center justify-center flex-shrink-0 w-[64px] sm:w-[72px] ${isProcessing || !textoManual.trim() ? 'bg-slate-600 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500 active:scale-95'}`}>
-                  <Send size={24} className="sm:w-7 sm:h-7" />
+                
+                <button type="submit" disabled={isProcessing || !textoManual.trim()} className={`p-3 sm:p-4 rounded-2xl text-white shadow-md transition-all flex items-center justify-center flex-shrink-0 w-[56px] sm:w-[64px] ${isProcessing || !textoManual.trim() ? 'bg-slate-600 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500 active:scale-95'}`}>
+                  <Send size={22} className="sm:w-6 sm:h-6" />
                 </button>
               </form>
             </div>
-          </div>
-
-          {/* ----- MODO VOZ (Animación por CSS puro) ----- */}
-          <div className={`absolute flex flex-col items-center transition-all duration-500 ease-in-out ${!modoTexto ? 'opacity-100 translate-y-0 scale-100 z-20' : 'opacity-0 translate-y-12 scale-90 pointer-events-none z-0'}`}>
-            <div className="relative">
-              {micError && <p className="text-red-400 text-xs sm:text-sm font-bold mb-2 absolute -top-8 sm:-top-10 whitespace-nowrap bg-red-950/80 px-3 py-1 rounded-full border border-red-900/50 shadow-lg">{micError}</p>}
-              {isListening && <div className="absolute inset-0 bg-blue-500/30 rounded-full blur-3xl animate-pulse -z-10 w-48 h-48 sm:w-64 sm:h-64 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></div>}
+          ) : (
+            <div className="w-full flex flex-col items-center relative animate-in fade-in zoom-in-95 duration-300">
+              {micError && <p className="text-red-400 text-[10px] sm:text-xs font-bold mb-2 absolute -top-8 bg-red-950/80 px-3 py-1 rounded-full border border-red-900/50 z-20">{micError}</p>}
               
-              <button
-                className={`w-28 h-28 sm:w-36 sm:h-36 rounded-full flex items-center justify-center border-2 transition-all duration-300 z-10 ${isProcessing ? 'opacity-50 cursor-not-allowed bg-slate-800 border-slate-700' : isListening ? 'scale-95 bg-blue-600 border-blue-400 shadow-[0_0_40px_rgba(37,99,235,0.5)]' : darkMode ? 'bg-[#151C2C] border-slate-700 shadow-2xl hover:border-slate-500' : 'bg-white border-slate-200 shadow-2xl hover:border-slate-400'}`}
-                onMouseDown={isProcessing ? null : startListening} 
-                onMouseUp={stopListening} 
-                onMouseLeave={stopListening} 
-                onTouchStart={isProcessing ? null : startListening} 
-                onTouchEnd={stopListening}
-                disabled={isProcessing}
-                style={{ WebkitTapHighlightColor: 'transparent' }}
-              >
-                <Mic size={48} strokeWidth={1.5} color={isListening ? "white" : (darkMode ? "#94a3b8" : "#64748b")} className={`sm:w-16 sm:h-16 transition-all ${isListening ? 'animate-bounce' : ''}`} />
-              </button>
+              <div className="flex items-center justify-center w-full relative">
+                <div className="relative flex justify-center items-center">
+                  {isListening && <div className="absolute inset-0 bg-blue-500/30 rounded-full blur-2xl animate-pulse -z-10 w-32 h-32 sm:w-48 sm:h-48"></div>}
+                  <button
+                    className={`w-24 h-24 sm:w-32 sm:h-32 rounded-full flex items-center justify-center border-2 transition-all duration-300 z-10 ${isProcessing ? 'opacity-50 cursor-not-allowed bg-slate-800 border-slate-700' : isListening ? 'scale-95 bg-blue-600 border-blue-400 shadow-[0_0_30px_rgba(37,99,235,0.5)]' : darkMode ? 'bg-[#151C2C] border-slate-700 shadow-xl hover:border-slate-500' : 'bg-white border-slate-200 shadow-xl hover:border-slate-400'}`}
+                    onMouseDown={isProcessing ? null : startListening} 
+                    onMouseUp={stopListening} 
+                    onMouseLeave={stopListening} 
+                    onTouchStart={isProcessing ? null : startListening} 
+                    onTouchEnd={stopListening}
+                    disabled={isProcessing}
+                    style={{ WebkitTapHighlightColor: 'transparent' }}
+                  >
+                    <Mic size={40} strokeWidth={1.5} color={isListening ? "white" : (darkMode ? "#94a3b8" : "#64748b")} className={`transition-all ${isListening ? 'animate-bounce' : ''}`} />
+                  </button>
+                </div>
 
-              <button 
-                onClick={() => setModoTexto(true)}
-                className={`absolute -right-4 sm:-right-8 top-1/2 -translate-y-1/2 p-3 sm:p-4 rounded-full border shadow-lg transition-colors active:scale-90 ${darkMode ? 'bg-slate-800 border-slate-700 text-slate-300 hover:text-white' : 'bg-slate-100 border-slate-300 text-slate-600 hover:text-slate-900'}`}
-                title="Cambiar a texto manual"
-              >
-                <Keyboard size={24} className="sm:w-6 sm:h-6"/>
-              </button>
+                {/* Teclado anclado de forma segura a la derecha */}
+                <button 
+                  onClick={() => setModoTexto(true)}
+                  className={`absolute right-4 sm:right-8 p-3 sm:p-4 rounded-full border shadow-sm transition-colors active:scale-90 ${darkMode ? 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white' : 'bg-slate-100 border-slate-300 text-slate-500 hover:text-slate-900'}`}
+                  title="Cambiar a texto manual"
+                >
+                  <Keyboard size={20} className="sm:w-6 sm:h-6"/>
+                </button>
+              </div>
+              
+              <span className={`font-bold tracking-widest text-[9px] sm:text-[10px] uppercase mt-3 sm:mt-4 ${isListening ? 'text-blue-500' : (darkMode ? 'text-slate-500' : 'text-slate-400')}`}>
+                {isListening ? "Escuchando orden..." : isProcessing ? "Procesando en servidor" : "Mantener pulsado para hablar"}
+              </span>
             </div>
-            <span className={`font-bold tracking-widest text-[10px] sm:text-xs uppercase mt-4 sm:mt-5 ${isListening ? 'text-blue-500' : (darkMode ? 'text-slate-500' : 'text-slate-400')}`}>{isListening ? "Escuchando orden..." : isProcessing ? "Procesando en servidor" : "Mantener pulsado para hablar"}</span>
-          </div>
-
+          )}
         </div>
 
-        {/* DOCK INFERIOR (Más robusto y equilibrado) */}
-        <div className="w-full grid grid-cols-3 gap-3 sm:gap-4 px-2 sm:px-0">
+        {/* DOCK INFERIOR (Recuperado y proporcionado) */}
+        <div className="w-full grid grid-cols-3 gap-2 sm:gap-4 px-2 sm:px-0">
             {dockItems.map((item, index) => (
               <button
                 key={index}
                 onClick={item.onClick}
-                className={`flex flex-col items-center justify-center py-4 sm:py-5 px-2 rounded-2xl border transition-all active:scale-95 shadow-md ${item.colorClass}`}
+                className={`flex flex-col items-center justify-center py-3 sm:py-4 px-2 rounded-2xl border transition-all active:scale-95 shadow-md ${item.colorClass}`}
                 style={{ WebkitTapHighlightColor: 'transparent' }}
               >
-                <div className="mb-1.5 sm:mb-2 scale-110 sm:scale-125">
+                <div className="mb-1 sm:mb-2 scale-100 sm:scale-110">
                   {item.icon}
                 </div>
-                <span className="text-[9px] sm:text-[11px] font-bold uppercase tracking-widest text-center leading-none">
+                <span className="text-[8px] sm:text-[10px] font-bold uppercase tracking-widest text-center leading-none">
                   {item.label}
                 </span>
               </button>
