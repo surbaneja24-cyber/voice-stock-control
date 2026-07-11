@@ -364,24 +364,37 @@ export default function Terminal() {
       <div className="flex-shrink-0 w-full max-w-2xl flex flex-col items-center gap-3 sm:gap-4 mt-2 pb-[env(safe-area-inset-bottom)]">
         
         {/* ZONA DE INPUT */}
-        <div className="w-full flex justify-center relative px-2">
+        <div className="w-full flex justify-center relative px-2 min-h-[5rem] sm:min-h-[6rem]">
           {modoTexto ? (
-            <form onSubmit={handleSubmitTexto} className="w-full flex gap-2 sm:gap-3">
-              <input 
-                type="text" 
-                value={textoManual}
-                onChange={(e) => setTextoManual(e.target.value)}
-                placeholder="Ej: Sumar 5 al pallet..."
-                className={`flex-1 px-4 py-3 sm:py-4 rounded-xl text-sm sm:text-base border shadow-inner focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'} ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
-                disabled={isProcessing}
-                autoFocus
-              />
-              <button type="submit" disabled={isProcessing || !textoManual.trim()} className={`p-3 sm:p-4 rounded-xl text-white shadow-md transition-colors flex items-center justify-center ${isProcessing || !textoManual.trim() ? 'bg-slate-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500 active:scale-95'}`}>
-                <Send size={24} />
+            <div className="w-full flex items-end relative animate-in fade-in slide-in-from-bottom-4 duration-300 ease-out">
+              
+              {/* BOTON TOGGLE (Flotando arriba del botón Enter con margen de seguridad) */}
+              <button 
+                onClick={() => setModoTexto(false)}
+                className={`absolute right-0 -top-12 sm:-top-14 p-2.5 rounded-full border shadow-md transition-all active:scale-90 flex items-center justify-center z-20 ${darkMode ? 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white' : 'bg-slate-100 border-slate-300 text-slate-600 hover:text-slate-900'}`}
+                title="Volver a reconocimiento de voz"
+              >
+                <Mic size={18} className="sm:w-5 sm:h-5"/>
               </button>
-            </form>
+
+              <form onSubmit={handleSubmitTexto} className="w-full flex gap-2 sm:gap-3">
+                <input 
+                  type="text" 
+                  value={textoManual}
+                  onChange={(e) => setTextoManual(e.target.value)}
+                  placeholder="Ej: Sumar 5 al pallet..."
+                  className={`flex-1 px-4 py-3 sm:py-4 rounded-xl text-sm sm:text-base border shadow-inner focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'} ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  disabled={isProcessing}
+                  autoFocus
+                />
+                <button type="submit" disabled={isProcessing || !textoManual.trim()} className={`p-3 sm:p-4 rounded-xl text-white shadow-md transition-all flex items-center justify-center flex-shrink-0 w-[52px] sm:w-[60px] ${isProcessing || !textoManual.trim() ? 'bg-slate-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500 active:scale-95'}`}>
+                  <Send size={20} className="sm:w-6 sm:h-6" />
+                </button>
+              </form>
+              
+            </div>
           ) : (
-            <div className="flex flex-col items-center relative">
+            <div className="flex flex-col items-center relative w-full animate-in fade-in zoom-in-95 duration-300 ease-out">
               {micError && <p className="text-red-500 text-[10px] sm:text-xs font-bold mb-1 absolute -top-5 sm:-top-6 whitespace-nowrap bg-red-100 dark:bg-red-900/30 px-2 py-0.5 rounded-full">{micError}</p>}
               {isListening && <div className="absolute inset-0 bg-blue-500/20 rounded-full blur-2xl animate-pulse -z-10 w-32 h-32 sm:w-48 sm:h-48 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></div>}
               <button
@@ -397,16 +410,17 @@ export default function Terminal() {
                 <Mic size={32} strokeWidth={1.5} color={isListening ? "white" : (darkMode ? "#94a3b8" : "#64748b")} className={`transition-all ${isListening ? 'animate-bounce' : ''}`} />
               </button>
               <span className={`font-bold tracking-wider text-[9px] sm:text-[10px] uppercase mt-1.5 sm:mt-2 ${isListening ? 'text-blue-500' : (darkMode ? 'text-slate-500' : 'text-slate-400')}`}>{isListening ? "Escuchando..." : isProcessing ? "Procesando" : "Mantener pulsado"}</span>
+              
+              {/* BOTON TOGGLE (Posición Absoluta Flotante) */}
+              <button 
+                onClick={() => setModoTexto(true)}
+                className={`absolute right-2 sm:right-0 top-[40%] -translate-y-1/2 p-2.5 sm:p-3 rounded-full border shadow-sm transition-colors active:scale-90 ${darkMode ? 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white' : 'bg-slate-100 border-slate-300 text-slate-500 hover:text-slate-900'}`}
+                title="Cambiar a texto manual"
+              >
+                <Keyboard size={18} className="sm:w-5 sm:h-5"/>
+              </button>
             </div>
           )}
-
-          <button 
-            onClick={() => setModoTexto(!modoTexto)}
-            className={`absolute right-2 sm:right-0 top-[40%] -translate-y-1/2 p-2.5 sm:p-3 rounded-full border shadow-sm transition-colors active:scale-90 ${darkMode ? 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white' : 'bg-slate-100 border-slate-300 text-slate-500 hover:text-slate-900'}`}
-            title={modoTexto ? "Cambiar a voz" : "Cambiar a texto manual"}
-          >
-            {modoTexto ? <Mic size={18} className="sm:w-5 sm:h-5"/> : <Keyboard size={18} className="sm:w-5 sm:h-5"/>}
-          </button>
         </div>
 
         {/* DOCK INFERIOR */}
