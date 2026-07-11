@@ -196,164 +196,32 @@ export default function Terminal() {
   ];
 
   return (
-    <div className={`h-[100dvh] w-full flex flex-col items-center pt-16 pb-4 px-4 overflow-hidden ${darkMode ? 'bg-slate-950' : 'bg-slate-50'}`}>
+    <div className={`h-[100dvh] w-full flex flex-col items-center pt-8 sm:pt-12 pb-4 px-4 overflow-hidden ${darkMode ? 'bg-[#0B1120]' : 'bg-slate-50'}`}>
       
-      {/* REFACTOR: MODAL SECTORES (Bottom Sheet en móvil, Modal centrado en PC) */}
-      {mostrarModalSectores && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm sm:p-4">
-          <div className={`w-full max-w-4xl p-6 sm:p-8 rounded-t-3xl sm:rounded-2xl shadow-2xl relative animate-in slide-in-from-bottom sm:zoom-in duration-300 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] sm:pb-8 ${darkMode ? 'bg-slate-900 border border-slate-700' : 'bg-white border border-slate-200'}`}>
-            <div className="text-center mb-6 sm:mb-8">
-              <h2 className={`text-2xl sm:text-3xl font-extrabold tracking-tight mb-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>Entorno de Trabajo</h2>
-              <p className={`text-sm sm:text-lg ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Bienvenido, {usuario?.nombre || "Operario"}. Selecciona tu área.</p>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 max-h-[50vh] overflow-y-auto custom-scrollbar p-1">
-              {sectores.map((sector) => (
-                <button
-                  key={sector.id}
-                  onClick={() => handleSelectSector(sector.id)}
-                  className={`flex flex-col items-center justify-center p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 active:scale-95 ${
-                    sectorActivo === sector.id
-                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400'
-                      : darkMode ? 'border-slate-800 bg-slate-800/50 text-slate-300' : 'border-slate-100 bg-slate-50 text-slate-700'
-                  }`}
-                >
-                  <span className="text-xl sm:text-2xl font-mono font-bold mb-1 sm:mb-2">{sector.icono}</span>
-                  <span className="text-xs sm:text-base font-semibold">{sector.nombre}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* --- MODALES OMITIDOS PARA BREVEDAD (Conserva los tuyos exactos aquí) --- */}
+      {/* ... (Pega aquí tus bloques de mostrarModalSectores, mostrarModalCatalogo y mostrarModalAyuda) ... */}
 
-      {/* REFACTOR: MODAL CATALOGO (Bottom Sheet en móvil, mitigación de teclado iOS) */}
-      {mostrarModalCatalogo && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm sm:p-4">
-          <div className={`w-full max-w-2xl max-h-[90dvh] flex flex-col p-5 sm:p-6 rounded-t-3xl sm:rounded-2xl shadow-2xl relative animate-in slide-in-from-bottom sm:zoom-in duration-300 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] sm:pb-6 ${darkMode ? 'bg-slate-900 border border-slate-700' : 'bg-white border border-slate-200'}`}>
-            <button onClick={() => setMostrarModalCatalogo(false)} className="absolute top-4 right-4 p-2 rounded-full bg-slate-100/50 hover:bg-slate-200 dark:bg-slate-800/50 dark:hover:bg-slate-800 transition-colors z-10">
-              <X size={20} className={darkMode ? 'text-slate-400' : 'text-slate-600'} />
-            </button>
-            
-            <div className="mb-4 pr-8">
-              <h2 className={`text-xl sm:text-2xl font-bold tracking-tight flex items-center gap-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}><BookOpen className="text-blue-500" size={24}/> Tu Inventario ({sectorActual?.nombre})</h2>
-            </div>
-
-            <form onSubmit={handleApproveProducto} className={`mb-4 flex gap-2 p-2 sm:p-3 rounded-xl border flex-shrink-0 ${darkMode ? 'bg-slate-800/50 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
-              <input                
-                type="text" 
-                placeholder="Nuevo producto..." 
-                value={nuevoItemNombre}
-                onChange={(e) => setNuevoItemNombre(e.target.value)}
-                className={`flex-1 px-3 py-2 rounded-lg text-sm border focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'}`}
-                required
-              />
-              <input 
-                type="number" 
-                placeholder="Stock" 
-                value={nuevoItemStock}
-                onChange={(e) => setNuevoItemStock(e.target.value)}                
-                className={`w-20 sm:w-24 px-3 py-2 rounded-lg text-sm border focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'}`}
-              />
-              <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-2 rounded-lg transition-colors flex items-center justify-center">
-                <Plus size={20} />
-              </button>
-            </form>
-
-            <div className="flex-1 overflow-y-auto pr-1 space-y-2 custom-scrollbar min-h-[40vh]">
-              {listaProductos.length === 0 ? (
-                <p className={`text-center py-8 text-sm ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>No hay productos en esta categoría.</p>
-              ) : (
-                listaProductos.map((prod) => (
-                  <div key={prod.id} className={`flex justify-between items-center p-3 rounded-xl border ${
-                    prod.sector === 'universal' ? (darkMode ? 'bg-purple-900/10 border-purple-800/50' : 'bg-purple-50 border-purple-100') : (darkMode ? 'bg-slate-800/30 border-slate-700' : 'bg-white border-slate-200')
-                  }`}>
-                    <span className={`font-medium flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-sm sm:text-base ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>
-                      {prod.nombre} 
-                      {prod.sector === 'universal' && <span className="text-[9px] w-fit uppercase tracking-wider text-purple-500 font-bold border border-purple-500/30 bg-purple-500/10 px-2 py-0.5 rounded-full">Global</span>}
-                    </span>
-                    <div className="flex items-center gap-2 sm:gap-3 ml-2 flex-shrink-0">
-                      <span className={`text-xs sm:text-sm font-mono px-2 py-1 rounded-md ${darkMode ? 'bg-slate-950 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>Stock: {prod.stock}</span>
-                      
-                      {/* REFACTOR: Botón de borrado siempre visible y con mayor área táctil */}
-                      <button 
-                        onClick={() => handleEliminarProducto(prod.id)}
-                        className={`p-2 rounded-lg transition-colors ${darkMode ? 'text-slate-500 hover:bg-red-900/30 hover:text-red-400' : 'text-slate-400 hover:bg-red-50 hover:text-red-500'}`}
-                        title="Borrar producto"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* REFACTOR: MODAL INSTRUCCIONES (Bottom Sheet en móvil) */}
-      {mostrarModalAyuda && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm sm:p-4">
-          <div className={`w-full max-w-md p-5 sm:p-6 rounded-t-3xl sm:rounded-2xl shadow-2xl relative animate-in slide-in-from-bottom sm:zoom-in duration-300 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] sm:pb-6 ${darkMode ? 'bg-slate-900 border border-slate-700' : 'bg-white border border-slate-200'}`}>
-            <button onClick={() => setMostrarModalAyuda(false)} className="absolute top-4 right-4 p-2 rounded-full bg-slate-100/50 hover:bg-slate-200 dark:bg-slate-800/50 dark:hover:bg-slate-800 transition-colors z-10">
-              <X size={20} className={darkMode ? 'text-slate-400' : 'text-slate-600'} />
-            </button>
-            
-            <div className="mb-5 pr-8">
-              <h2 className={`text-xl sm:text-2xl font-bold tracking-tight flex items-center gap-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                <Info className="text-blue-500" size={24}/> ¿Cómo usar VoxStock?
-              </h2>
-            </div>
-
-            <div className="space-y-3 max-h-[60vh] overflow-y-auto custom-scrollbar pr-1">
-              <div className={`p-3 sm:p-4 rounded-xl border ${darkMode ? 'bg-slate-800/30 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
-                <h3 className={`font-bold text-sm sm:text-base mb-1 ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>1. Modo Voz (Por Defecto)</h3>
-                <p className={`text-xs sm:text-sm ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Mantén presionado el botón del micrófono azul. Dicta tu orden de forma natural y suelta para enviar.</p>
-              </div>
-
-              <div className={`p-3 sm:p-4 rounded-xl border ${darkMode ? 'bg-slate-800/30 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
-                <h3 className={`font-bold text-sm sm:text-base mb-1 ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>2. Modo Texto (Ruido/iOS)</h3>
-                <p className={`text-xs sm:text-sm mb-2 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Si el micrófono falla, pulsa el icono del teclado a la derecha para escribir la orden manualmente.</p>
-                <div className={`mt-2 p-2 rounded-lg text-xs font-mono italic border ${darkMode ? 'bg-slate-950/50 border-blue-900/30 text-blue-400' : 'bg-blue-50/50 border-blue-100 text-blue-700'}`}>
-                  Ej: "Suma 5 unidades al pallet rojo"
-                </div>
-              </div>
-
-              <div className={`p-3 sm:p-4 rounded-xl border ${darkMode ? 'bg-slate-800/30 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
-                <h3 className={`font-bold text-sm sm:text-base mb-1 ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>3. El Motor IA</h3>
-                <p className={`text-xs sm:text-sm ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>El sistema detecta automáticamente la intención (Suma/Resta), la cantidad numérica y asocia el producto a tu catálogo mediante Fuzzy Matching.</p>
-              </div>
-            </div>
-            
-            <button onClick={() => setMostrarModalAyuda(false)} className="w-full mt-5 bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white font-bold py-3 sm:py-3.5 px-4 rounded-xl transition-all">
-              Entendido, a trabajar
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* --- EL RESTO DE LA INTERFAZ PRINCIPAL SE MANTIENE INTACTA --- */}
-      {/* CABECERA FIJA */}
-      <div className="flex-shrink-0 flex flex-col items-center text-center gap-1.5 w-full max-w-2xl mb-2 sm:mb-4">
-          <span className={`px-3 py-1 rounded-full border text-[9px] sm:text-[10px] md:text-xs font-bold uppercase tracking-widest ${darkMode ? 'bg-blue-900/30 border-blue-800 text-blue-400' : 'bg-blue-50 border-blue-100 text-blue-600'}`}>
+      {/* CABECERA */}
+      <div className="flex-shrink-0 flex flex-col items-center text-center gap-2 w-full max-w-3xl mb-4 sm:mb-8">
+          <span className={`px-4 py-1.5 rounded-full border text-[10px] sm:text-xs font-bold uppercase tracking-widest ${darkMode ? 'bg-blue-900/30 border-blue-800 text-blue-400' : 'bg-blue-50 border-blue-100 text-blue-600'}`}>
             Modo Operario: {sectorActual?.nombre.toUpperCase()}
           </span>
-          <h1 className={`text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight leading-none mt-1 ${darkMode ? 'text-white' : 'text-slate-900'}`}>Terminal Principal</h1>
+          <h1 className={`text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight leading-none mt-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>Terminal Principal</h1>
       </div>
 
-      {/* ÁREA CENTRAL FLUIDA */}
-      <div className="flex-1 w-full max-w-2xl flex flex-col justify-center gap-4 overflow-y-auto custom-scrollbar px-1 min-h-0">
-        <div className={`w-full p-4 sm:p-5 rounded-2xl border shadow-lg transition-colors ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-          <div className="mb-3 sm:mb-4 pb-3 sm:pb-4 border-b border-dashed border-slate-300 dark:border-slate-700">
-            <h3 className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-widest mb-1 sm:mb-1.5 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Última Orden Procesada</h3>
-            <p className={`text-sm sm:text-base italic font-medium ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>"{respuestaIA.transcripcion}"</p>
+      {/* ÁREA CENTRAL (Más prominente y equilibrada) */}
+      <div className="flex-1 w-full max-w-3xl flex flex-col justify-center gap-4 px-2 sm:px-0 min-h-0 mb-6">
+        <div className={`w-full p-6 sm:p-8 rounded-3xl border shadow-xl transition-colors flex flex-col justify-center min-h-[200px] sm:min-h-[250px] ${darkMode ? 'bg-[#151C2C] border-slate-800/50' : 'bg-white border-slate-200'}`}>
+          <div className="mb-4 sm:mb-6 pb-4 sm:pb-6 border-b border-dashed border-slate-400/30 dark:border-slate-700">
+            <h3 className={`text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-2 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Última Orden Procesada</h3>
+            <p className={`text-lg sm:text-xl italic font-medium ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>"{respuestaIA.transcripcion}"</p>
           </div>
-          <div className="flex items-center gap-2 mb-2 sm:mb-3">
-            <div className={`w-2 h-2 rounded-full ${isProcessing ? 'animate-bounce bg-yellow-500' : 'animate-pulse'} ${respuestaIA.estado === 'error' ? 'bg-red-500' : respuestaIA.estado === 'completado' ? 'bg-emerald-500' : 'bg-blue-600'}`}></div>
-            <h3 className={`text-[10px] sm:text-xs font-bold uppercase tracking-wider ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Estado de Resolución</h3>
+          <div className="flex items-center gap-3 mb-4">
+            <div className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full ${isProcessing ? 'animate-bounce bg-yellow-500' : 'animate-pulse'} ${respuestaIA.estado === 'error' ? 'bg-red-500' : respuestaIA.estado === 'completado' ? 'bg-emerald-500' : 'bg-blue-600'}`}></div>
+            <h3 className={`text-xs sm:text-sm font-bold uppercase tracking-wider ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Estado de Resolución</h3>
           </div>
-          <div className={`p-3 sm:p-4 rounded-xl min-h-[70px] sm:min-h-[80px] flex items-center justify-center transition-colors duration-300 ${respuestaIA.estado === 'error' ? (darkMode ? 'bg-red-950/40 text-red-400 border border-red-900/50' : 'bg-red-50 text-red-700 border border-red-100') : respuestaIA.estado === 'completado' ? (darkMode ? 'bg-emerald-950/40 text-emerald-400 border border-emerald-900/50' : 'bg-emerald-50 text-emerald-700 border border-emerald-100') : (darkMode ? 'text-slate-400 bg-slate-800/30' : 'text-slate-600 bg-slate-100')}`}>
-            <p className="text-sm sm:text-base leading-relaxed font-semibold whitespace-pre-wrap text-center">
+          <div className={`p-4 sm:p-6 rounded-2xl flex-1 flex items-center justify-center transition-colors duration-300 border ${respuestaIA.estado === 'error' ? (darkMode ? 'bg-red-950/20 text-red-400 border-red-900/30' : 'bg-red-50 text-red-700 border-red-100') : respuestaIA.estado === 'completado' ? (darkMode ? 'bg-emerald-950/20 text-emerald-400 border-emerald-900/30' : 'bg-emerald-50 text-emerald-700 border-emerald-100') : (darkMode ? 'text-slate-400 bg-[#0B1120]/50 border-transparent' : 'text-slate-600 bg-slate-50 border-transparent')}`}>
+            <p className="text-base sm:text-lg leading-relaxed font-semibold whitespace-pre-wrap text-center">
               {isProcessing ? "Estableciendo conexión con el servidor..." : (respuestaIA.mensaje || "Esperando instrucciones...")}
             </p>
           </div>
@@ -361,44 +229,47 @@ export default function Terminal() {
       </div>
 
       {/* ÁREA DE CONTROL INFERIOR */}
-      <div className="flex-shrink-0 w-full max-w-2xl flex flex-col items-center gap-3 sm:gap-4 mt-2 pb-[env(safe-area-inset-bottom)]">
+      <div className="flex-shrink-0 w-full max-w-3xl flex flex-col items-center gap-6 sm:gap-8 pb-[env(safe-area-inset-bottom)]">
         
-        {/* ZONA DE INPUT */}
-        <div className="w-full flex justify-center relative px-2 min-h-[5rem] sm:min-h-[6rem]">
-          {modoTexto ? (
-            <div className="w-full flex items-end relative animate-in fade-in slide-in-from-bottom-4 duration-300 ease-out">
+        {/* ZONA DE INPUT (CONTENEDOR DE ALTURA FIJA PARA TRANSICIONES PERFECTAS) */}
+        <div className="w-full relative px-2 flex justify-center items-center h-[140px] sm:h-[180px]">
+          
+          {/* ----- MODO TEXTO (Animación por CSS puro) ----- */}
+          <div className={`absolute w-full px-2 sm:px-6 transition-all duration-500 ease-in-out ${modoTexto ? 'opacity-100 translate-y-0 z-20' : 'opacity-0 translate-y-12 pointer-events-none z-0'}`}>
+            <div className="w-full flex items-end relative">
               
-              {/* BOTON TOGGLE (Flotando arriba del botón Enter con margen de seguridad) */}
               <button 
                 onClick={() => setModoTexto(false)}
-                className={`absolute right-0 -top-12 sm:-top-14 p-2.5 rounded-full border shadow-md transition-all active:scale-90 flex items-center justify-center z-20 ${darkMode ? 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white' : 'bg-slate-100 border-slate-300 text-slate-600 hover:text-slate-900'}`}
+                className="absolute right-0 -top-14 sm:-top-16 p-3 sm:p-4 rounded-full border shadow-lg transition-all active:scale-90 flex items-center justify-center z-30 bg-slate-800 border-slate-700 text-slate-300 hover:text-white dark:bg-slate-800 dark:border-slate-700"
                 title="Volver a reconocimiento de voz"
               >
-                <Mic size={18} className="sm:w-5 sm:h-5"/>
+                <Mic size={24} className="sm:w-6 sm:h-6"/>
               </button>
 
-              <form onSubmit={handleSubmitTexto} className="w-full flex gap-2 sm:gap-3">
+              <form onSubmit={handleSubmitTexto} className="w-full flex gap-3 sm:gap-4">
                 <input 
                   type="text" 
                   value={textoManual}
                   onChange={(e) => setTextoManual(e.target.value)}
                   placeholder="Ej: Sumar 5 al pallet..."
-                  className={`flex-1 px-4 py-3 sm:py-4 rounded-xl text-sm sm:text-base border shadow-inner focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'} ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className={`flex-1 px-5 py-4 sm:py-5 rounded-2xl text-base sm:text-lg border shadow-inner focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-[#151C2C] border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'} ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
                   disabled={isProcessing}
-                  autoFocus
                 />
-                <button type="submit" disabled={isProcessing || !textoManual.trim()} className={`p-3 sm:p-4 rounded-xl text-white shadow-md transition-all flex items-center justify-center flex-shrink-0 w-[52px] sm:w-[60px] ${isProcessing || !textoManual.trim() ? 'bg-slate-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500 active:scale-95'}`}>
-                  <Send size={20} className="sm:w-6 sm:h-6" />
+                <button type="submit" disabled={isProcessing || !textoManual.trim()} className={`p-4 sm:p-5 rounded-2xl text-white shadow-xl transition-all flex items-center justify-center flex-shrink-0 w-[64px] sm:w-[72px] ${isProcessing || !textoManual.trim() ? 'bg-slate-600 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500 active:scale-95'}`}>
+                  <Send size={24} className="sm:w-7 sm:h-7" />
                 </button>
               </form>
-              
             </div>
-          ) : (
-            <div className="flex flex-col items-center relative w-full animate-in fade-in zoom-in-95 duration-300 ease-out">
-              {micError && <p className="text-red-500 text-[10px] sm:text-xs font-bold mb-1 absolute -top-5 sm:-top-6 whitespace-nowrap bg-red-100 dark:bg-red-900/30 px-2 py-0.5 rounded-full">{micError}</p>}
-              {isListening && <div className="absolute inset-0 bg-blue-500/20 rounded-full blur-2xl animate-pulse -z-10 w-32 h-32 sm:w-48 sm:h-48 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></div>}
+          </div>
+
+          {/* ----- MODO VOZ (Animación por CSS puro) ----- */}
+          <div className={`absolute flex flex-col items-center transition-all duration-500 ease-in-out ${!modoTexto ? 'opacity-100 translate-y-0 scale-100 z-20' : 'opacity-0 translate-y-12 scale-90 pointer-events-none z-0'}`}>
+            <div className="relative">
+              {micError && <p className="text-red-400 text-xs sm:text-sm font-bold mb-2 absolute -top-8 sm:-top-10 whitespace-nowrap bg-red-950/80 px-3 py-1 rounded-full border border-red-900/50 shadow-lg">{micError}</p>}
+              {isListening && <div className="absolute inset-0 bg-blue-500/30 rounded-full blur-3xl animate-pulse -z-10 w-48 h-48 sm:w-64 sm:h-64 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></div>}
+              
               <button
-                className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center border transition-all duration-300 z-10 ${isProcessing ? 'opacity-50 cursor-not-allowed bg-slate-300 border-slate-400' : isListening ? 'scale-95 bg-blue-600 border-blue-500 shadow-[0_0_30px_rgba(37,99,235,0.4)]' : darkMode ? 'bg-slate-800 border-slate-700 shadow-xl hover:border-slate-600' : 'bg-white border-slate-200 shadow-xl hover:border-slate-300'}`}
+                className={`w-28 h-28 sm:w-36 sm:h-36 rounded-full flex items-center justify-center border-2 transition-all duration-300 z-10 ${isProcessing ? 'opacity-50 cursor-not-allowed bg-slate-800 border-slate-700' : isListening ? 'scale-95 bg-blue-600 border-blue-400 shadow-[0_0_40px_rgba(37,99,235,0.5)]' : darkMode ? 'bg-[#151C2C] border-slate-700 shadow-2xl hover:border-slate-500' : 'bg-white border-slate-200 shadow-2xl hover:border-slate-400'}`}
                 onMouseDown={isProcessing ? null : startListening} 
                 onMouseUp={stopListening} 
                 onMouseLeave={stopListening} 
@@ -407,33 +278,35 @@ export default function Terminal() {
                 disabled={isProcessing}
                 style={{ WebkitTapHighlightColor: 'transparent' }}
               >
-                <Mic size={32} strokeWidth={1.5} color={isListening ? "white" : (darkMode ? "#94a3b8" : "#64748b")} className={`transition-all ${isListening ? 'animate-bounce' : ''}`} />
+                <Mic size={48} strokeWidth={1.5} color={isListening ? "white" : (darkMode ? "#94a3b8" : "#64748b")} className={`sm:w-16 sm:h-16 transition-all ${isListening ? 'animate-bounce' : ''}`} />
               </button>
-              <span className={`font-bold tracking-wider text-[9px] sm:text-[10px] uppercase mt-1.5 sm:mt-2 ${isListening ? 'text-blue-500' : (darkMode ? 'text-slate-500' : 'text-slate-400')}`}>{isListening ? "Escuchando..." : isProcessing ? "Procesando" : "Mantener pulsado"}</span>
-              
-              {/* BOTON TOGGLE (Posición Absoluta Flotante) */}
+
               <button 
                 onClick={() => setModoTexto(true)}
-                className={`absolute right-2 sm:right-0 top-[40%] -translate-y-1/2 p-2.5 sm:p-3 rounded-full border shadow-sm transition-colors active:scale-90 ${darkMode ? 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white' : 'bg-slate-100 border-slate-300 text-slate-500 hover:text-slate-900'}`}
+                className={`absolute -right-4 sm:-right-8 top-1/2 -translate-y-1/2 p-3 sm:p-4 rounded-full border shadow-lg transition-colors active:scale-90 ${darkMode ? 'bg-slate-800 border-slate-700 text-slate-300 hover:text-white' : 'bg-slate-100 border-slate-300 text-slate-600 hover:text-slate-900'}`}
                 title="Cambiar a texto manual"
               >
-                <Keyboard size={18} className="sm:w-5 sm:h-5"/>
+                <Keyboard size={24} className="sm:w-6 sm:h-6"/>
               </button>
             </div>
-          )}
+            <span className={`font-bold tracking-widest text-[10px] sm:text-xs uppercase mt-4 sm:mt-5 ${isListening ? 'text-blue-500' : (darkMode ? 'text-slate-500' : 'text-slate-400')}`}>{isListening ? "Escuchando orden..." : isProcessing ? "Procesando en servidor" : "Mantener pulsado para hablar"}</span>
+          </div>
+
         </div>
 
-        {/* DOCK INFERIOR */}
-        <div className="w-full grid grid-cols-3 gap-2 px-1">
+        {/* DOCK INFERIOR (Más robusto y equilibrado) */}
+        <div className="w-full grid grid-cols-3 gap-3 sm:gap-4 px-2 sm:px-0">
             {dockItems.map((item, index) => (
               <button
                 key={index}
                 onClick={item.onClick}
-                className={`flex flex-col items-center justify-center py-2.5 sm:py-3 px-1 rounded-xl border transition-all active:scale-95 ${item.colorClass}`}
+                className={`flex flex-col items-center justify-center py-4 sm:py-5 px-2 rounded-2xl border transition-all active:scale-95 shadow-md ${item.colorClass}`}
                 style={{ WebkitTapHighlightColor: 'transparent' }}
               >
-                {item.icon}
-                <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-center mt-1 leading-none">
+                <div className="mb-1.5 sm:mb-2 scale-110 sm:scale-125">
+                  {item.icon}
+                </div>
+                <span className="text-[9px] sm:text-[11px] font-bold uppercase tracking-widest text-center leading-none">
                   {item.label}
                 </span>
               </button>
