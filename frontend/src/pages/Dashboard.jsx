@@ -4,7 +4,7 @@ import { useHistoryStore } from "../store/historyStore";
 import { useThemeStore } from "../store/themeStore";
 import { useAuthStore } from "../store/authStore"; 
 import {
-  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid, Legend
+  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell
 } from "recharts";
 
 export default function Dashboard() {
@@ -26,7 +26,6 @@ export default function Dashboard() {
   
   const operacionesRegistradas = totalEntradas + totalSalidas; 
   
-  // REFACTOR: División de flujo para gráfico de áreas
   const trendData = useMemo(() => {
     return [...movimientos]
       .sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime())
@@ -105,30 +104,48 @@ export default function Dashboard() {
 
   const COLORS = darkMode ? ["#10b981", "#ef4444"] : ["#059669", "#dc2626"];
 
-  const cardClass = `p-6 rounded-3xl border shadow-xl transition-all duration-300 ${
-    darkMode ? 'bg-[#151C2C] border-slate-800/50 text-white' : 'bg-white border-slate-200 text-slate-900'
+  // REFACTOR: Estilos de tarjetas más limpios, bordes afilados y tipografía sobria
+  const cardClass = `p-6 rounded-xl border transition-all duration-300 ${
+    darkMode ? 'bg-[#111827] border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
   }`;
 
+  // REFACTOR: Renderizador de leyenda personalizado para evitar la distorsión de Recharts
+  const renderCustomLegend = (items) => {
+    return (
+      <div className="flex items-center gap-4 mb-4 text-[10px] font-bold uppercase tracking-widest font-sans">
+        {items.map((item, index) => (
+          <div key={index} className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
+            <span className={darkMode ? "text-slate-400" : "text-slate-600"}>{item.name}</span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   return (
-    <div className={`min-h-screen p-4 sm:p-8 ${darkMode ? 'bg-[#0B1120]' : 'bg-slate-50'}`}>
-      <div className="flex justify-between items-end mb-8">
+    <div className={`min-h-screen p-4 sm:p-8 font-sans ${darkMode ? 'bg-[#070B14]' : 'bg-slate-50'}`}>
+      
+      {/* CABECERA CORPORATIVA */}
+      <div className="flex justify-between items-end mb-8 pb-4 border-b border-slate-200 dark:border-slate-800/60">
         <div>
-          <h1 className={`text-3xl sm:text-4xl font-extrabold tracking-tight ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-            Analitica de Inventario
+          <h1 className={`text-2xl sm:text-3xl font-black tracking-tight uppercase ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+            Control Analítico de Inventario
           </h1>
-          <p className={`mt-2 font-medium ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-            Supervisión en tiempo real — Operario: <span className={darkMode ? 'text-blue-400' : 'text-blue-600'}>{usuario?.nombre || "N/A"}</span>
+          <p className={`mt-1 text-xs font-semibold tracking-wide uppercase ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+            Terminal de supervisión — Operario ID: <span className={darkMode ? 'text-blue-400' : 'text-blue-600 font-bold'}>{usuario?.nombre || "N/A"}</span>
           </p>
         </div>
         {cargando && (
-          <span className="flex h-4 w-4 relative mb-2 sm:mb-4">
+          <span className="flex h-3 w-3 relative mb-1">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-4 w-4 bg-blue-500"></span>
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
           </span>
         )}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 mb-8">
+      {/* REFACTOR: KPIs con tipografía numérica monoespaciada seria */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-5 mb-8">
         {[
           { label: "Movimientos totales", value: totalMovimientos },
           { label: "Entradas procesadas", value: totalEntradas },
@@ -136,98 +153,113 @@ export default function Dashboard() {
           { label: "Transacciones IA", value: operacionesRegistradas }
         ].map((kpi, idx) => (
           <div key={idx} className={cardClass}>
-            <p className={`text-xs font-bold uppercase tracking-widest ${darkMode ? "text-slate-500" : "text-slate-400"}`}>{kpi.label}</p>
-            <h2 className="text-4xl font-extrabold mt-3 tracking-tight">
+            <p className={`text-[10px] font-bold uppercase tracking-widest ${darkMode ? "text-slate-500" : "text-slate-400"}`}>{kpi.label}</p>
+            <h2 className="text-3xl font-mono font-bold mt-2 tracking-normal">
               {cargando && movimientos.length === 0 ? "-" : kpi.value}
             </h2>
           </div>
         ))}
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6 sm:gap-8 mb-8">
+      <div className="grid md:grid-cols-2 gap-6 sm:gap-6 mb-8">
         
-        {/* GRÁFICO 1: ÁREA DE FLUJO DOBLE */}
+        {/* GRÁFICO 1: REFACTORIZACIÓN DE ÁREA SIN MARGEN LOCAL */}
         <div className={cardClass}>
-          <h2 className="text-xl font-bold tracking-tight mb-6">Volumen por transacción</h2>
-          <div className="w-full h-[300px]">
+          <div className="flex justify-between items-start mb-2">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Volumen por transacción</h2>
+            {renderCustomLegend([
+              { name: "Entradas", color: darkMode ? "#10b981" : "#059669" },
+              { name: "Salidas", color: darkMode ? "#ef4444" : "#dc2626" }
+            ])}
+          </div>
+          <div className="w-full h-[280px]">
             <ResponsiveContainer width="100%" height="100%">
               {movimientos.length > 0 ? (
-                <AreaChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                // margin right e izquierdo en cero eliminan el recorte lateral
+                <AreaChart data={trendData} margin={{ top: 10, right: 0, left: -25, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorEntradas" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={darkMode ? "#10b981" : "#059669"} stopOpacity={0.4}/>
+                      <stop offset="5%" stopColor={darkMode ? "#10b981" : "#059669"} stopOpacity={0.25}/>
                       <stop offset="95%" stopColor={darkMode ? "#10b981" : "#059669"} stopOpacity={0}/>
                     </linearGradient>
                     <linearGradient id="colorSalidas" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={darkMode ? "#ef4444" : "#dc2626"} stopOpacity={0.4}/>
+                      <stop offset="5%" stopColor={darkMode ? "#ef4444" : "#dc2626"} stopOpacity={0.25}/>
                       <stop offset="95%" stopColor={darkMode ? "#ef4444" : "#dc2626"} stopOpacity={0}/>
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={darkMode ? "#1e293b" : "#e2e8f0"} />
-                  <XAxis dataKey="etiqueta" stroke={darkMode ? "#64748b" : "#94a3b8"} fontSize={11} tickMargin={12} tickLine={false} axisLine={false} />
-                  <YAxis stroke={darkMode ? "#64748b" : "#94a3b8"} fontSize={11} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}u`} />
+                  <CartesianGrid strokeDasharray="2 2" vertical={false} stroke={darkMode ? "#1f2937" : "#e2e8f0"} />
+                  {/* padding en 0 y tickLine/axisLine false purgan el exceso geométrico */}
+                  <XAxis dataKey="etiqueta" stroke={darkMode ? "#4b5563" : "#94a3b8"} fontSize={10} fontFamily="monospace" tickMargin={12} tickLine={false} axisLine={false} padding={{ left: 0, right: 0 }} />
+                  <YAxis stroke={darkMode ? "#4b5563" : "#94a3b8"} fontSize={10} fontFamily="monospace" tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
                   <Tooltip 
-                    contentStyle={{ backgroundColor: darkMode ? '#1e293b' : '#fff', borderRadius: '12px', border: darkMode ? '1px solid #334155' : '1px solid #e2e8f0', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }} 
-                    itemStyle={{ fontWeight: 'bold' }}
-                    labelStyle={{ color: darkMode ? '#94a3b8' : '#64748b', marginBottom: '8px', fontSize: '12px' }}
+                    contentStyle={{ backgroundColor: darkMode ? '#1f2937' : '#fff', borderRadius: '6px', border: darkMode ? '1px solid #374151' : '1px solid #e2e8f0', fontFamily: 'monospace', fontSize: '12px' }} 
+                    itemStyle={{ paddingVertical: '2px' }}
+                    labelStyle={{ color: darkMode ? '#94a3b8' : '#64748b', marginBottom: '6px', fontWeight: 'bold' }}
                   />
-                  <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '12px', color: darkMode ? '#94a3b8' : '#475569' }}/>
-                  <Area type="monotone" dataKey="Entradas" stroke={darkMode ? "#10b981" : "#059669"} strokeWidth={3} fillOpacity={1} fill="url(#colorEntradas)" activeDot={{ r: 6, strokeWidth: 0 }} />
-                  <Area type="monotone" dataKey="Salidas" stroke={darkMode ? "#ef4444" : "#dc2626"} strokeWidth={3} fillOpacity={1} fill="url(#colorSalidas)" activeDot={{ r: 6, strokeWidth: 0 }} />
+                  {/* Animaciones limpias y veloces con ease-out cúbico */}
+                  <Area type="monotone" dataKey="Entradas" stroke={darkMode ? "#10b981" : "#059669"} strokeWidth={2} fillOpacity={1} fill="url(#colorEntradas)" isAnimationActive={true} animationDuration={400} animationEasing="ease-out" dot={false} activeDot={{ r: 4, strokeWidth: 0 }} />
+                  <Area type="monotone" dataKey="Salidas" stroke={darkMode ? "#ef4444" : "#dc2626"} strokeWidth={2} fillOpacity={1} fill="url(#colorSalidas)" isAnimationActive={true} animationDuration={400} animationEasing="ease-out" dot={false} activeDot={{ r: 4, strokeWidth: 0 }} />
                 </AreaChart>
               ) : (
-                <div className={`flex h-full items-center justify-center font-medium ${darkMode ? "text-slate-600" : "text-slate-400"}`}>
-                  {cargando ? "Cargando métricas de flujo..." : "Inventario sin movimientos."}
+                <div className="flex h-full items-center justify-center text-xs font-bold uppercase tracking-widest text-slate-500">
+                  {cargando ? "Sincronizando flujo..." : "Sin registros de actividad."}
                 </div>
               )}
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* GRÁFICO 2: DONUT CHART CON KPI CENTRAL */}
+        {/* GRÁFICO 2: DONUT CHART EMPRESARIAL */}
         <div className={cardClass}>
-          <h2 className="text-xl font-bold tracking-tight mb-6">Proporción de Flujo</h2>
-          <div className="relative w-full h-[300px]">
+          <div className="flex justify-between items-start mb-2">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Proporción de flujo</h2>
+            {renderCustomLegend([
+              { name: "Entradas", color: darkMode ? "#10b981" : "#059669" },
+              { name: "Salidas", color: darkMode ? "#ef4444" : "#dc2626" }
+            ])}
+          </div>
+          <div className="relative w-full h-[280px]">
             <ResponsiveContainer width="100%" height="100%">
               {movimientos.length > 0 ? (
                 <PieChart>
                   <Pie 
                     data={categoryData} 
                     cx="50%" 
-                    cy="45%" 
-                    innerRadius={80} 
-                    outerRadius={110} 
+                    cy="50%" 
+                    innerRadius={85} 
+                    outerRadius={105} 
                     dataKey="value" 
                     nameKey="name" 
-                    paddingAngle={3}
-                    cornerRadius={6}
+                    paddingAngle={4}
+                    cornerRadius={4}
                     stroke="none"
+                    isAnimationActive={true}
+                    animationDuration={500}
+                    animationEasing="ease-out"
                   >
                     {categoryData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
                   <Tooltip 
-                    contentStyle={{ backgroundColor: darkMode ? '#1e293b' : '#fff', borderRadius: '12px', border: darkMode ? '1px solid #334155' : '1px solid #e2e8f0', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
-                    itemStyle={{ fontWeight: 'bold' }}
+                    contentStyle={{ backgroundColor: darkMode ? '#1f2937' : '#fff', borderRadius: '6px', border: darkMode ? '1px solid #374151' : '1px solid #e2e8f0', fontFamily: 'monospace', fontSize: '12px' }}
                   />
-                  <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '12px' }}/>
                 </PieChart>
               ) : (
-                 <div className={`flex h-full items-center justify-center font-medium ${darkMode ? "text-slate-600" : "text-slate-400"}`}>
-                   {cargando ? "Calculando proporciones..." : "Inventario sin movimientos."}
+                 <div className="flex h-full items-center justify-center text-xs font-bold uppercase tracking-widest text-slate-500">
+                   {cargando ? "Calculando proporciones..." : "Sin registros de actividad."}
                  </div>
               )}
             </ResponsiveContainer>
             
-            {/* Capa Absoluta para el KPI Central del Donut */}
+            {/* KPI central alineado con tipografía rígida */}
             {movimientos.length > 0 && !cargando && (
-              <div className="absolute top-[45%] left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center pointer-events-none">
-                <span className={`text-4xl font-black ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center pointer-events-none">
+                <span className="text-4xl font-mono font-bold tracking-tight leading-none">
                   {operacionesRegistradas}
                 </span>
-                <span className={`text-[10px] font-bold uppercase tracking-widest mt-1 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-                  Operaciones
+                <span className={`text-[9px] font-bold uppercase tracking-widest mt-2 ${darkMode ? 'text-slate-600' : 'text-slate-400'}`}>
+                  Órdenes OK
                 </span>
               </div>
             )}
@@ -235,29 +267,30 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* TABLA DE AUDITORÍA INFERIOR */}
       <div className={cardClass}>
-        <h2 className="text-xl font-bold tracking-tight mb-6">Registro de transacciones recientes</h2>
-        <div className="space-y-4">
+        <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-6">Registro de transacciones recientes</h2>
+        <div className="space-y-3">
           {cargando && movimientos.length === 0 ? (
-             <p className={`animate-pulse font-medium ${darkMode ? "text-slate-600" : "text-slate-400"}`}>Sincronizando con el clúster de base de datos...</p>
+             <p className="text-xs font-bold uppercase tracking-widest text-slate-500 animate-pulse">Consultando registro maestro...</p>
           ) : movimientos.length === 0 ? (
-            <p className={`font-medium ${darkMode ? "text-slate-600" : "text-slate-400"}`}>Base de datos limpia. Aún no se han registrado comandos.</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Auditoría vacía. Servidor a la espera de comandos.</p>
           ) : (
             [...movimientos].sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime()).slice(-6).reverse().map((item, index) => (
-              <div key={index} className={`flex justify-between items-center pb-4 border-b ${darkMode ? 'border-slate-800' : 'border-slate-100'} last:border-0 last:pb-0`}>
+              <div key={index} className={`flex justify-between items-center pb-3 border-b ${darkMode ? 'border-slate-800/60' : 'border-slate-100'} last:border-0 last:pb-0`}>
                 <div>
-                  <p className={`font-bold text-base ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>{item.product}</p>
-                  <p className={`text-xs mt-1 font-medium ${darkMode ? "text-slate-500" : "text-slate-500"}`}>
-                    <span className={darkMode ? 'text-slate-400' : 'text-slate-600'}>{item.user}</span> • {item.dateTime ? new Date(item.dateTime).toLocaleString() : 'N/A'} • Motor: <span className="uppercase">{item.method}</span>
+                  <p className="font-bold text-sm tracking-tight text-slate-800 dark:text-slate-200">{item.product}</p>
+                  <p className="text-[11px] mt-1 font-mono text-slate-500">
+                    ID: {item.user} • {item.dateTime ? new Date(item.dateTime).toLocaleString() : 'N/A'} • SYS: {item.method.toUpperCase()}
                   </p>
                 </div>
-                <div className={`px-4 py-2 rounded-xl text-sm font-black tracking-wide flex items-center gap-2 flex-shrink-0 ml-2 shadow-sm ${
+                <div className={`px-3 py-1.5 rounded text-xs font-mono font-bold tracking-wide flex items-center gap-1.5 flex-shrink-0 ml-2 ${
                   item.action === 'suma' 
                     ? (darkMode ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-emerald-50 text-emerald-700 border border-emerald-200')
                     : (darkMode ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-red-50 text-red-700 border border-red-200')
                 }`}>
                   <span>{item.action === 'suma' ? '+' : '-'}{item.quantity}</span>
-                  <span className="uppercase text-[10px] opacity-70 font-bold">{item.unit || 'UD'}</span>
+                  <span className="opacity-60 text-[10px]">{item.unit || 'UD'}</span>
                 </div>
               </div>
             ))
