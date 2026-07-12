@@ -9,7 +9,7 @@ import Terminal from "./pages/Terminal";
 import Historial from "./pages/Historial";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
-import Register from "./pages/Register"; 
+import Register from "./pages/Register";
 import Profile from "./pages/Profile/Profile";
 import Instrucciones from './pages/Instrucciones';
 import Settings from "./pages/Settings/Settings";
@@ -30,13 +30,11 @@ function ProtectedLayout() {
   }
 
   return (
-    <div className={`flex h-screen overflow-hidden font-sans transition-colors duration-500 ${
-      darkMode ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'
-    }`}>
+    <div className={`flex h-screen overflow-hidden font-sans transition-colors duration-500 ${darkMode ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'
+      }`}>
       <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
-      <main className={`flex-1 transition-all duration-300 ease-in-out h-screen overflow-y-auto ${
-        sidebarOpen ? 'md:ml-64' : 'md:ml-20'
-      } ml-0 p-6`}> 
+      <main className={`flex-1 transition-all duration-300 ease-in-out h-screen overflow-y-auto ${sidebarOpen ? 'md:ml-64' : 'md:ml-20'
+        } ml-0 p-6 pt-24 md:pt-6`}>
         <Outlet />
       </main>
     </div>
@@ -52,7 +50,7 @@ export default function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/como-funciona" element={<Instrucciones />} />
       <Route path="/register" element={<Register />} />
-      <Route path="/pricing" element={<Pricing />} /> 
+      <Route path="/pricing" element={<Pricing />} />
       <Route path="/piloto" element={<Piloto />} />
       <Route path="/faq" element={<Faq />} />
       <Route path="/equipo" element={<Equipo />} />
