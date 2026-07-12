@@ -4,7 +4,7 @@ import { useHistoryStore } from "../store/historyStore";
 import { useThemeStore } from "../store/themeStore";
 import { useAuthStore } from "../store/authStore"; 
 import {
-  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid, Legend
+  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid, Legend
 } from "recharts";
 
 export default function Dashboard() {
@@ -26,7 +26,7 @@ export default function Dashboard() {
   
   const operacionesRegistradas = totalEntradas + totalSalidas; 
   
-  // Memoizamos y ordenamos los datos para garantizar un gráfico cronológico
+  // REFACTOR: División de flujo para gráfico de áreas
   const trendData = useMemo(() => {
     return [...movimientos]
       .sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime())
@@ -42,8 +42,8 @@ export default function Dashboard() {
         
         return {
           etiqueta: horaFormateada,
-          cantidad: Number(mov.quantity || 0),
-          tipo: mov.action
+          Entradas: mov.action === "suma" ? Number(mov.quantity || 0) : 0,
+          Salidas: mov.action === "resta" ? Number(mov.quantity || 0) : 0,
         };
       });
   }, [movimientos]);
@@ -105,25 +105,25 @@ export default function Dashboard() {
 
   const COLORS = darkMode ? ["#10b981", "#ef4444"] : ["#059669", "#dc2626"];
 
-  const cardClass = `p-6 rounded-2xl border shadow-sm transition-all duration-300 ${
-    darkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+  const cardClass = `p-6 rounded-3xl border shadow-xl transition-all duration-300 ${
+    darkMode ? 'bg-[#151C2C] border-slate-800/50 text-white' : 'bg-white border-slate-200 text-slate-900'
   }`;
 
   return (
-    <div className="min-h-screen p-4 sm:p-8 transparent">
+    <div className={`min-h-screen p-4 sm:p-8 ${darkMode ? 'bg-[#0B1120]' : 'bg-slate-50'}`}>
       <div className="flex justify-between items-end mb-8">
         <div>
-          <h1 className={`text-3xl sm:text-4xl font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+          <h1 className={`text-3xl sm:text-4xl font-extrabold tracking-tight ${darkMode ? 'text-white' : 'text-slate-900'}`}>
             Analitica de Inventario
           </h1>
-          <p className={`mt-2 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-            Resumen de actividad para {usuario?.nombre || "Operario"}
+          <p className={`mt-2 font-medium ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+            Supervisión en tiempo real — Operario: <span className={darkMode ? 'text-blue-400' : 'text-blue-600'}>{usuario?.nombre || "N/A"}</span>
           </p>
         </div>
         {cargando && (
-          <span className="flex h-3 w-3 relative mb-2 sm:mb-4">
+          <span className="flex h-4 w-4 relative mb-2 sm:mb-4">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+            <span className="relative inline-flex rounded-full h-4 w-4 bg-blue-500"></span>
           </span>
         )}
       </div>
@@ -136,8 +136,8 @@ export default function Dashboard() {
           { label: "Transacciones IA", value: operacionesRegistradas }
         ].map((kpi, idx) => (
           <div key={idx} className={cardClass}>
-            <p className={darkMode ? "text-slate-400" : "text-zinc-600"}>{kpi.label}</p>
-            <h2 className="text-3xl font-bold mt-2">
+            <p className={`text-xs font-bold uppercase tracking-widest ${darkMode ? "text-slate-500" : "text-slate-400"}`}>{kpi.label}</p>
+            <h2 className="text-4xl font-extrabold mt-3 tracking-tight">
               {cargando && movimientos.length === 0 ? "-" : kpi.value}
             </h2>
           </div>
@@ -145,102 +145,119 @@ export default function Dashboard() {
       </div>
 
       <div className="grid md:grid-cols-2 gap-6 sm:gap-8 mb-8">
+        
+        {/* GRÁFICO 1: ÁREA DE FLUJO DOBLE */}
         <div className={cardClass}>
-          <h2 className="text-xl font-semibold mb-6">Volumen por transaccion (Ultimos 20)</h2>
-          {/* Se añade un div contenedor para aislar el width absoluto del ResponsiveContainer */}
+          <h2 className="text-xl font-bold tracking-tight mb-6">Volumen por transacción</h2>
           <div className="w-full h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               {movimientos.length > 0 ? (
-                <LineChart data={trendData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={darkMode ? "#334155" : "#e2e8f0"} />
-                  <XAxis dataKey="etiqueta" stroke={darkMode ? "#94a3b8" : "#64748b"} fontSize={12} tickMargin={10} />
-                  <YAxis stroke={darkMode ? "#94a3b8" : "#64748b"} fontSize={12} tickFormatter={(value) => `${value}`} width={40} />
+                <AreaChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorEntradas" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={darkMode ? "#10b981" : "#059669"} stopOpacity={0.4}/>
+                      <stop offset="95%" stopColor={darkMode ? "#10b981" : "#059669"} stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="colorSalidas" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={darkMode ? "#ef4444" : "#dc2626"} stopOpacity={0.4}/>
+                      <stop offset="95%" stopColor={darkMode ? "#ef4444" : "#dc2626"} stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={darkMode ? "#1e293b" : "#e2e8f0"} />
+                  <XAxis dataKey="etiqueta" stroke={darkMode ? "#64748b" : "#94a3b8"} fontSize={11} tickMargin={12} tickLine={false} axisLine={false} />
+                  <YAxis stroke={darkMode ? "#64748b" : "#94a3b8"} fontSize={11} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}u`} />
                   <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: darkMode ? '#1e293b' : '#fff', 
-                      borderRadius: '8px', 
-                      border: darkMode ? '1px solid #334155' : '1px solid #e2e8f0',
-                      color: darkMode ? '#f8fafc' : '#0f172a'
-                    }} 
-                    itemStyle={{ color: darkMode ? '#f8fafc' : '#0f172a' }}
-                    labelStyle={{ color: darkMode ? '#94a3b8' : '#64748b', marginBottom: '4px' }}
+                    contentStyle={{ backgroundColor: darkMode ? '#1e293b' : '#fff', borderRadius: '12px', border: darkMode ? '1px solid #334155' : '1px solid #e2e8f0', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }} 
+                    itemStyle={{ fontWeight: 'bold' }}
+                    labelStyle={{ color: darkMode ? '#94a3b8' : '#64748b', marginBottom: '8px', fontSize: '12px' }}
                   />
-                  <Line type="monotone" dataKey="cantidad" name="Unidades" stroke={darkMode ? "#60a5fa" : "#2563eb"} strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 6 }} />
-                </LineChart>
+                  <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '12px', color: darkMode ? '#94a3b8' : '#475569' }}/>
+                  <Area type="monotone" dataKey="Entradas" stroke={darkMode ? "#10b981" : "#059669"} strokeWidth={3} fillOpacity={1} fill="url(#colorEntradas)" activeDot={{ r: 6, strokeWidth: 0 }} />
+                  <Area type="monotone" dataKey="Salidas" stroke={darkMode ? "#ef4444" : "#dc2626"} strokeWidth={3} fillOpacity={1} fill="url(#colorSalidas)" activeDot={{ r: 6, strokeWidth: 0 }} />
+                </AreaChart>
               ) : (
-                <div className={`flex h-full items-center justify-center ${darkMode ? "text-slate-500" : "text-slate-400"}`}>
-                  {cargando ? "Cargando datos..." : "No hay datos suficientes para graficar."}
+                <div className={`flex h-full items-center justify-center font-medium ${darkMode ? "text-slate-600" : "text-slate-400"}`}>
+                  {cargando ? "Cargando métricas de flujo..." : "Inventario sin movimientos."}
                 </div>
               )}
             </ResponsiveContainer>
           </div>
         </div>
 
+        {/* GRÁFICO 2: DONUT CHART CON KPI CENTRAL */}
         <div className={cardClass}>
-          <h2 className="text-xl font-semibold mb-6">Proporcion de Flujo</h2>
-          <div className="w-full h-[300px]">
+          <h2 className="text-xl font-bold tracking-tight mb-6">Proporción de Flujo</h2>
+          <div className="relative w-full h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               {movimientos.length > 0 ? (
                 <PieChart>
                   <Pie 
                     data={categoryData} 
                     cx="50%" 
-                    cy="50%" 
-                    innerRadius={60} 
-                    outerRadius={100} 
+                    cy="45%" 
+                    innerRadius={80} 
+                    outerRadius={110} 
                     dataKey="value" 
                     nameKey="name" 
-                    paddingAngle={5}
+                    paddingAngle={3}
+                    cornerRadius={6}
+                    stroke="none"
                   >
                     {categoryData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
                   <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: darkMode ? '#1e293b' : '#fff', 
-                      borderRadius: '8px', 
-                      border: darkMode ? '1px solid #334155' : '1px solid #e2e8f0',
-                      color: darkMode ? '#f8fafc' : '#0f172a'
-                    }}
-                    itemStyle={{ color: darkMode ? '#f8fafc' : '#0f172a' }}
+                    contentStyle={{ backgroundColor: darkMode ? '#1e293b' : '#fff', borderRadius: '12px', border: darkMode ? '1px solid #334155' : '1px solid #e2e8f0', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
+                    itemStyle={{ fontWeight: 'bold' }}
                   />
-                  <Legend verticalAlign="bottom" height={36} wrapperStyle={{ color: darkMode ? '#f8fafc' : '#0f172a' }}/>
+                  <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '12px' }}/>
                 </PieChart>
               ) : (
-                 <div className={`flex h-full items-center justify-center ${darkMode ? "text-slate-500" : "text-slate-400"}`}>
-                   {cargando ? "Cargando proporciones..." : "No hay transacciones registradas."}
+                 <div className={`flex h-full items-center justify-center font-medium ${darkMode ? "text-slate-600" : "text-slate-400"}`}>
+                   {cargando ? "Calculando proporciones..." : "Inventario sin movimientos."}
                  </div>
               )}
             </ResponsiveContainer>
+            
+            {/* Capa Absoluta para el KPI Central del Donut */}
+            {movimientos.length > 0 && !cargando && (
+              <div className="absolute top-[45%] left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center pointer-events-none">
+                <span className={`text-4xl font-black ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                  {operacionesRegistradas}
+                </span>
+                <span className={`text-[10px] font-bold uppercase tracking-widest mt-1 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                  Operaciones
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       <div className={cardClass}>
-        <h2 className="text-xl font-semibold mb-6">Actividad reciente en tiempo real</h2>
+        <h2 className="text-xl font-bold tracking-tight mb-6">Registro de transacciones recientes</h2>
         <div className="space-y-4">
           {cargando && movimientos.length === 0 ? (
-             <p className={`animate-pulse ${darkMode ? "text-slate-500" : "text-slate-400"}`}>Sincronizando con el servidor...</p>
+             <p className={`animate-pulse font-medium ${darkMode ? "text-slate-600" : "text-slate-400"}`}>Sincronizando con el clúster de base de datos...</p>
           ) : movimientos.length === 0 ? (
-            <p className={darkMode ? "text-slate-400" : "text-zinc-600"}>Base de datos sin registros.</p>
+            <p className={`font-medium ${darkMode ? "text-slate-600" : "text-slate-400"}`}>Base de datos limpia. Aún no se han registrado comandos.</p>
           ) : (
-            // Nos aseguramos de clonar el array antes de hacer reverse() para no mutar el estado original de Zustand accidentalmente
-            [...movimientos].sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime()).slice(-5).reverse().map((item, index) => (
-              <div key={index} className={`flex justify-between items-center pb-4 border-b ${darkMode ? 'border-slate-800' : 'border-slate-100'} last:border-0`}>
+            [...movimientos].sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime()).slice(-6).reverse().map((item, index) => (
+              <div key={index} className={`flex justify-between items-center pb-4 border-b ${darkMode ? 'border-slate-800' : 'border-slate-100'} last:border-0 last:pb-0`}>
                 <div>
-                  <p className="font-semibold text-base">{item.product}</p>
-                  <p className={`text-xs mt-1 ${darkMode ? "text-slate-400" : "text-slate-500"}`}>
-                    {item.user} • {item.dateTime ? new Date(item.dateTime).toLocaleString() : 'N/A'} • Motor: {item.method}
+                  <p className={`font-bold text-base ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>{item.product}</p>
+                  <p className={`text-xs mt-1 font-medium ${darkMode ? "text-slate-500" : "text-slate-500"}`}>
+                    <span className={darkMode ? 'text-slate-400' : 'text-slate-600'}>{item.user}</span> • {item.dateTime ? new Date(item.dateTime).toLocaleString() : 'N/A'} • Motor: <span className="uppercase">{item.method}</span>
                   </p>
                 </div>
-                <div className={`px-4 py-2 rounded-lg text-sm font-bold tracking-wide flex items-center gap-2 flex-shrink-0 ml-2 ${
+                <div className={`px-4 py-2 rounded-xl text-sm font-black tracking-wide flex items-center gap-2 flex-shrink-0 ml-2 shadow-sm ${
                   item.action === 'suma' 
-                    ? (darkMode ? 'bg-emerald-950/40 text-emerald-400' : 'bg-emerald-50 text-emerald-700')
-                    : (darkMode ? 'bg-red-950/40 text-red-400' : 'bg-red-50 text-red-700')
+                    ? (darkMode ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-emerald-50 text-emerald-700 border border-emerald-200')
+                    : (darkMode ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-red-50 text-red-700 border border-red-200')
                 }`}>
                   <span>{item.action === 'suma' ? '+' : '-'}{item.quantity}</span>
-                  <span className="uppercase text-[10px] opacity-80">{item.unit || 'unidad'}</span>
+                  <span className="uppercase text-[10px] opacity-70 font-bold">{item.unit || 'UD'}</span>
                 </div>
               </div>
             ))
