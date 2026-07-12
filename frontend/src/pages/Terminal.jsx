@@ -198,8 +198,7 @@ export default function Terminal() {
   return (
     // REFACTOR: pt-[calc(env(...))] calcula dinámicamente la muesca/notch de hardware en smartphones reales
     // PEGA ESTA LÍNEA:
-<div className={`w-full flex flex-col items-center pt-4 sm:pt-8 pb-4 px-4 overflow-hidden relative h-[calc(100dvh-64px)] md:h-[100dvh] ${darkMode ? 'bg-[#0B1120]' : 'bg-slate-50'}`}>
-      
+<div className={`w-full flex flex-col items-center pt-[76px] md:pt-8 pb-4 px-4 overflow-hidden relative h-[100dvh] flex-1 ${darkMode ? 'bg-[#0B1120]' : 'bg-slate-50'}`}>      
       {/* MODAL SECTORES */}
       {mostrarModalSectores && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm sm:p-4">
