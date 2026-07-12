@@ -17,8 +17,6 @@ export default function Dashboard() {
   const navigate = useNavigate();
 
   const [cargando, setCargando] = useState(true);
-  
-  // NUEVO ESTADO: Control del filtro de tiempo
   const [rangoTiempo, setRangoTiempo] = useState("1d");
 
   const movimientos = Array.isArray(storeMovimientos) ? storeMovimientos : [];
@@ -28,43 +26,57 @@ export default function Dashboard() {
   const totalSalidas = movimientos.filter((m) => m.action === "resta").length;
   const operacionesRegistradas = totalEntradas + totalSalidas; 
   
-  // REFACTOR: Filtrado dinámico por tiempo y formateo inteligente de etiquetas
+  // REFACTOR MASIVO: Motor de agrupación de datos (Data Binning)
   const trendData = useMemo(() => {
     const ahora = new Date().getTime();
 
+    // 1. Filtrar transacciones fuera de rango
     const movimientosFiltrados = [...movimientos].filter((mov) => {
       if (!mov.dateTime) return false;
       const tiempoMov = new Date(mov.dateTime).getTime();
-      
-      // Matemáticas de milisegundos para recortar el historial
       if (rangoTiempo === "1d") return ahora - tiempoMov <= 24 * 60 * 60 * 1000;
       if (rangoTiempo === "1w") return ahora - tiempoMov <= 7 * 24 * 60 * 60 * 1000;
       if (rangoTiempo === "1m") return ahora - tiempoMov <= 30 * 24 * 60 * 60 * 1000;
-      return true; // "Max" deja pasar todo
+      return true; // "Max"
     });
 
-    return movimientosFiltrados
-      .sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime())
-      .map((mov) => {
-        let etiqueta = "00:00";
-        if (mov.dateTime) {
-          const fechaObj = new Date(mov.dateTime);
-          if (!isNaN(fechaObj.getTime())) {
-            // Si el rango es mayor a 1 día, mostramos la fecha (ej: 14/05 10:30)
-            if (rangoTiempo === "1d") {
-              etiqueta = fechaObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            } else {
-              etiqueta = `${fechaObj.getDate()}/${fechaObj.getMonth() + 1} ${fechaObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-            }
-          }
-        }
-        
-        return {
-          etiqueta,
-          Entradas: mov.action === "suma" ? Number(mov.quantity || 0) : 0,
-          Salidas: mov.action === "resta" ? Number(mov.quantity || 0) : 0,
+    // 2. Agrupación matemática según el tiempo seleccionado
+    const agrupados = {};
+
+    movimientosFiltrados.forEach((mov) => {
+      const fechaObj = new Date(mov.dateTime);
+      if (isNaN(fechaObj.getTime())) return;
+
+      let claveEtiqueta = "";
+
+      if (rangoTiempo === "1d") {
+        // Agrupar por horas exactas (ej: "14:00")
+        claveEtiqueta = `${fechaObj.getHours().toString().padStart(2, '0')}:00`;
+      } else if (rangoTiempo === "1w" || rangoTiempo === "1m") {
+        // Agrupar por días (ej: "12/05")
+        claveEtiqueta = `${fechaObj.getDate().toString().padStart(2, '0')}/${(fechaObj.getMonth() + 1).toString().padStart(2, '0')}`;
+      } else {
+        // Agrupar por meses (ej: "05/2026")
+        claveEtiqueta = `${(fechaObj.getMonth() + 1).toString().padStart(2, '0')}/${fechaObj.getFullYear()}`;
+      }
+
+      // Si el bloque de tiempo no existe, lo creamos
+      if (!agrupados[claveEtiqueta]) {
+        agrupados[claveEtiqueta] = { 
+          etiqueta: claveEtiqueta, 
+          Entradas: 0, 
+          Salidas: 0, 
+          timestamp: fechaObj.getTime() // Referencia oculta para ordenar cronológicamente
         };
-      });
+      }
+
+      // Sumar al bloque correspondiente
+      if (mov.action === "suma") agrupados[claveEtiqueta].Entradas += Number(mov.quantity || 0);
+      if (mov.action === "resta") agrupados[claveEtiqueta].Salidas += Number(mov.quantity || 0);
+    });
+
+    // 3. Devolver array ordenado de más antiguo a más nuevo
+    return Object.values(agrupados).sort((a, b) => a.timestamp - b.timestamp);
   }, [movimientos, rangoTiempo]);
   
   const categoryData = [
@@ -144,7 +156,6 @@ export default function Dashboard() {
   return (
     <div className={`min-h-screen p-4 sm:p-8 font-sans ${darkMode ? 'bg-[#070B14]' : 'bg-slate-50'}`}>
       
-      {/* CABECERA CORPORATIVA */}
       <div className="flex justify-between items-end mb-8 pb-4 border-b border-slate-200 dark:border-slate-800/60">
         <div>
           <h1 className={`text-2xl sm:text-3xl font-black tracking-tight uppercase ${darkMode ? 'text-white' : 'text-slate-900'}`}>
@@ -180,7 +191,6 @@ export default function Dashboard() {
 
       <div className="grid md:grid-cols-2 gap-6 sm:gap-6 mb-8">
         
-        {/* GRÁFICO 1: ÁREA CON FILTRO DE TIEMPO */}
         <div className={cardClass}>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
             <div>
@@ -191,7 +201,6 @@ export default function Dashboard() {
               ])}
             </div>
             
-            {/* NUEVO: Controles de Rango de Tiempo */}
             <div className={`flex p-1 rounded-lg border ${darkMode ? 'bg-[#1f2937] border-slate-700' : 'bg-slate-100 border-slate-200'}`}>
               {['1d', '1w', '1m', 'Max'].map((rango) => (
                 <button
@@ -224,7 +233,8 @@ export default function Dashboard() {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="2 2" vertical={false} stroke={darkMode ? "#1f2937" : "#e2e8f0"} />
-                  <XAxis dataKey="etiqueta" stroke={darkMode ? "#4b5563" : "#94a3b8"} fontSize={10} fontFamily="monospace" tickMargin={12} tickLine={false} axisLine={false} padding={{ left: 0, right: 0 }} />
+                  {/* REFACTOR: minTickGap=20 previene colisiones forzando márgenes matemáticos */}
+                  <XAxis dataKey="etiqueta" stroke={darkMode ? "#4b5563" : "#94a3b8"} fontSize={10} fontFamily="monospace" tickMargin={12} tickLine={false} axisLine={false} padding={{ left: 0, right: 0 }} minTickGap={20} />
                   <YAxis stroke={darkMode ? "#4b5563" : "#94a3b8"} fontSize={10} fontFamily="monospace" tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
                   <Tooltip 
                     contentStyle={{ backgroundColor: darkMode ? '#1f2937' : '#fff', borderRadius: '6px', border: darkMode ? '1px solid #374151' : '1px solid #e2e8f0', fontFamily: 'monospace', fontSize: '12px' }} 
@@ -236,14 +246,13 @@ export default function Dashboard() {
                 </AreaChart>
               ) : (
                 <div className="flex h-full items-center justify-center text-xs font-bold uppercase tracking-widest text-slate-500">
-                  {cargando ? "Sincronizando flujo..." : "Sin actividad en este rango de tiempo."}
+                  {cargando ? "Sincronizando flujo..." : "Sin actividad en este rango."}
                 </div>
               )}
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* GRÁFICO 2: DONUT CHART */}
         <div className={cardClass}>
           <div className="flex justify-between items-start mb-2">
             <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Proporción de flujo</h2>
@@ -300,7 +309,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* TABLA DE AUDITORÍA INFERIOR */}
       <div className={cardClass}>
         <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-6">Registro de transacciones recientes</h2>
         <div className="space-y-3">
