@@ -17,35 +17,55 @@ export default function Dashboard() {
   const navigate = useNavigate();
 
   const [cargando, setCargando] = useState(true);
+  
+  // NUEVO ESTADO: Control del filtro de tiempo
+  const [rangoTiempo, setRangoTiempo] = useState("1d");
 
   const movimientos = Array.isArray(storeMovimientos) ? storeMovimientos : [];
 
   const totalMovimientos = movimientos.length;
   const totalEntradas = movimientos.filter((m) => m.action === "suma").length;
   const totalSalidas = movimientos.filter((m) => m.action === "resta").length;
-  
   const operacionesRegistradas = totalEntradas + totalSalidas; 
   
+  // REFACTOR: Filtrado dinámico por tiempo y formateo inteligente de etiquetas
   const trendData = useMemo(() => {
-    return [...movimientos]
+    const ahora = new Date().getTime();
+
+    const movimientosFiltrados = [...movimientos].filter((mov) => {
+      if (!mov.dateTime) return false;
+      const tiempoMov = new Date(mov.dateTime).getTime();
+      
+      // Matemáticas de milisegundos para recortar el historial
+      if (rangoTiempo === "1d") return ahora - tiempoMov <= 24 * 60 * 60 * 1000;
+      if (rangoTiempo === "1w") return ahora - tiempoMov <= 7 * 24 * 60 * 60 * 1000;
+      if (rangoTiempo === "1m") return ahora - tiempoMov <= 30 * 24 * 60 * 60 * 1000;
+      return true; // "Max" deja pasar todo
+    });
+
+    return movimientosFiltrados
       .sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime())
-      .slice(-20)
       .map((mov) => {
-        let horaFormateada = "00:00";
+        let etiqueta = "00:00";
         if (mov.dateTime) {
           const fechaObj = new Date(mov.dateTime);
           if (!isNaN(fechaObj.getTime())) {
-            horaFormateada = fechaObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            // Si el rango es mayor a 1 día, mostramos la fecha (ej: 14/05 10:30)
+            if (rangoTiempo === "1d") {
+              etiqueta = fechaObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            } else {
+              etiqueta = `${fechaObj.getDate()}/${fechaObj.getMonth() + 1} ${fechaObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+            }
           }
         }
         
         return {
-          etiqueta: horaFormateada,
+          etiqueta,
           Entradas: mov.action === "suma" ? Number(mov.quantity || 0) : 0,
           Salidas: mov.action === "resta" ? Number(mov.quantity || 0) : 0,
         };
       });
-  }, [movimientos]);
+  }, [movimientos, rangoTiempo]);
   
   const categoryData = [
     { name: "Entradas", value: totalEntradas },
@@ -104,15 +124,13 @@ export default function Dashboard() {
 
   const COLORS = darkMode ? ["#10b981", "#ef4444"] : ["#059669", "#dc2626"];
 
-  // REFACTOR: Estilos de tarjetas más limpios, bordes afilados y tipografía sobria
   const cardClass = `p-6 rounded-xl border transition-all duration-300 ${
     darkMode ? 'bg-[#111827] border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
   }`;
 
-  // REFACTOR: Renderizador de leyenda personalizado para evitar la distorsión de Recharts
   const renderCustomLegend = (items) => {
     return (
-      <div className="flex items-center gap-4 mb-4 text-[10px] font-bold uppercase tracking-widest font-sans">
+      <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest font-sans">
         {items.map((item, index) => (
           <div key={index} className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
@@ -144,7 +162,6 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* REFACTOR: KPIs con tipografía numérica monoespaciada seria */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-5 mb-8">
         {[
           { label: "Movimientos totales", value: totalMovimientos },
@@ -163,19 +180,38 @@ export default function Dashboard() {
 
       <div className="grid md:grid-cols-2 gap-6 sm:gap-6 mb-8">
         
-        {/* GRÁFICO 1: REFACTORIZACIÓN DE ÁREA SIN MARGEN LOCAL */}
+        {/* GRÁFICO 1: ÁREA CON FILTRO DE TIEMPO */}
         <div className={cardClass}>
-          <div className="flex justify-between items-start mb-2">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Volumen por transacción</h2>
-            {renderCustomLegend([
-              { name: "Entradas", color: darkMode ? "#10b981" : "#059669" },
-              { name: "Salidas", color: darkMode ? "#ef4444" : "#dc2626" }
-            ])}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+            <div>
+              <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">Volumen por transacción</h2>
+              {renderCustomLegend([
+                { name: "Entradas", color: darkMode ? "#10b981" : "#059669" },
+                { name: "Salidas", color: darkMode ? "#ef4444" : "#dc2626" }
+              ])}
+            </div>
+            
+            {/* NUEVO: Controles de Rango de Tiempo */}
+            <div className={`flex p-1 rounded-lg border ${darkMode ? 'bg-[#1f2937] border-slate-700' : 'bg-slate-100 border-slate-200'}`}>
+              {['1d', '1w', '1m', 'Max'].map((rango) => (
+                <button
+                  key={rango}
+                  onClick={() => setRangoTiempo(rango)}
+                  className={`px-3 py-1.5 text-[10px] font-bold rounded-md transition-all uppercase tracking-wider ${
+                    rangoTiempo === rango 
+                      ? (darkMode ? 'bg-slate-600 text-white shadow-sm' : 'bg-white text-slate-900 shadow-sm') 
+                      : (darkMode ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-700')
+                  }`}
+                >
+                  {rango}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="w-full h-[280px]">
+
+          <div className="w-full h-[250px]">
             <ResponsiveContainer width="100%" height="100%">
-              {movimientos.length > 0 ? (
-                // margin right e izquierdo en cero eliminan el recorte lateral
+              {trendData.length > 0 ? (
                 <AreaChart data={trendData} margin={{ top: 10, right: 0, left: -25, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorEntradas" x1="0" y1="0" x2="0" y2="1">
@@ -188,7 +224,6 @@ export default function Dashboard() {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="2 2" vertical={false} stroke={darkMode ? "#1f2937" : "#e2e8f0"} />
-                  {/* padding en 0 y tickLine/axisLine false purgan el exceso geométrico */}
                   <XAxis dataKey="etiqueta" stroke={darkMode ? "#4b5563" : "#94a3b8"} fontSize={10} fontFamily="monospace" tickMargin={12} tickLine={false} axisLine={false} padding={{ left: 0, right: 0 }} />
                   <YAxis stroke={darkMode ? "#4b5563" : "#94a3b8"} fontSize={10} fontFamily="monospace" tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
                   <Tooltip 
@@ -196,20 +231,19 @@ export default function Dashboard() {
                     itemStyle={{ paddingVertical: '2px' }}
                     labelStyle={{ color: darkMode ? '#94a3b8' : '#64748b', marginBottom: '6px', fontWeight: 'bold' }}
                   />
-                  {/* Animaciones limpias y veloces con ease-out cúbico */}
                   <Area type="monotone" dataKey="Entradas" stroke={darkMode ? "#10b981" : "#059669"} strokeWidth={2} fillOpacity={1} fill="url(#colorEntradas)" isAnimationActive={true} animationDuration={400} animationEasing="ease-out" dot={false} activeDot={{ r: 4, strokeWidth: 0 }} />
                   <Area type="monotone" dataKey="Salidas" stroke={darkMode ? "#ef4444" : "#dc2626"} strokeWidth={2} fillOpacity={1} fill="url(#colorSalidas)" isAnimationActive={true} animationDuration={400} animationEasing="ease-out" dot={false} activeDot={{ r: 4, strokeWidth: 0 }} />
                 </AreaChart>
               ) : (
                 <div className="flex h-full items-center justify-center text-xs font-bold uppercase tracking-widest text-slate-500">
-                  {cargando ? "Sincronizando flujo..." : "Sin registros de actividad."}
+                  {cargando ? "Sincronizando flujo..." : "Sin actividad en este rango de tiempo."}
                 </div>
               )}
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* GRÁFICO 2: DONUT CHART EMPRESARIAL */}
+        {/* GRÁFICO 2: DONUT CHART */}
         <div className={cardClass}>
           <div className="flex justify-between items-start mb-2">
             <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Proporción de flujo</h2>
@@ -252,7 +286,6 @@ export default function Dashboard() {
               )}
             </ResponsiveContainer>
             
-            {/* KPI central alineado con tipografía rígida */}
             {movimientos.length > 0 && !cargando && (
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center pointer-events-none">
                 <span className="text-4xl font-mono font-bold tracking-tight leading-none">
