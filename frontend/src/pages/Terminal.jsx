@@ -196,18 +196,9 @@ export default function Terminal() {
   ];
 
   return (
-    // BLOQUEO DE SCROLL ABSOLUTO: fixed inset-0 clava la app al viewport
-    <div className={`fixed inset-0 w-full flex flex-col items-center pt-8 sm:pt-12 pb-4 px-4 overflow-hidden ${darkMode ? 'bg-[#0B1120]' : 'bg-slate-50'}`}>
+    // REFACTOR: pt-[calc(env(...))] calcula dinámicamente la muesca/notch de hardware en smartphones reales
+    <div className={`fixed inset-0 w-full flex flex-col items-center pt-[calc(env(safe-area-inset-top)+1rem)] sm:pt-12 pb-4 px-4 overflow-hidden ${darkMode ? 'bg-[#0B1120]' : 'bg-slate-50'}`}>
       
-      {/* BOTON FLOTANTE DE AYUDA */}
-      <button 
-        onClick={() => setMostrarModalAyuda(true)}
-        className={`absolute top-4 sm:top-6 right-4 sm:right-6 p-2 rounded-full border shadow-sm transition-colors z-10 ${darkMode ? 'bg-slate-800/50 border-slate-700 text-slate-400 hover:text-white' : 'bg-white border-slate-200 text-slate-500 hover:text-slate-900'}`}
-        title="Ver Instrucciones"
-      >
-        <HelpCircle size={24} />
-      </button>
-
       {/* MODAL SECTORES */}
       {mostrarModalSectores && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm sm:p-4">
@@ -339,15 +330,29 @@ export default function Terminal() {
         </div>
       )}
 
-      {/* CABECERA (Ajustada para no expandirse y crear scroll) */}
-      <div className="flex-shrink-0 flex flex-col items-center text-center gap-2 w-full max-w-3xl mb-4 sm:mb-6">
-          <span className={`px-4 py-1.5 rounded-full border text-[10px] sm:text-xs font-bold uppercase tracking-widest ${darkMode ? 'bg-blue-900/30 border-blue-800 text-blue-400' : 'bg-blue-50 border-blue-100 text-blue-600'}`}>
-            Modo Operario: {sectorActual?.nombre.toUpperCase()}
-          </span>
-          <h1 className={`text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight leading-none mt-1 ${darkMode ? 'text-white' : 'text-slate-900'}`}>Terminal Principal</h1>
+      {/* REFACTOR HEDER: Fila de Control unificada en Flexbox para prevenir colisiones en pantallas de smartphones */}
+      <div className="flex-shrink-0 w-full max-w-3xl flex items-center justify-between mb-3 border-b border-dashed border-slate-500/20 pb-2.5">
+        <span className={`px-3 py-1 rounded-full border text-[9px] sm:text-xs font-bold uppercase tracking-widest ${darkMode ? 'bg-blue-900/30 border-blue-800 text-blue-400' : 'bg-blue-50 border-blue-100 text-blue-600'}`}>
+          Modo Operario: {sectorActual?.nombre.toUpperCase()}
+        </span>
+        
+        <button 
+          onClick={() => setMostrarModalAyuda(true)}
+          className={`p-2 rounded-full border shadow-sm transition-colors ${darkMode ? 'bg-slate-800/50 border-slate-700 text-slate-400 hover:text-white' : 'bg-white border-slate-200 text-slate-500 hover:text-slate-900'}`}
+          title="Ver Instrucciones"
+        >
+          <HelpCircle size={18} className="sm:w-5 sm:h-5" />
+        </button>
       </div>
 
-      {/* ÁREA CENTRAL (min-h-0 evita empujar el dock) */}
+      {/* TÍTULO DE CONTEXTO */}
+      <div className="flex-shrink-0 w-full max-w-3xl text-center mb-4">
+        <h1 className={`text-2xl sm:text-4xl md:text-5xl font-extrabold tracking-tight leading-none ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+          Terminal Principal
+        </h1>
+      </div>
+
+      {/* ÁREA CENTRAL */}
       <div className="flex-1 w-full max-w-3xl flex flex-col justify-center gap-4 px-2 sm:px-0 min-h-0 mb-4 sm:mb-6">
         <div className={`w-full p-5 sm:p-8 rounded-3xl border shadow-xl flex flex-col justify-center transition-colors ${darkMode ? 'bg-[#151C2C] border-slate-800/50' : 'bg-white border-slate-200'}`}>
           <div className="mb-3 sm:mb-5 pb-3 sm:pb-5 border-b border-dashed border-slate-400/30 dark:border-slate-700">
@@ -366,7 +371,7 @@ export default function Terminal() {
         </div>
       </div>
 
-      {/* ÁREA DE CONTROL INFERIOR (flex-shrink-0 asegura que siempre sea visible) */}
+      {/* ÁREA DE CONTROL INFERIOR */}
       <div className="flex-shrink-0 w-full max-w-3xl flex flex-col items-center gap-4 sm:gap-6 pb-[env(safe-area-inset-bottom)]">
         
         {/* ZONA DE INPUT */}
