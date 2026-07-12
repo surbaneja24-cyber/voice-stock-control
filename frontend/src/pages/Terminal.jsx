@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Mic, X, BookOpen, LogOut, Trash2, Plus, Info, Keyboard, Send } from "lucide-react"; 
+import { Mic, X, BookOpen, LogOut, Trash2, Plus, Info, Keyboard, Send, HelpCircle } from "lucide-react"; 
 import { useNavigate } from "react-router-dom";
 import { useHistoryStore } from "../store/historyStore";
 import { useThemeStore } from "../store/themeStore";
@@ -196,20 +196,158 @@ export default function Terminal() {
   ];
 
   return (
-    <div className={`h-[100dvh] w-full flex flex-col items-center pt-8 sm:pt-12 pb-4 px-4 overflow-hidden ${darkMode ? 'bg-[#0B1120]' : 'bg-slate-50'}`}>
+    // BLOQUEO DE SCROLL ABSOLUTO: fixed inset-0 clava la app al viewport
+    <div className={`fixed inset-0 w-full flex flex-col items-center pt-8 sm:pt-12 pb-4 px-4 overflow-hidden ${darkMode ? 'bg-[#0B1120]' : 'bg-slate-50'}`}>
       
-      {/* --- MODALES OMITIDOS PARA BREVEDAD (Conserva los tuyos exactos aquí) --- */}
-      {/* ... (Pega aquí tus bloques de mostrarModalSectores, mostrarModalCatalogo y mostrarModalAyuda) ... */}
+      {/* BOTON FLOTANTE DE AYUDA */}
+      <button 
+        onClick={() => setMostrarModalAyuda(true)}
+        className={`absolute top-4 sm:top-6 right-4 sm:right-6 p-2 rounded-full border shadow-sm transition-colors z-10 ${darkMode ? 'bg-slate-800/50 border-slate-700 text-slate-400 hover:text-white' : 'bg-white border-slate-200 text-slate-500 hover:text-slate-900'}`}
+        title="Ver Instrucciones"
+      >
+        <HelpCircle size={24} />
+      </button>
 
-      {/* CABECERA */}
-      <div className="flex-shrink-0 flex flex-col items-center text-center gap-2 w-full max-w-3xl mb-4 sm:mb-8">
+      {/* MODAL SECTORES */}
+      {mostrarModalSectores && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm sm:p-4">
+          <div className={`w-full max-w-4xl p-6 sm:p-8 rounded-t-3xl sm:rounded-2xl shadow-2xl relative animate-in slide-in-from-bottom sm:zoom-in duration-300 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] sm:pb-8 ${darkMode ? 'bg-[#151C2C] border border-slate-700' : 'bg-white border border-slate-200'}`}>
+            <div className="text-center mb-6 sm:mb-8">
+              <h2 className={`text-2xl sm:text-3xl font-extrabold tracking-tight mb-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>Entorno de Trabajo</h2>
+              <p className={`text-sm sm:text-lg ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Bienvenido, {usuario?.nombre || "Operario"}. Selecciona tu área.</p>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 max-h-[50vh] overflow-y-auto custom-scrollbar p-1">
+              {sectores.map((sector) => (
+                <button
+                  key={sector.id}
+                  onClick={() => handleSelectSector(sector.id)}
+                  className={`flex flex-col items-center justify-center p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 active:scale-95 ${
+                    sectorActivo === sector.id
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400'
+                      : darkMode ? 'border-slate-800 bg-slate-800/50 text-slate-300' : 'border-slate-100 bg-slate-50 text-slate-700'
+                  }`}
+                >
+                  <span className="text-xl sm:text-2xl font-mono font-bold mb-1 sm:mb-2">{sector.icono}</span>
+                  <span className="text-xs sm:text-base font-semibold">{sector.nombre}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL CATALOGO */}
+      {mostrarModalCatalogo && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm sm:p-4">
+          <div className={`w-full max-w-2xl max-h-[90dvh] flex flex-col p-5 sm:p-6 rounded-t-3xl sm:rounded-2xl shadow-2xl relative animate-in slide-in-from-bottom sm:zoom-in duration-300 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] sm:pb-6 ${darkMode ? 'bg-[#151C2C] border border-slate-700' : 'bg-white border border-slate-200'}`}>
+            <button onClick={() => setMostrarModalCatalogo(false)} className="absolute top-4 right-4 p-2 rounded-full bg-slate-100/50 hover:bg-slate-200 dark:bg-slate-800/50 dark:hover:bg-slate-800 transition-colors z-10">
+              <X size={20} className={darkMode ? 'text-slate-400' : 'text-slate-600'} />
+            </button>
+            
+            <div className="mb-4 pr-8">
+              <h2 className={`text-xl sm:text-2xl font-bold tracking-tight flex items-center gap-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}><BookOpen className="text-blue-500" size={24}/> Tu Inventario ({sectorActual?.nombre})</h2>
+            </div>
+
+            <form onSubmit={handleApproveProducto} className={`mb-4 flex gap-2 p-2 sm:p-3 rounded-xl border flex-shrink-0 ${darkMode ? 'bg-slate-800/50 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
+              <input                
+                type="text" 
+                placeholder="Nuevo producto..." 
+                value={nuevoItemNombre}
+                onChange={(e) => setNuevoItemNombre(e.target.value)}
+                className={`flex-1 px-3 py-2 rounded-lg text-sm border focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-[#0B1120] border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'}`}
+                required
+              />
+              <input 
+                type="number" 
+                placeholder="Stock" 
+                value={nuevoItemStock}
+                onChange={(e) => setNuevoItemStock(e.target.value)}                
+                className={`w-20 sm:w-24 px-3 py-2 rounded-lg text-sm border focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-[#0B1120] border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'}`}
+              />
+              <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-2 rounded-lg transition-colors flex items-center justify-center">
+                <Plus size={20} />
+              </button>
+            </form>
+
+            <div className="flex-1 overflow-y-auto pr-1 space-y-2 custom-scrollbar min-h-[40vh]">
+              {listaProductos.length === 0 ? (
+                <p className={`text-center py-8 text-sm ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>No hay productos en esta categoría.</p>
+              ) : (
+                listaProductos.map((prod) => (
+                  <div key={prod.id} className={`flex justify-between items-center p-3 rounded-xl border ${
+                    prod.sector === 'universal' ? (darkMode ? 'bg-purple-900/10 border-purple-800/50' : 'bg-purple-50 border-purple-100') : (darkMode ? 'bg-slate-800/30 border-slate-700' : 'bg-white border-slate-200')
+                  }`}>
+                    <span className={`font-medium flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-sm sm:text-base ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>
+                      {prod.nombre} 
+                      {prod.sector === 'universal' && <span className="text-[9px] w-fit uppercase tracking-wider text-purple-500 font-bold border border-purple-500/30 bg-purple-500/10 px-2 py-0.5 rounded-full">Global</span>}
+                    </span>
+                    <div className="flex items-center gap-2 sm:gap-3 ml-2 flex-shrink-0">
+                      <span className={`text-xs sm:text-sm font-mono px-2 py-1 rounded-md ${darkMode ? 'bg-[#0B1120] text-slate-300' : 'bg-slate-100 text-slate-600'}`}>Stock: {prod.stock}</span>
+                      <button 
+                        onClick={() => handleEliminarProducto(prod.id)}
+                        className={`p-2 rounded-lg transition-colors ${darkMode ? 'text-slate-500 hover:bg-red-900/30 hover:text-red-400' : 'text-slate-400 hover:bg-red-50 hover:text-red-500'}`}
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL INSTRUCCIONES */}
+      {mostrarModalAyuda && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm sm:p-4">
+          <div className={`w-full max-w-md p-5 sm:p-6 rounded-t-3xl sm:rounded-2xl shadow-2xl relative animate-in slide-in-from-bottom sm:zoom-in duration-300 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] sm:pb-6 ${darkMode ? 'bg-[#151C2C] border border-slate-700' : 'bg-white border border-slate-200'}`}>
+            <button onClick={() => setMostrarModalAyuda(false)} className="absolute top-4 right-4 p-2 rounded-full bg-slate-100/50 hover:bg-slate-200 dark:bg-slate-800/50 dark:hover:bg-slate-800 transition-colors z-10">
+              <X size={20} className={darkMode ? 'text-slate-400' : 'text-slate-600'} />
+            </button>
+            
+            <div className="mb-5 pr-8">
+              <h2 className={`text-xl sm:text-2xl font-bold tracking-tight flex items-center gap-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                <Info className="text-blue-500" size={24}/> ¿Cómo usar VoxStock?
+              </h2>
+            </div>
+
+            <div className="space-y-3 max-h-[60vh] overflow-y-auto custom-scrollbar pr-1">
+              <div className={`p-3 sm:p-4 rounded-xl border ${darkMode ? 'bg-slate-800/30 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
+                <h3 className={`font-bold text-sm sm:text-base mb-1 ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>1. Modo Voz (Por Defecto)</h3>
+                <p className={`text-xs sm:text-sm ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Mantén presionado el botón del micrófono azul. Dicta tu orden de forma natural y suelta para enviar.</p>
+              </div>
+
+              <div className={`p-3 sm:p-4 rounded-xl border ${darkMode ? 'bg-slate-800/30 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
+                <h3 className={`font-bold text-sm sm:text-base mb-1 ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>2. Modo Texto (Ruido/iOS)</h3>
+                <p className={`text-xs sm:text-sm mb-2 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Si el micrófono falla, pulsa el icono del teclado a la derecha para escribir la orden manualmente.</p>
+                <div className={`mt-2 p-2 rounded-lg text-xs font-mono italic border ${darkMode ? 'bg-[#0B1120] border-blue-900/30 text-blue-400' : 'bg-blue-50/50 border-blue-100 text-blue-700'}`}>
+                  Ej: "Suma 5 unidades al pallet rojo"
+                </div>
+              </div>
+
+              <div className={`p-3 sm:p-4 rounded-xl border ${darkMode ? 'bg-slate-800/30 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
+                <h3 className={`font-bold text-sm sm:text-base mb-1 ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>3. El Motor IA</h3>
+                <p className={`text-xs sm:text-sm ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>El sistema detecta automáticamente la intención (Suma/Resta), la cantidad numérica y asocia el producto a tu catálogo mediante Fuzzy Matching.</p>
+              </div>
+            </div>
+            
+            <button onClick={() => setMostrarModalAyuda(false)} className="w-full mt-5 bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white font-bold py-3 sm:py-3.5 px-4 rounded-xl transition-all">
+              Entendido, a trabajar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* CABECERA (Ajustada para no expandirse y crear scroll) */}
+      <div className="flex-shrink-0 flex flex-col items-center text-center gap-2 w-full max-w-3xl mb-4 sm:mb-6">
           <span className={`px-4 py-1.5 rounded-full border text-[10px] sm:text-xs font-bold uppercase tracking-widest ${darkMode ? 'bg-blue-900/30 border-blue-800 text-blue-400' : 'bg-blue-50 border-blue-100 text-blue-600'}`}>
             Modo Operario: {sectorActual?.nombre.toUpperCase()}
           </span>
-          <h1 className={`text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight leading-none mt-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>Terminal Principal</h1>
+          <h1 className={`text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight leading-none mt-1 ${darkMode ? 'text-white' : 'text-slate-900'}`}>Terminal Principal</h1>
       </div>
 
-      {/* ÁREA CENTRAL (Fluida, sin alturas mínimas rígidas) */}
+      {/* ÁREA CENTRAL (min-h-0 evita empujar el dock) */}
       <div className="flex-1 w-full max-w-3xl flex flex-col justify-center gap-4 px-2 sm:px-0 min-h-0 mb-4 sm:mb-6">
         <div className={`w-full p-5 sm:p-8 rounded-3xl border shadow-xl flex flex-col justify-center transition-colors ${darkMode ? 'bg-[#151C2C] border-slate-800/50' : 'bg-white border-slate-200'}`}>
           <div className="mb-3 sm:mb-5 pb-3 sm:pb-5 border-b border-dashed border-slate-400/30 dark:border-slate-700">
@@ -228,16 +366,14 @@ export default function Terminal() {
         </div>
       </div>
 
-      {/* ÁREA DE CONTROL INFERIOR */}
+      {/* ÁREA DE CONTROL INFERIOR (flex-shrink-0 asegura que siempre sea visible) */}
       <div className="flex-shrink-0 w-full max-w-3xl flex flex-col items-center gap-4 sm:gap-6 pb-[env(safe-area-inset-bottom)]">
         
-        {/* ZONA DE INPUT (Flexbox Limpio y Secuencial) */}
+        {/* ZONA DE INPUT */}
         <div className="w-full px-2">
           {modoTexto ? (
             <div className="w-full flex animate-in fade-in slide-in-from-bottom-2 duration-300">
               <form onSubmit={handleSubmitTexto} className="w-full flex gap-2 sm:gap-3">
-                
-                {/* Botón de volver a micrófono a la izquierda */}
                 <button 
                   type="button"
                   onClick={() => setModoTexto(false)}
@@ -246,7 +382,6 @@ export default function Terminal() {
                 >
                   <Mic size={22} className="sm:w-6 sm:h-6"/>
                 </button>
-                
                 <input 
                   type="text" 
                   value={textoManual}
@@ -256,7 +391,6 @@ export default function Terminal() {
                   disabled={isProcessing}
                   autoFocus
                 />
-                
                 <button type="submit" disabled={isProcessing || !textoManual.trim()} className={`p-3 sm:p-4 rounded-2xl text-white shadow-md transition-all flex items-center justify-center flex-shrink-0 w-[56px] sm:w-[64px] ${isProcessing || !textoManual.trim() ? 'bg-slate-600 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500 active:scale-95'}`}>
                   <Send size={22} className="sm:w-6 sm:h-6" />
                 </button>
@@ -265,7 +399,6 @@ export default function Terminal() {
           ) : (
             <div className="w-full flex flex-col items-center relative animate-in fade-in zoom-in-95 duration-300">
               {micError && <p className="text-red-400 text-[10px] sm:text-xs font-bold mb-2 absolute -top-8 bg-red-950/80 px-3 py-1 rounded-full border border-red-900/50 z-20">{micError}</p>}
-              
               <div className="flex items-center justify-center w-full relative">
                 <div className="relative flex justify-center items-center">
                   {isListening && <div className="absolute inset-0 bg-blue-500/30 rounded-full blur-2xl animate-pulse -z-10 w-32 h-32 sm:w-48 sm:h-48"></div>}
@@ -282,8 +415,6 @@ export default function Terminal() {
                     <Mic size={40} strokeWidth={1.5} color={isListening ? "white" : (darkMode ? "#94a3b8" : "#64748b")} className={`transition-all ${isListening ? 'animate-bounce' : ''}`} />
                   </button>
                 </div>
-
-                {/* Teclado anclado de forma segura a la derecha */}
                 <button 
                   onClick={() => setModoTexto(true)}
                   className={`absolute right-4 sm:right-8 p-3 sm:p-4 rounded-full border shadow-sm transition-colors active:scale-90 ${darkMode ? 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white' : 'bg-slate-100 border-slate-300 text-slate-500 hover:text-slate-900'}`}
@@ -292,7 +423,6 @@ export default function Terminal() {
                   <Keyboard size={20} className="sm:w-6 sm:h-6"/>
                 </button>
               </div>
-              
               <span className={`font-bold tracking-widest text-[9px] sm:text-[10px] uppercase mt-3 sm:mt-4 ${isListening ? 'text-blue-500' : (darkMode ? 'text-slate-500' : 'text-slate-400')}`}>
                 {isListening ? "Escuchando orden..." : isProcessing ? "Procesando en servidor" : "Mantener pulsado para hablar"}
               </span>
@@ -300,7 +430,7 @@ export default function Terminal() {
           )}
         </div>
 
-        {/* DOCK INFERIOR (Recuperado y proporcionado) */}
+        {/* DOCK INFERIOR */}
         <div className="w-full grid grid-cols-3 gap-2 sm:gap-4 px-2 sm:px-0">
             {dockItems.map((item, index) => (
               <button
