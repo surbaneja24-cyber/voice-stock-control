@@ -60,10 +60,12 @@ export default function Login() {
         throw new Error(data.detail || t.errors?.generic || "Credenciales inválidas.");
       }
       
-      const data = await res.json();
-      
-      if (data.access_token) {
-        localStorage.setItem("token", data.access_token);
+    const data = await res.json();
+
+      // 1. Barrera de validación: Si el servidor rechazó el login, cortamos la ejecución
+      if (!res.ok || data.status !== "success") {
+        // Asumiendo que tienes un estado de error en tu componente, como setError(...)
+        throw new Error(data.detail || "Credenciales incorrectas");
       }
       
       loginAction(data.usuario);

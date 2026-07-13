@@ -13,7 +13,10 @@ export default function Dashboard() {
   
   const darkMode = useThemeStore((state) => state.darkMode); 
   const usuario = useAuthStore((state) => state.usuario); 
-  const logoutAction = useAuthStore((state) => state.logout);
+  
+  // INYECCIÓN DE SEGURIDAD
+  const authenticatedFetch = useAuthStore((state) => state.authenticatedFetch);
+
   const navigate = useNavigate();
 
   const [cargando, setCargando] = useState(true);
@@ -26,21 +29,18 @@ export default function Dashboard() {
   const totalSalidas = movimientos.filter((m) => m.action === "resta").length;
   const operacionesRegistradas = totalEntradas + totalSalidas; 
   
-  // REFACTOR MASIVO: Motor de agrupación de datos (Data Binning)
   const trendData = useMemo(() => {
     const ahora = new Date().getTime();
 
-    // 1. Filtrar transacciones fuera de rango
     const movimientosFiltrados = [...movimientos].filter((mov) => {
       if (!mov.dateTime) return false;
       const tiempoMov = new Date(mov.dateTime).getTime();
       if (rangoTiempo === "1d") return ahora - tiempoMov <= 24 * 60 * 60 * 1000;
       if (rangoTiempo === "1w") return ahora - tiempoMov <= 7 * 24 * 60 * 60 * 1000;
       if (rangoTiempo === "1m") return ahora - tiempoMov <= 30 * 24 * 60 * 60 * 1000;
-      return true; // "Max"
+      return true; 
     });
 
-    // 2. Agrupación matemática según el tiempo seleccionado
     const agrupados = {};
 
     movimientosFiltrados.forEach((mov) => {
@@ -50,32 +50,26 @@ export default function Dashboard() {
       let claveEtiqueta = "";
 
       if (rangoTiempo === "1d") {
-        // Agrupar por horas exactas (ej: "14:00")
         claveEtiqueta = `${fechaObj.getHours().toString().padStart(2, '0')}:00`;
       } else if (rangoTiempo === "1w" || rangoTiempo === "1m") {
-        // Agrupar por días (ej: "12/05")
         claveEtiqueta = `${fechaObj.getDate().toString().padStart(2, '0')}/${(fechaObj.getMonth() + 1).toString().padStart(2, '0')}`;
       } else {
-        // Agrupar por meses (ej: "05/2026")
         claveEtiqueta = `${(fechaObj.getMonth() + 1).toString().padStart(2, '0')}/${fechaObj.getFullYear()}`;
       }
 
-      // Si el bloque de tiempo no existe, lo creamos
       if (!agrupados[claveEtiqueta]) {
         agrupados[claveEtiqueta] = { 
           etiqueta: claveEtiqueta, 
           Entradas: 0, 
           Salidas: 0, 
-          timestamp: fechaObj.getTime() // Referencia oculta para ordenar cronológicamente
+          timestamp: fechaObj.getTime()
         };
       }
 
-      // Sumar al bloque correspondiente
       if (mov.action === "suma") agrupados[claveEtiqueta].Entradas += Number(mov.quantity || 0);
       if (mov.action === "resta") agrupados[claveEtiqueta].Salidas += Number(mov.quantity || 0);
     });
 
-    // 3. Devolver array ordenado de más antiguo a más nuevo
     return Object.values(agrupados).sort((a, b) => a.timestamp - b.timestamp);
   }, [movimientos, rangoTiempo]);
   
@@ -85,8 +79,8 @@ export default function Dashboard() {
   ];
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!usuario?.id || !token) {
+    // Ya no comprobamos tokens crudos, dependemos del store
+    if (!usuario?.id) {
       navigate("/login");
       return;
     }
@@ -99,19 +93,9 @@ export default function Dashboard() {
           ? "http://localhost:5001" 
           : `${window.location.protocol}//${window.location.hostname.replace("-5173", "-5001")}`);
 
-    fetch(`${baseApiUrl}/api/history`, {
-      headers: {
-        "Authorization": `Bearer ${token}`
-      }
-    })
+    // REFACTOR: Llamada blindada sin configurar cabeceras manualmente
+    authenticatedFetch(`${baseApiUrl}/api/history`)
       .then((res) => {
-        if (res.status === 401) {
-          logoutAction();
-          localStorage.removeItem("token");
-          navigate("/login");
-          throw new Error("Sesión expirada");
-        }
-        if (!res.ok) throw new Error("Error de red");
         return res.json();
       })
       .then((data) => {
@@ -125,14 +109,14 @@ export default function Dashboard() {
         }
       })
       .catch((err) => {
-        if (isMounted) console.error("[ERROR] Fallo de conexión:", err);
+        if (isMounted) console.error("[ERROR] Fallo de conexión o sesión expirada:", err);
       })
       .finally(() => {
         if (isMounted) setCargando(false);
       });
 
     return () => { isMounted = false; };
-  }, [setMovimientos, usuario?.id, navigate, logoutAction]);
+  }, [setMovimientos, usuario?.id, navigate, authenticatedFetch]);
 
   const COLORS = darkMode ? ["#10b981", "#ef4444"] : ["#059669", "#dc2626"];
 
@@ -233,7 +217,6 @@ export default function Dashboard() {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="2 2" vertical={false} stroke={darkMode ? "#1f2937" : "#e2e8f0"} />
-                  {/* REFACTOR: minTickGap=20 previene colisiones forzando márgenes matemáticos */}
                   <XAxis dataKey="etiqueta" stroke={darkMode ? "#4b5563" : "#94a3b8"} fontSize={10} fontFamily="monospace" tickMargin={12} tickLine={false} axisLine={false} padding={{ left: 0, right: 0 }} minTickGap={20} />
                   <YAxis stroke={darkMode ? "#4b5563" : "#94a3b8"} fontSize={10} fontFamily="monospace" tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
                   <Tooltip 

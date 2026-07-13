@@ -2,7 +2,7 @@ import asyncio
 from datetime import datetime, timedelta
 from typing import Literal, List
 from pydantic import BaseModel, Field, EmailStr
-from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi import FastAPI, HTTPException, Depends, status, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
@@ -25,11 +25,17 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7 
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/login") 
+# Mantenemos oauth2_scheme para compatibilidad con la documentación de Swagger, aunque usemos cookies
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/login", auto_error=False) 
 
+# REFACTOR: Soporte dual para producción y entorno de desarrollo local
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://voice-stock-control.vercel.app"], 
+    allow_origins=[
+        "https://voice-stock-control.vercel.app",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173"
+    ], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -56,7 +62,6 @@ class LeadCreate(BaseModel):
     email: str 
     volumen: Literal["0-50", "51-200", "201-500", "500+"]
 
-# Nuevo esquema para recibir texto limpio desde React
 class ComandoPayload(BaseModel):
     comando: str = Field(..., max_length=200)
     sector: str
@@ -85,13 +90,28 @@ def crear_token_acceso(data: dict, expires_delta: timedelta | None = None):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+# REFACTOR: Extracción Híbrida de Sesión (Cookie > Header)
+def get_current_user(request: Request, db: Session = Depends(get_db)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Credenciales no válidas o token expirado",
+        detail="Credenciales no válidas o sesión expirada",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    
+    token = request.cookies.get("access_token")
+    
+    if not token:
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header.split(" ")[1]
+            
+    if not token:
+        raise credentials_exception
+
     try:
+        if token.startswith("Bearer "):
+            token = token.replace("Bearer ", "")
+            
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email: str = payload.get("sub")
         if email is None:
@@ -117,7 +137,7 @@ def sembrar_catalogo_para_usuario(db: Session, usuario_id: int):
     db.add_all(nuevos_productos)
 
 # ==========================================
-# ENDPOINTS PÚBLICOS (Sin Token)
+# ENDPOINTS PÚBLICOS
 # ==========================================
 
 @app.post("/api/registro")
@@ -147,13 +167,14 @@ def registrar_usuario(user: UsuarioRegistro, db: Session = Depends(get_db)):
             "status": "success",
             "usuario": {"nombre": nuevo_usuario.nombre, "email": nuevo_usuario.email, "rol": nuevo_usuario.rol}
         }
-    except Exception as e:
+    except Exception as e:        
         db.rollback() 
         print(f"[ERROR CRÍTICO REGISTRO]: {str(e)}") 
-        raise HTTPException(status_code=500, detail="Error interno al procesar el registro. Contacte al administrador del WMS.")
+        raise HTTPException(status_code=500, detail="Error interno al procesar el registro.")
 
+# REFACTOR: Set-Cookie de alta seguridad
 @app.post("/api/login")
-def login_usuario(user: UsuarioLogin, db: Session = Depends(get_db)):
+def login_usuario(user: UsuarioLogin, response: Response, db: Session = Depends(get_db)):
     db_user = db.query(Usuario).filter(Usuario.email == user.email).first()
     if not db_user or not verificar_password(user.password, db_user.password_hash):
         raise HTTPException(status_code=400, detail="Credenciales incorrectas. Verifique correo y contraseña.")
@@ -161,10 +182,18 @@ def login_usuario(user: UsuarioLogin, db: Session = Depends(get_db)):
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = crear_token_acceso(data={"sub": db_user.email}, expires_delta=access_token_expires)
     
+    response.set_cookie(
+        key="access_token",
+        value=f"Bearer {access_token}",
+        httponly=True,
+        secure=True,
+        samesite="none",
+        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60
+    )
+    
     return {
         "status": "success",
-        "access_token": access_token,
-        "token_type": "bearer",
+        "mensaje": "Autenticación segura completada",
         "usuario": {
             "id": db_user.id,
             "nombre": db_user.nombre,
@@ -173,6 +202,17 @@ def login_usuario(user: UsuarioLogin, db: Session = Depends(get_db)):
             "plan": db_user.plan
         }
     }
+
+# REFACTOR: Endpoint para destrucción segura de cookie
+@app.post("/api/logout")
+def logout_usuario(response: Response):
+    response.delete_cookie(
+        key="access_token",
+        secure=True,
+        samesite="none",
+        httponly=True
+    )
+    return {"status": "success", "mensaje": "Sesión finalizada"}
 
 @app.post("/api/leads")
 def registrar_lead_piloto(lead: LeadCreate, db: Session = Depends(get_db)):
@@ -198,7 +238,7 @@ def obtener_planes_monetizacion():
     ]
 
 # ==========================================
-# ENDPOINTS PRIVADOS (Requieren Token JWT) 
+# ENDPOINTS PRIVADOS
 # ==========================================
 
 @app.get("/api/history")
@@ -250,12 +290,10 @@ def eliminar_producto_personalizado(producto_id: int, db: Session = Depends(get_
     db.commit()
     return {"status": "success", "mensaje": f"Producto '{nombre_borrado}' eliminado."}
 
-# --- EL NUEVO MOTOR DE PROCESAMIENTO NLP ---
 @app.post("/api/procesar-comando")
 def procesar_comando(payload: ComandoPayload, db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_user)):
     texto = payload.comando.lower()
     
-    # 1. Determinar Acción
     palabras_ingreso = ["añadir", "añade", "suma", "sumar", "entrar", "entrada", "agrega", "agregar"]
     palabras_salida = ["quitar", "quita", "resta", "restar", "sacar", "saca", "elimina", "salida"]
     
@@ -269,7 +307,6 @@ def procesar_comando(payload: ComandoPayload, db: Session = Depends(get_db), cur
         
     accion = "suma" if es_ingreso else "resta"
     
-    # 2. Extraer Cantidad
     cantidad = 0
     match_digito = re.search(r'\d+', texto)
     if match_digito:
@@ -283,13 +320,11 @@ def procesar_comando(payload: ComandoPayload, db: Session = Depends(get_db), cur
     if cantidad <= 0:
         return {"estado": "error", "mensaje": "No escuché una cantidad válida."}
 
-    # 3. Limpiar texto 
     texto_limpio = re.sub(r'\d+', '', texto)
     for palabra in palabras_ingreso + palabras_salida + list(MAPEO_NUMEROS.keys()):
         texto_limpio = re.sub(rf'\b{palabra}\b', '', texto_limpio)
     texto_limpio = texto_limpio.strip()
 
-    # 4. Búsqueda Difusa en Catálogo del Usuario
     productos_db = db.query(Producto).filter(
         Producto.usuario_id == current_user.id,
         ((Producto.sector == payload.sector.lower()) | (Producto.sector == 'universal'))
@@ -306,7 +341,6 @@ def procesar_comando(payload: ComandoPayload, db: Session = Depends(get_db), cur
         
     producto_objetivo = next(p for p in productos_db if p.nombre.lower() == mejor_coincidencia)
     
-    # 5. Ejecutar la lógica y guardar el Movimiento
     try:
         if accion == "resta":
             if producto_objetivo.stock < cantidad:
@@ -317,7 +351,6 @@ def procesar_comando(payload: ComandoPayload, db: Session = Depends(get_db), cur
             producto_objetivo.stock += cantidad
             accion_str = f"Entrada registrada: +{cantidad} ud(s)"
             
-        # Generar el registro en el historial
         nuevo_movimiento = Movimiento(
             user=current_user.nombre, 
             action=accion, 
@@ -337,7 +370,7 @@ def procesar_comando(payload: ComandoPayload, db: Session = Depends(get_db), cur
             "mensaje": f"[ÉXITO] {producto_objetivo.nombre}\n{accion_str}\nStock actual: {producto_objetivo.stock}\nPrecisión: {puntuacion}%",
             "accion": "entrada" if accion == "suma" else "salida",
             "producto": producto_objetivo.nombre,
-            "cantidad": cantidad,
+            "cantidad": cantidad,            
             "unidad": "ud"
         }
     except Exception as e:

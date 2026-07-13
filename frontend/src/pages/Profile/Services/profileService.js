@@ -1,35 +1,31 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+import { useAuthStore } from '../store/authStore'; // Importamos el gestor de estado
 
-const getAuthHeaders = () => {
-    const token = localStorage.getItem('authToken');
-    return {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    };
-};
+// Usa la variable correcta según tu entorno de producción
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL 
+  || (window.location.hostname === "localhost" ? "http://localhost:5001" : "");
 
 const handleResponse = async (res) => {
     if (!res.ok) {
-        const error = await res.json().catch(() => ({ message: 'Error desconocido' }));
-        throw new Error(error.message || `HTTP ${res.status}`);
+        const error = await res.json().catch(() => ({ message: 'Error desconocido del servidor' }));
+        throw new Error(error.detail || error.message || `HTTP ${res.status}`);
     }
     return res.json();
 };
 
 // ─── GET /api/user/profile ───────────────────────────────────────────────────
 export const fetchProfile = async () => {
-    const res = await fetch(`${API_BASE_URL}/user/profile`, {
+    const { authenticatedFetch } = useAuthStore.getState();
+    const res = await authenticatedFetch(`${API_BASE_URL}/api/user/profile`, {
         method: 'GET',
-        headers: getAuthHeaders(),
     });
     return handleResponse(res);
 };
 
 // ─── PATCH /api/user/profile ─────────────────────────────────────────────────
 export const updateProfile = async (data) => {
-    const res = await fetch(`${API_BASE_URL}/user/profile`, {
+    const { authenticatedFetch } = useAuthStore.getState();
+    const res = await authenticatedFetch(`${API_BASE_URL}/api/user/profile`, {
         method: 'PATCH',
-        headers: getAuthHeaders(),
         body: JSON.stringify(data),
     });
     return handleResponse(res);
@@ -37,25 +33,32 @@ export const updateProfile = async (data) => {
 
 // ─── POST /api/user/avatar ───────────────────────────────────────────────────
 export const uploadAvatar = async (file) => {
-    const token = localStorage.getItem('authToken');
     const formData = new FormData();
     formData.append('avatar', file);
 
-    const res = await fetch(`${API_BASE_URL}/user/avatar`, {
+    // CRÍTICO: NO usamos authenticatedFetch aquí porque inyectaría 'Content-Type: application/json'.
+    // Para FormData, el navegador debe autogenerar el Content-Type con el 'boundary'.
+    // Solo inyectamos credentials para que envíe la cookie segura.
+    const res = await fetch(`${API_BASE_URL}/api/user/avatar`, {
         method: 'POST',
-        headers: {
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        credentials: 'include', 
         body: formData,
     });
+    
+    // Validar expiración de sesión manualmente para este caso aislado
+    if (res.status === 401) {
+        useAuthStore.getState().logout();
+        throw new Error("Sesión expirada");
+    }
+
     return handleResponse(res);
 };
 
 // ─── PATCH /api/user/password ────────────────────────────────────────────────
 export const changePassword = async ({ currentPassword, newPassword }) => {
-    const res = await fetch(`${API_BASE_URL}/user/password`, {
+    const { authenticatedFetch } = useAuthStore.getState();
+    const res = await authenticatedFetch(`${API_BASE_URL}/api/user/password`, {
         method: 'PATCH',
-        headers: getAuthHeaders(),
         body: JSON.stringify({ currentPassword, newPassword }),
     });
     return handleResponse(res);
@@ -63,9 +66,9 @@ export const changePassword = async ({ currentPassword, newPassword }) => {
 
 // ─── DELETE /api/user/account ────────────────────────────────────────────────
 export const deleteAccount = async () => {
-    const res = await fetch(`${API_BASE_URL}/user/account`, {
+    const { authenticatedFetch } = useAuthStore.getState();
+    const res = await authenticatedFetch(`${API_BASE_URL}/api/user/account`, {
         method: 'DELETE',
-        headers: getAuthHeaders(),
     });
     return handleResponse(res);
 };

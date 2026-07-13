@@ -13,8 +13,10 @@ export default function Terminal() {
   const darkMode = useThemeStore((state) => state.darkMode);
   const usuario = useAuthStore((state) => state.usuario); 
   const logoutAction = useAuthStore((state) => state.logout); 
+  
+  // INYECCIÓN DE SEGURIDAD: Traemos el fetch protegido
+  const authenticatedFetch = useAuthStore((state) => state.authenticatedFetch);
 
-  const token = localStorage.getItem("token");
   const baseApiUrl = import.meta.env.VITE_BACKEND_URL 
     || (window.location.hostname === "localhost" 
         ? "http://localhost:5001" 
@@ -60,34 +62,23 @@ export default function Terminal() {
   ];
 
   useEffect(() => {
-    if (!usuario || !token) {
+    // Ya no verificamos el token aquí, authStore controla la sesión real
+    if (!usuario) {
       navigate("/login");
     }
-  }, [usuario, token, navigate]);
+  }, [usuario, navigate]);
 
   const fetchCatalogo = useCallback(async () => {
-    if (!usuario?.id || !token) return;
+    if (!usuario?.id) return;
     try {
-      const res = await fetch(`${baseApiUrl}/api/catalogo?sector=${sectorActivo}`, {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json"
-        }
-      });
-
-      if (res.status === 401) {
-        ejecutarCerrarSesion();
-        return;
-      }
-
-      if (res.ok) {
-        const data = await res.json();
-        setListaProductos(data);
-      }
+      // REFACTOR: Uso de authenticatedFetch sin headers manuales
+      const res = await authenticatedFetch(`${baseApiUrl}/api/catalogo?sector=${sectorActivo}`);
+      const data = await res.json();
+      setListaProductos(data);
     } catch (error) {
-      console.error("[ERROR] No se pudo cargar el catalogo:", error);
+      console.error("[ERROR] Fallo al cargar catálogo. Posible sesión expirada:", error);
     }
-  }, [sectorActivo, usuario?.id, token, baseApiUrl]);
+  }, [sectorActivo, usuario?.id, baseApiUrl, authenticatedFetch]);
 
   useEffect(() => {
     if (!mostrarModalSectores) {
@@ -116,9 +107,9 @@ export default function Terminal() {
     setRespuestaIA({ transcripcion: textoComando, mensaje: "Procesando intención con IA...", estado: "idle" });
 
     try {
-      const respuesta = await fetch(`${baseApiUrl}/api/procesar-comando`, { 
+      // REFACTOR: Uso de authenticatedFetch
+      const respuesta = await authenticatedFetch(`${baseApiUrl}/api/procesar-comando`, { 
         method: "POST", 
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ comando: textoComando, sector: sectorActivo }) 
       });
       
@@ -142,7 +133,7 @@ export default function Terminal() {
         setRespuestaIA({ transcripcion: textoComando, mensaje: "Fallo del motor: " + (datos.detail || datos.error), estado: "error" });
       }
     } catch (error) {
-      setRespuestaIA({ transcripcion: "Fallo de red.", mensaje: "Error Critico: Servidor inalcanzable.", estado: "error" });
+      setRespuestaIA({ transcripcion: "Fallo de red o sesión expirada.", mensaje: "Error Critico: Acción denegada.", estado: "error" });
     } finally {
       setIsProcessing(false); 
     }
@@ -153,25 +144,35 @@ export default function Terminal() {
     if (!nuevoItemNombre.trim()) return;
     const payload = { nombre: nuevoItemNombre, stock: parseInt(nuevoItemStock) || 0, sector: sectorActivo };
     try {
-      const res = await fetch(`${baseApiUrl}/api/catalogo/item`, { 
+      // REFACTOR: Uso de authenticatedFetch
+      const res = await authenticatedFetch(`${baseApiUrl}/api/catalogo/item`, { 
         method: 'POST', 
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, 
         body: JSON.stringify(payload) 
       });
-      if (res.ok) { setNuevoItemNombre(""); setNuevoItemStock(""); fetchCatalogo(); } 
-      else { const err = await res.json(); alert(err.detail); }
-    } catch (error) { console.error("Error al añadir:", error); }
+      if (res.ok) { 
+        setNuevoItemNombre(""); 
+        setNuevoItemStock(""); 
+        fetchCatalogo(); 
+      } else { 
+        const err = await res.json(); 
+        alert(err.detail); 
+      }
+    } catch (error) { 
+      console.error("Error al añadir:", error); 
+    }
   };
 
   const handleEliminarProducto = async (productoId) => { 
     if (!confirm("¿Estás seguro de eliminar este artículo de tu inventario?")) return;
     try {
-      const res = await fetch(`${baseApiUrl}/api/catalogo/item/${productoId}`, { 
-        method: 'DELETE', 
-        headers: { 'Authorization': `Bearer ${token}` } 
+      // REFACTOR: Uso de authenticatedFetch
+      const res = await authenticatedFetch(`${baseApiUrl}/api/catalogo/item/${productoId}`, { 
+        method: 'DELETE' 
       });
       if (res.ok) fetchCatalogo();
-    } catch (error) { console.error("Error al eliminar:", error); }
+    } catch (error) { 
+      console.error("Error al eliminar:", error); 
+    }
   };
 
   const handleSelectSector = (sectorId) => { 
@@ -181,9 +182,9 @@ export default function Terminal() {
     localStorage.setItem(`voxstock_onboarding_${usuario?.id}`, "done");
   };
 
-  const ejecutarCerrarSesion = () => { 
-    logoutAction();
-    localStorage.removeItem("token"); 
+  const ejecutarCerrarSesion = async () => { 
+    // REFACTOR: La acción de Zustand ahora maneja el borrado de cookie en backend y la purga local
+    await logoutAction();
     navigate('/');
   };
 
@@ -196,9 +197,8 @@ export default function Terminal() {
   ];
 
   return (
-    // REFACTOR: pt-[calc(env(...))] calcula dinámicamente la muesca/notch de hardware en smartphones reales
-    // PEGA ESTA LÍNEA:
-   <div className={`w-full h-full flex flex-col items-center pt-4 sm:pt-8 pb-4 px-4 overflow-hidden ${darkMode ? 'bg-[#0B1120]' : 'bg-slate-50'}`}>
+    <div className={`w-full h-full flex flex-col items-center pt-4 sm:pt-8 pb-4 px-4 overflow-hidden ${darkMode ? 'bg-[#0B1120]' : 'bg-slate-50'}`}>
+      
       {/* MODAL SECTORES */}
       {mostrarModalSectores && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm sm:p-4">
@@ -330,7 +330,7 @@ export default function Terminal() {
         </div>
       )}
 
-      {/* REFACTOR HEDER: Fila de Control unificada en Flexbox para prevenir colisiones en pantallas de smartphones */}
+      {/* CABECERA */}
       <div className="flex-shrink-0 w-full max-w-3xl flex items-center justify-between mb-3 border-b border-dashed border-slate-500/20 pb-2.5">
         <span className={`px-3 py-1 rounded-full border text-[9px] sm:text-xs font-bold uppercase tracking-widest ${darkMode ? 'bg-blue-900/30 border-blue-800 text-blue-400' : 'bg-blue-50 border-blue-100 text-blue-600'}`}>
           Modo Operario: {sectorActual?.nombre.toUpperCase()}
@@ -345,7 +345,6 @@ export default function Terminal() {
         </button>
       </div>
 
-      {/* TÍTULO DE CONTEXTO */}
       <div className="flex-shrink-0 w-full max-w-3xl text-center mb-4">
         <h1 className={`text-2xl sm:text-4xl md:text-5xl font-extrabold tracking-tight leading-none ${darkMode ? 'text-white' : 'text-slate-900'}`}>
           Terminal Principal
@@ -373,8 +372,6 @@ export default function Terminal() {
 
       {/* ÁREA DE CONTROL INFERIOR */}
       <div className="flex-shrink-0 w-full max-w-3xl flex flex-col items-center gap-4 sm:gap-6 pb-[env(safe-area-inset-bottom)]">
-        
-        {/* ZONA DE INPUT */}
         <div className="w-full px-2">
           {modoTexto ? (
             <div className="w-full flex animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -435,7 +432,6 @@ export default function Terminal() {
           )}
         </div>
 
-        {/* DOCK INFERIOR */}
         <div className="w-full grid grid-cols-3 gap-2 sm:gap-4 px-2 sm:px-0">
             {dockItems.map((item, index) => (
               <button

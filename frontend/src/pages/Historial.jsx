@@ -13,7 +13,9 @@ export default function Historial() {
   
   const darkMode = useThemeStore((state) => state.darkMode);
   const usuario = useAuthStore((state) => state.usuario); 
-  const logoutAction = useAuthStore((state) => state.logout);
+  
+  // INYECCIÓN DE SEGURIDAD
+  const authenticatedFetch = useAuthStore((state) => state.authenticatedFetch);
   const navigate = useNavigate();
   
   const [cargando, setCargando] = useState(true);
@@ -21,12 +23,13 @@ export default function Historial() {
   const movimientos = Array.isArray(storeMovimientos) ? storeMovimientos : [];
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!usuario?.id || !token) {
+    // Solo validamos la memoria del perfil, la validez del token la dictará el servidor
+    if (!usuario?.id) {
       navigate("/login");
       return;
     }
 
+    let isMounted = true;
     setCargando(true);
 
     const baseApiUrl = import.meta.env.VITE_BACKEND_URL 
@@ -34,52 +37,47 @@ export default function Historial() {
           ? "http://localhost:5001" 
           : `${window.location.protocol}//${window.location.hostname.replace("-5173", "-5001")}`);
 
-    fetch(`${baseApiUrl}/api/history`, {
-      headers: {
-        "Authorization": `Bearer ${token}`
-      }
-    })
+    // REFACTOR: Uso exclusivo de authenticatedFetch. Se eliminan interceptores 401 redundantes.
+    authenticatedFetch(`${baseApiUrl}/api/history`)
       .then((res) => {
-        if (res.status === 401) {
-          logoutAction();
-          localStorage.removeItem("token");
-          navigate("/login");
-          throw new Error("Sesión expirada");
-        }
         if (!res.ok) throw new Error("Fallo en la red");
         return res.json();
       })
       .then((data) => {
-        if (Array.isArray(data)) {
-          setMovimientos(data);
-        } else {
-          console.warn("Respuesta inválida:", data);
-          setMovimientos([]);
+        if (isMounted) {
+          if (Array.isArray(data)) {
+            setMovimientos(data);
+          } else {
+            console.warn("[WARNING] Respuesta inválida del historial:", data);
+            setMovimientos([]);
+          }
         }
       })
       .catch((err) => {
-        console.error("Error:", err);
-        setMovimientos([]);
+        if (isMounted) {
+          console.error("[ERROR] Fallo al cargar historial:", err);
+          setMovimientos([]);
+        }
       })
       .finally(() => {
-        setCargando(false);
+        if (isMounted) setCargando(false);
       });
-  }, [setMovimientos, usuario?.id, navigate, logoutAction]); 
+      
+    return () => { isMounted = false; };
+  }, [setMovimientos, usuario?.id, navigate, authenticatedFetch]); 
 
- const exportExcel = () => {
+  const exportExcel = () => {
     const wb = XLSX.utils.book_new();
 
-    // 1. Construir el bloque de Metadatos Corporativos (Encabezado)
     const fechaCorte = new Date().toLocaleString();
     const metadatos = [
       ["VOXSTOCK - SISTEMA DE CONTROL DE INVENTARIO"],
       [`Operador responsable: ${usuario?.nombre || 'Operario'}`],
       [`Fecha y hora de corte: ${fechaCorte}`],
       [`Total de transacciones: ${movimientos.length}`],
-      [] // Fila vacía para separar el encabezado de la tabla
+      []
     ];
 
-    // 2. Mapear los datos de la tabla
     const datosLimpios = movimientos.map(({ dateTime, user, product, quantity, method }) => ({
       "Fecha y Hora": dateTime ? new Date(dateTime).toLocaleString() : 'N/A',
       "Usuario": user,
@@ -88,47 +86,42 @@ export default function Historial() {
       "Método": method
     }));
 
-    // 3. Inyectar todo en la misma hoja
-    const ws = XLSX.utils.json_to_sheet([]); // Hoja en blanco
-    XLSX.utils.sheet_add_aoa(ws, metadatos, { origin: "A1" }); // Pegar metadatos arriba
-    XLSX.utils.sheet_add_json(ws, datosLimpios, { origin: "A6" }); // Pegar tabla en la fila 6
+    const ws = XLSX.utils.json_to_sheet([]);
+    XLSX.utils.sheet_add_aoa(ws, metadatos, { origin: "A1" });
+    XLSX.utils.sheet_add_json(ws, datosLimpios, { origin: "A6" });
 
-    // 4. Ajustar anchos de columna para que sea legible sin editar
     ws['!cols'] = [
-      { wch: 22 }, // Fecha
-      { wch: 15 }, // Usuario
-      { wch: 25 }, // Producto
-      { wch: 10 }, // Cantidad
-      { wch: 12 }  // Método
+      { wch: 22 }, 
+      { wch: 15 }, 
+      { wch: 25 }, 
+      { wch: 10 }, 
+      { wch: 12 }  
     ];
 
     XLSX.utils.book_append_sheet(wb, ws, "Auditoria");
     XLSX.writeFile(wb, `VoxStock_Auditoria_${new Date().getTime()}.xlsx`);
   };
 
- const exportPDF = () => {
+  const exportPDF = () => {
     const doc = new jsPDF();
     const fechaCorte = new Date().toLocaleString();
 
-    // 1. Diseño del Encabezado del Documento
     doc.setFontSize(18);
-    doc.setTextColor(37, 99, 235); // Azul característico de tu UI
+    doc.setTextColor(37, 99, 235);
     doc.text("VOXSTOCK", 14, 22);
     
     doc.setFontSize(12);
     doc.setTextColor(50);
     doc.text("Reporte de Auditoría de Inventario", 14, 30);
 
-    // 2. Metadatos de la sesión
     doc.setFontSize(9);
     doc.setTextColor(100);
     doc.text(`Operador: ${usuario?.nombre || 'Operario'}`, 14, 40);
     doc.text(`Fecha de corte: ${fechaCorte}`, 14, 45);
     doc.text(`Transacciones registradas: ${movimientos.length}`, 14, 50);
 
-    // 3. Renderizado de la tabla con estilos profesionales
     autoTable(doc, {
-      startY: 55, // Empezar debajo del encabezado
+      startY: 55,
       head: [["Fecha y Hora", "Usuario", "Producto", "Cant.", "Método"]],
       body: movimientos.map((m) => [
         m.dateTime ? new Date(m.dateTime).toLocaleString() : 'N/A', 
@@ -138,18 +131,17 @@ export default function Historial() {
         m.method
       ]),
       headStyles: { 
-        fillColor: [37, 99, 235], // Fondo azul del header
+        fillColor: [37, 99, 235], 
         textColor: 255, 
         fontStyle: 'bold' 
       },
       alternateRowStyles: { 
-        fillColor: [248, 250, 252] // Sutil gris en filas pares (readability)
+        fillColor: [248, 250, 252]
       },
       styles: { 
         fontSize: 9, 
         cellPadding: 3 
       },
-      // 4. Paginación automática en el pie de página
       didDrawPage: function (data) {
         const str = "Página " + doc.internal.getNumberOfPages();
         doc.setFontSize(8);
@@ -163,7 +155,6 @@ export default function Historial() {
 
   return (
     <div className={`min-h-screen px-8 py-10 ${darkMode ? 'text-slate-100' : 'text-slate-900'}`}>
-      
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-10">
         <div>
           <h1 className="text-4xl font-bold mb-2">Historial de movimientos</h1>
