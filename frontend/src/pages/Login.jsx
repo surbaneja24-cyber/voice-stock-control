@@ -39,13 +39,13 @@ export default function Login() {
             
       const backendUrl = `${baseApiUrl}/api/login`;
 
-      const res = await fetch(backendUrl, {
+      const res = await fetch(`${baseApiUrl}/api/login`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: emailSanitizado,
-          password: formData.password
-        }),
+        credentials: "include", // <-- ESTA ES LA PIEZA QUE FALTABA. Obliga al navegador a tragarse la cookie.
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
       });
 
       if (!res.ok) {
