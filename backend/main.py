@@ -186,8 +186,8 @@ def login_usuario(user: UsuarioLogin, response: Response, db: Session = Depends(
         key="access_token",
         value=f"Bearer {access_token}",
         httponly=True,
-        secure=True,
-        samesite="none",
+        secure=False,      # <-- CAMBIADO: Permite HTTP en desarrollo local
+        samesite="lax",    # <-- CAMBIADO: Evita el bloqueo de cookies de terceros
         max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60
     )
     
