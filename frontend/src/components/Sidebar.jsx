@@ -42,22 +42,24 @@ const Sidebar = ({ isOpen = false, setIsOpen = () => {} }) => {
         <button onClick={() => setIsOpen(true)} className={`p-2 -ml-2 rounded-lg ${darkMode ? "text-slate-300 hover:bg-slate-800" : "text-slate-600 hover:bg-slate-100"}`}>
           <Menu size={26} />
         </button>
-        <span className={`font-extrabold tracking-wider text-xl ${darkMode ? "text-white" : "text-slate-900"}`}>
+        {/* LOGO INTERACTIVO MÓVIL (TOP BAR) */}
+        <Link to="/dashboard" className={`font-extrabold tracking-wider text-xl hover:opacity-80 transition-opacity focus:outline-none ${darkMode ? "text-white" : "text-slate-900"}`}>
           VOX<span className="text-blue-500">STOCK</span>
-        </span>
+        </Link>
         <div className="w-8" /> 
       </div>
 
-      {/* 2. Cortina Oscura y Menú Deslizable (Drawer) - ¡CORREGIDO A Z-[9999]! */}
+      {/* 2. Cortina Oscura y Menú Deslizable (Drawer) - Z-[9999] */}
       <div className={`md:hidden fixed inset-0 z-[9999] transition-opacity duration-300 ${isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}>
         <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsOpen(false)} />
         
         <aside className={`absolute top-0 left-0 w-[80%] max-w-[320px] h-full flex flex-col justify-between shadow-2xl transition-transform duration-300 ${isOpen ? "translate-x-0" : "-translate-x-full"} ${darkMode ? "bg-slate-950 border-r border-slate-800" : "bg-white border-r border-slate-200"}`}>
           <div>
             <div className={`h-16 flex items-center justify-between px-6 border-b ${darkMode ? "border-slate-800" : "border-slate-100"}`}>
-              <span className={`font-extrabold tracking-wider text-2xl ${darkMode ? "text-white" : "text-slate-900"}`}>
+              {/* LOGO INTERACTIVO MÓVIL (DRAWER) */}
+              <Link to="/dashboard" onClick={handleMobileNav} className={`font-extrabold tracking-wider text-2xl hover:opacity-80 transition-opacity focus:outline-none ${darkMode ? "text-white" : "text-slate-900"}`}>
                 VOX<span className="text-blue-500">STOCK</span>
-              </span>
+              </Link>
               <button onClick={() => setIsOpen(false)} className={`p-2 rounded-lg ${darkMode ? "text-slate-400 hover:bg-slate-800" : "text-slate-500 hover:bg-slate-100"}`}>
                 <X size={24} />
               </button>
@@ -98,15 +100,18 @@ const Sidebar = ({ isOpen = false, setIsOpen = () => {} }) => {
       </div>
 
       {/* =========================================
-          VERSIÓN ESCRITORIO: SIDEBAR RETRÁCTIL (También elevado a Z-[9999] por prevención)
+          VERSIÓN ESCRITORIO: SIDEBAR RETRÁCTIL
           ========================================= */}
       <aside className={`hidden md:flex fixed left-0 top-0 h-screen flex-col justify-between transition-all duration-300 z-[9999] shadow-[4px_0_24px_rgba(0,0,0,0.05)] ${isOpen ? "w-64" : "w-20"} ${darkMode ? "bg-slate-950 border-r border-slate-800" : "bg-white border-r border-slate-200"}`}>
         <div>
           <div className={`h-20 flex items-center transition-all duration-300 ${isOpen ? "justify-between px-6" : "justify-center"} ${darkMode ? "border-b border-slate-800" : "border-b border-slate-100"}`}>
             {isOpen && (
-              <span className={`font-extrabold tracking-wider text-2xl whitespace-nowrap overflow-hidden ${darkMode ? "text-white" : "text-slate-900"}`}>
-                VOX<span className="text-blue-500">STOCK</span>
-              </span>
+              <>
+                {/* LOGO INTERACTIVO ESCRITORIO */}
+                <Link to="/dashboard" className={`font-extrabold tracking-wider text-2xl whitespace-nowrap overflow-hidden hover:opacity-80 transition-opacity focus:outline-none ${darkMode ? "text-white" : "text-slate-900"}`}>
+                  VOX<span className="text-blue-500">STOCK</span>
+                </Link>
+              </>
             )}
             <button onClick={() => setIsOpen(!isOpen)} className={`p-2 rounded-lg transition-colors cursor-pointer ${darkMode ? "text-slate-400 hover:text-blue-400 hover:bg-slate-800" : "text-slate-500 hover:text-blue-600 hover:bg-blue-50"}`}>
               {isOpen ? <ChevronLeft size={24} /> : <Menu size={24} />}
