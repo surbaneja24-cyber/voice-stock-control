@@ -203,8 +203,8 @@ export default function Dashboard() {
           </div>
 
           <div className="w-full h-[250px]">
-            <ResponsiveContainer width="100%" height="100%">
-              {trendData.length > 0 ? (
+            {trendData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={trendData} margin={{ top: 10, right: 0, left: -25, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorEntradas" x1="0" y1="0" x2="0" y2="1">
@@ -227,12 +227,12 @@ export default function Dashboard() {
                   <Area type="monotone" dataKey="Entradas" stroke={darkMode ? "#10b981" : "#059669"} strokeWidth={2} fillOpacity={1} fill="url(#colorEntradas)" isAnimationActive={true} animationDuration={400} animationEasing="ease-out" dot={false} activeDot={{ r: 4, strokeWidth: 0 }} />
                   <Area type="monotone" dataKey="Salidas" stroke={darkMode ? "#ef4444" : "#dc2626"} strokeWidth={2} fillOpacity={1} fill="url(#colorSalidas)" isAnimationActive={true} animationDuration={400} animationEasing="ease-out" dot={false} activeDot={{ r: 4, strokeWidth: 0 }} />
                 </AreaChart>
-              ) : (
-                <div className="flex h-full items-center justify-center text-xs font-bold uppercase tracking-widest text-slate-500">
-                  {cargando ? "Sincronizando flujo..." : "Sin actividad en este rango."}
-                </div>
-              )}
-            </ResponsiveContainer>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-xs font-bold uppercase tracking-widest text-slate-500 text-center">
+                {cargando ? "Sincronizando flujo..." : "Sin actividad en este rango."}
+              </div>
+            )}
           </div>
         </div>
 
@@ -245,8 +245,8 @@ export default function Dashboard() {
             ])}
           </div>
           <div className="relative w-full h-[280px]">
-            <ResponsiveContainer width="100%" height="100%">
-              {movimientos.length > 0 ? (
+            {movimientos.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie 
                     data={categoryData} 
@@ -271,12 +271,12 @@ export default function Dashboard() {
                     contentStyle={{ backgroundColor: darkMode ? '#1f2937' : '#fff', borderRadius: '6px', border: darkMode ? '1px solid #374151' : '1px solid #e2e8f0', fontFamily: 'monospace', fontSize: '12px' }}
                   />
                 </PieChart>
-              ) : (
-                 <div className="flex h-full items-center justify-center text-xs font-bold uppercase tracking-widest text-slate-500">
-                   {cargando ? "Calculando proporciones..." : "Sin registros de actividad."}
-                 </div>
-              )}
-            </ResponsiveContainer>
+              </ResponsiveContainer>
+            ) : (
+               <div className="flex h-full w-full items-center justify-center text-xs font-bold uppercase tracking-widest text-slate-500 text-center">
+                 {cargando ? "Calculando proporciones..." : "Sin registros de actividad."}
+               </div>
+            )}
             
             {movimientos.length > 0 && !cargando && (
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center pointer-events-none">
