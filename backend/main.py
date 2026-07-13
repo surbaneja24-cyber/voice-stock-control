@@ -90,7 +90,6 @@ def crear_token_acceso(data: dict, expires_delta: timedelta | None = None):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-# REFACTOR: Extracción Híbrida de Sesión (Cookie > Header)
 def get_current_user(request: Request, db: Session = Depends(get_db)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -98,8 +97,10 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
         headers={"WWW-Authenticate": "Bearer"},
     )
     
+    # 1. Leer la cookie directamente
     token = request.cookies.get("access_token")
     
+    # 2. Fallback a cabeceras (por si viene de una app móvil futura)
     if not token:
         auth_header = request.headers.get("Authorization")
         if auth_header and auth_header.startswith("Bearer "):
@@ -109,6 +110,8 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
         raise credentials_exception
 
     try:
+        # Como quitamos "Bearer" de la cookie, el token viene limpio.
+        # Si por algún motivo residual viene con "Bearer ", lo limpiamos:
         if token.startswith("Bearer "):
             token = token.replace("Bearer ", "")
             
@@ -116,13 +119,14 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
         email: str = payload.get("sub")
         if email is None:
             raise credentials_exception
-    except JWTError:
+    except JWTError as e:
+        print(f"[ERROR JWT]: {str(e)}") # Esto te saldrá en la terminal del backend si falla
         raise credentials_exception
     
     user = db.query(Usuario).filter(Usuario.email == email).first()
     if user is None:
         raise credentials_exception
-    return user 
+    return user
 
 # --- SEMILLA DE CATÁLOGO ---
 def sembrar_catalogo_para_usuario(db: Session, usuario_id: int):
@@ -182,12 +186,13 @@ def login_usuario(user: UsuarioLogin, response: Response, db: Session = Depends(
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = crear_token_acceso(data={"sub": db_user.email}, expires_delta=access_token_expires)
     
+    # ELIMINAMOS EL PREFIJO "Bearer " PARA NO ROMPER EL PARSER HTTP
     response.set_cookie(
         key="access_token",
-        value=f"Bearer {access_token}",
+        value=access_token, # Envío del JWT crudo
         httponly=True,
-        secure=False,      # <-- CAMBIADO: Permite HTTP en desarrollo local
-        samesite="lax",    # <-- CAMBIADO: Evita el bloqueo de cookies de terceros
+        secure=True,        # OBLIGATORIO para Vercel
+        samesite="none",    # OBLIGATORIO para peticiones entre distintos dominios
         max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60
     )
     
