@@ -66,11 +66,25 @@ export default function Dashboard() {
         };
       }
 
-      if (mov.action === "suma") agrupados[claveEtiqueta].Entradas += Number(mov.quantity || 0);
+    if (mov.action === "suma") agrupados[claveEtiqueta].Entradas += Number(mov.quantity || 0);
       if (mov.action === "resta") agrupados[claveEtiqueta].Salidas += Number(mov.quantity || 0);
     });
 
-    return Object.values(agrupados).sort((a, b) => a.timestamp - b.timestamp);
+    const resultadoFinal = Object.values(agrupados).sort((a, b) => a.timestamp - b.timestamp);
+
+    // --- BLOQUE DE PREVENCIÓN: SÍNDROME DEL PUNTO ÚNICO ---
+    // Si el usuario acaba de empezar y solo hay un punto temporal agrupado, 
+    // inyectamos un punto cero inicial para que Recharts pueda trazar la línea.
+    if (resultadoFinal.length === 1) {
+      resultadoFinal.unshift({
+        etiqueta: "Inicio",
+        Entradas: 0,
+        Salidas: 0,
+        timestamp: resultadoFinal[0].timestamp - 1 // Se coloca un milisegundo antes para mantener el orden
+      });
+    }
+
+    return resultadoFinal;
   }, [movimientos, rangoTiempo]);
   
   const categoryData = [
