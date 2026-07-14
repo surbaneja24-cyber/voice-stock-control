@@ -4,7 +4,7 @@ import { useHistoryStore } from "../store/historyStore";
 import { useThemeStore } from "../store/themeStore";
 import { useAuthStore } from "../store/authStore"; 
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid
+  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid
 } from "recharts";
 
 export default function Dashboard() {
