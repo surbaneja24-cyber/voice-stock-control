@@ -21,6 +21,9 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // 1. BLOQUEO SÍNCRONO: Previene el doble envío por clics ultrarrápidos
+    if (loading) return; 
+    
     const emailSanitizado = formData.email.trim();
     
     if (!emailSanitizado || !formData.password) {
@@ -37,15 +40,17 @@ export default function Login() {
             ? "http://localhost:5001" 
             : `${window.location.protocol}//${window.location.hostname.replace("-5173", "-5001")}`);
             
-      const backendUrl = `${baseApiUrl}/api/login`;
-
       const res = await fetch(`${baseApiUrl}/api/login`, {
         method: "POST",
-        credentials: "include", // <-- ESTA ES LA PIEZA QUE FALTABA. Obliga al navegador a tragarse la cookie.
+        credentials: "include", 
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        // 2. CORRECCIÓN: Ahora sí enviamos el email sanitizado
+        body: JSON.stringify({ 
+          email: emailSanitizado, 
+          password: formData.password 
+        }),
       });
 
       if (!res.ok) {
@@ -60,11 +65,9 @@ export default function Login() {
         throw new Error(data.detail || t.errors?.generic || "Credenciales inválidas.");
       }
       
-    const data = await res.json();
+      const data = await res.json();
 
-      // 1. Barrera de validación: Si el servidor rechazó el login, cortamos la ejecución
       if (!res.ok || data.status !== "success") {
-        // Asumiendo que tienes un estado de error en tu componente, como setError(...)
         throw new Error(data.detail || "Credenciales incorrectas");
       }
       
