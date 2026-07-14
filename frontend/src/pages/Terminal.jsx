@@ -370,31 +370,43 @@ export default function Terminal() {
         </div>
       </div>
 
-      {/* ÁREA DE CONTROL INFERIOR */}
-      <div className="flex-shrink-0 w-full max-w-3xl flex flex-col items-center gap-4 sm:gap-6 pb-[env(safe-area-inset-bottom)]">
-        <div className="w-full px-2">
+     {/* ÁREA DE CONTROL INFERIOR */}
+      <div className="flex-shrink-0 w-full max-w-3xl flex flex-col items-center gap-4 sm:gap-6 pb-[env(safe-area-inset-bottom)] px-4 sm:px-0">
+        
+        {/* CONTENEDOR DEL INPUT / MICRÓFONO */}
+        <div className="w-full">
           {modoTexto ? (
             <div className="w-full flex animate-in fade-in slide-in-from-bottom-2 duration-300">
               <form onSubmit={handleSubmitTexto} className="w-full flex gap-2 sm:gap-3">
+                {/* Botón Volver a Voz */}
                 <button 
                   type="button"
                   onClick={() => setModoTexto(false)}
-                  className={`p-3 sm:p-4 rounded-2xl border shadow-sm transition-colors flex items-center justify-center flex-shrink-0 ${darkMode ? 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white' : 'bg-slate-100 border-slate-300 text-slate-500 hover:text-slate-900'}`}
+                  className={`p-3 sm:p-4 rounded-xl sm:rounded-2xl border shadow-sm transition-colors flex items-center justify-center flex-shrink-0 aspect-square ${darkMode ? 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white' : 'bg-slate-100 border-slate-300 text-slate-500 hover:text-slate-900'}`}
                   title="Volver a reconocimiento de voz"
                 >
                   <Mic size={22} className="sm:w-6 sm:h-6"/>
                 </button>
+                
+                {/* Input Manual */}
                 <input 
                   type="text" 
                   value={textoManual}
                   onChange={(e) => setTextoManual(e.target.value)}
                   placeholder="Ej: Sumar 5 al pallet..."
-                  className={`flex-1 px-4 py-3 sm:py-4 rounded-2xl text-sm sm:text-base border shadow-inner focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-[#151C2C] border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'} ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className={`flex-1 w-full px-4 py-3 sm:py-4 rounded-xl sm:rounded-2xl text-sm sm:text-base border shadow-inner focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-[#151C2C] border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'} ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
                   disabled={isProcessing}
                   autoFocus
                 />
-                <button type="submit" disabled={isProcessing || !textoManual.trim()} className={`p-3 sm:p-4 rounded-2xl text-white shadow-md transition-all flex items-center justify-center flex-shrink-0 w-[56px] sm:w-[64px] ${isProcessing || !textoManual.trim() ? 'bg-slate-600 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500 active:scale-95'}`}>
-                  <Send size={22} className="sm:w-6 sm:h-6" />
+                
+                {/* Botón Enviar (Corregido estructuralmente) */}
+                <button 
+                  type="submit" 
+                  disabled={isProcessing || !textoManual.trim()} 
+                  className={`p-3 sm:p-4 rounded-xl sm:rounded-2xl text-white shadow-md transition-all flex items-center justify-center flex-shrink-0 aspect-square ${isProcessing || !textoManual.trim() ? 'bg-slate-600 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500 active:scale-95'}`}
+                >
+                  {/* Corrección óptica: El icono de enviar suele verse descentrado visualmente. -ml-0.5 lo centra */}
+                  <Send size={22} className="sm:w-6 sm:h-6 -ml-0.5" />
                 </button>
               </form>
             </div>
@@ -419,7 +431,7 @@ export default function Terminal() {
                 </div>
                 <button 
                   onClick={() => setModoTexto(true)}
-                  className={`absolute right-4 sm:right-8 p-3 sm:p-4 rounded-full border shadow-sm transition-colors active:scale-90 ${darkMode ? 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white' : 'bg-slate-100 border-slate-300 text-slate-500 hover:text-slate-900'}`}
+                  className={`absolute right-0 sm:right-8 p-3 sm:p-4 rounded-full border shadow-sm transition-colors active:scale-90 ${darkMode ? 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white' : 'bg-slate-100 border-slate-300 text-slate-500 hover:text-slate-900'}`}
                   title="Cambiar a texto manual"
                 >
                   <Keyboard size={20} className="sm:w-6 sm:h-6"/>
@@ -432,12 +444,13 @@ export default function Terminal() {
           )}
         </div>
 
-        <div className="w-full grid grid-cols-3 gap-2 sm:gap-4 px-2 sm:px-0">
+        {/* CONTENEDOR DOCK ITEMS (Botones inferiores) */}
+        <div className="w-full grid grid-cols-3 gap-2 sm:gap-4 mt-2">
             {dockItems.map((item, index) => (
               <button
                 key={index}
                 onClick={item.onClick}
-                className={`flex flex-col items-center justify-center py-3 sm:py-4 px-2 rounded-2xl border transition-all active:scale-95 shadow-md ${item.colorClass}`}
+                className={`flex flex-col items-center justify-center py-3 sm:py-4 px-2 rounded-xl sm:rounded-2xl border transition-all active:scale-95 shadow-md ${item.colorClass}`}
                 style={{ WebkitTapHighlightColor: 'transparent' }}
               >
                 <div className="mb-1 sm:mb-2 scale-100 sm:scale-110">
