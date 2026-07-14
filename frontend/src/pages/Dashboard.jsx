@@ -4,7 +4,7 @@ import { useHistoryStore } from "../store/historyStore";
 import { useThemeStore } from "../store/themeStore";
 import { useAuthStore } from "../store/authStore"; 
 import {
-  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid
 } from "recharts";
 
 export default function Dashboard() {
@@ -219,29 +219,24 @@ export default function Dashboard() {
           <div className="w-full h-[250px]">
             {trendData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={trendData} margin={{ top: 10, right: 0, left: -25, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorEntradas" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={darkMode ? "#10b981" : "#059669"} stopOpacity={0.25}/>
-                      <stop offset="95%" stopColor={darkMode ? "#10b981" : "#059669"} stopOpacity={0}/>
-                    </linearGradient>
-                    <linearGradient id="colorSalidas" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={darkMode ? "#ef4444" : "#dc2626"} stopOpacity={0.25}/>
-                      <stop offset="95%" stopColor={darkMode ? "#ef4444" : "#dc2626"} stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="2 2" vertical={false} stroke={darkMode ? "#1f2937" : "#e2e8f0"} />
-                  <XAxis dataKey="etiqueta" stroke={darkMode ? "#4b5563" : "#94a3b8"} fontSize={10} fontFamily="monospace" tickMargin={12} tickLine={false} axisLine={false} padding={{ left: 0, right: 0 }} minTickGap={20} />
-                  <YAxis stroke={darkMode ? "#4b5563" : "#94a3b8"} fontSize={10} fontFamily="monospace" tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: darkMode ? '#1f2937' : '#fff', borderRadius: '6px', border: darkMode ? '1px solid #374151' : '1px solid #e2e8f0', fontFamily: 'monospace', fontSize: '12px' }} 
-                    itemStyle={{ paddingVertical: '2px' }}
-                    labelStyle={{ color: darkMode ? '#94a3b8' : '#64748b', marginBottom: '6px', fontWeight: 'bold' }}
-                  />
-                  <Area type="monotone" dataKey="Entradas" stroke={darkMode ? "#10b981" : "#059669"} strokeWidth={2} fillOpacity={1} fill="url(#colorEntradas)" isAnimationActive={true} animationDuration={400} animationEasing="ease-out" dot={false} activeDot={{ r: 4, strokeWidth: 0 }} />
-                  <Area type="monotone" dataKey="Salidas" stroke={darkMode ? "#ef4444" : "#dc2626"} strokeWidth={2} fillOpacity={1} fill="url(#colorSalidas)" isAnimationActive={true} animationDuration={400} animationEasing="ease-out" dot={false} activeDot={{ r: 4, strokeWidth: 0 }} />
-                </AreaChart>
-              </ResponsiveContainer>
+              <BarChart data={trendData} margin={{ top: 10, right: 0, left: -25, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="2 2" vertical={false} stroke={darkMode ? "#1f2937" : "#e2e8f0"} />
+                <XAxis dataKey="etiqueta" stroke={darkMode ? "#4b5563" : "#94a3b8"} fontSize={10} fontFamily="monospace" tickMargin={12} tickLine={false} axisLine={false} />
+                
+                {/* BLOQUEO DE DECIMALES INYECTADO AQUÍ */}
+                <YAxis allowDecimals={false} stroke={darkMode ? "#4b5563" : "#94a3b8"} fontSize={10} fontFamily="monospace" tickLine={false} axisLine={false} />
+                
+                <Tooltip 
+                  contentStyle={{ backgroundColor: darkMode ? '#1f2937' : '#fff', borderRadius: '6px', border: darkMode ? '1px solid #374151' : '1px solid #e2e8f0', fontFamily: 'monospace', fontSize: '12px' }} 
+                  itemStyle={{ paddingVertical: '2px' }}
+                  labelStyle={{ color: darkMode ? '#94a3b8' : '#64748b', marginBottom: '6px', fontWeight: 'bold' }}
+                  cursor={{ fill: darkMode ? '#1f2937' : '#f1f5f9' }}
+                />
+                
+                <Bar dataKey="Entradas" fill={darkMode ? "#10b981" : "#059669"} radius={[4, 4, 0, 0]} maxBarSize={40} />
+                <Bar dataKey="Salidas" fill={darkMode ? "#ef4444" : "#dc2626"} radius={[4, 4, 0, 0]} maxBarSize={40} />
+              </BarChart>
+            </ResponsiveContainer>
             ) : (
               <div className="flex h-full w-full items-center justify-center text-xs font-bold uppercase tracking-widest text-slate-500 text-center">
                 {cargando ? "Sincronizando flujo..." : "Sin actividad en este rango."}
