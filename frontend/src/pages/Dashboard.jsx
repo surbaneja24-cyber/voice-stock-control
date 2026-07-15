@@ -46,39 +46,44 @@ export default function Dashboard() {
       if (isNaN(fechaObj.getTime())) return;
 
       let claveEtiqueta = "";
+      let timestampOrden = 0;
 
+      // CORRECCIÓN MATEMÁTICA: Creamos un timestamp absoluto para el inicio exacto del bloque de tiempo
       if (rangoTiempo === "1d") {
         claveEtiqueta = `${fechaObj.getHours().toString().padStart(2, '0')}:00`;
+        timestampOrden = new Date(fechaObj.getFullYear(), fechaObj.getMonth(), fechaObj.getDate(), fechaObj.getHours()).getTime();
       } else if (rangoTiempo === "1w" || rangoTiempo === "1m") {
         claveEtiqueta = `${fechaObj.getDate().toString().padStart(2, '0')}/${(fechaObj.getMonth() + 1).toString().padStart(2, '0')}`;
+        timestampOrden = new Date(fechaObj.getFullYear(), fechaObj.getMonth(), fechaObj.getDate()).getTime();
       } else {
         claveEtiqueta = `${(fechaObj.getMonth() + 1).toString().padStart(2, '0')}/${fechaObj.getFullYear()}`;
+        timestampOrden = new Date(fechaObj.getFullYear(), fechaObj.getMonth(), 1).getTime();
       }
 
-      if (!agrupados[claveEtiqueta]) {
-        agrupados[claveEtiqueta] = { 
+      // Usamos el timestampOrden como clave en lugar del texto para evitar fusiones erróneas
+      if (!agrupados[timestampOrden]) {
+        agrupados[timestampOrden] = { 
           etiqueta: claveEtiqueta, 
           Entradas: 0, 
           Salidas: 0, 
-          timestamp: fechaObj.getTime()
+          timestamp: timestampOrden 
         };
       }
 
-      if (mov.action === "suma") agrupados[claveEtiqueta].Entradas += Number(mov.quantity || 0);
-      if (mov.action === "resta") agrupados[claveEtiqueta].Salidas += Number(mov.quantity || 0);
+      if (mov.action === "suma") agrupados[timestampOrden].Entradas += Number(mov.quantity || 0);
+      if (mov.action === "resta") agrupados[timestampOrden].Salidas += Number(mov.quantity || 0);
     });
 
+    // Ahora el sort funciona perfectamente sin importar el orden original del array
     const resultadoFinal = Object.values(agrupados).sort((a, b) => a.timestamp - b.timestamp);
 
-    // LÓGICA DE MONTAÑA CORREGIDA:
-    // Siempre obligamos a que nazca desde cero al inicio para formar la curva de subida.
-    // PERO no tocamos el final. El final se queda flotando en tu último escaneo.
+    // Mantenemos la inyección del punto "Inicio" para forzar el nacimiento desde 0
     if (resultadoFinal.length > 0) {
       resultadoFinal.unshift({
         etiqueta: "Inicio",
         Entradas: 0,
         Salidas: 0,
-        timestamp: resultadoFinal[0].timestamp - 60000 // 1 minuto antes
+        timestamp: resultadoFinal[0].timestamp - 60000 // 1 minuto antes del primer registro
       });
     }
 
@@ -186,7 +191,7 @@ export default function Dashboard() {
 
       <div className="grid md:grid-cols-2 gap-6 sm:gap-6 mb-8">
         
-        {/* GRÁFICO 1: CURVAS SUAVES + PUNTOS EXACTOS (SIN BAJAR A CERO AL FINAL) */}
+        {/* GRÁFICO 1: ÁREA CON CURVAS SUAVES Y ORDEN CRONOLÓGICO ESTRICTO */}
         <div className={cardClass}>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
             <div>
@@ -230,16 +235,12 @@ export default function Dashboard() {
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={darkMode ? "#1f2937" : "#e2e8f0"} />
                   <XAxis dataKey="etiqueta" stroke={darkMode ? "#4b5563" : "#94a3b8"} fontSize={10} fontFamily="monospace" tickMargin={12} tickLine={false} axisLine={false} padding={{ left: 0, right: 0 }} minTickGap={20} />
-                  
-                  {/* BLOQUEO DE DECIMALES EN EL EJE Y */}
                   <YAxis allowDecimals={false} stroke={darkMode ? "#4b5563" : "#94a3b8"} fontSize={10} fontFamily="monospace" tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
-                  
                   <Tooltip 
                     contentStyle={{ backgroundColor: darkMode ? '#1f2937' : '#fff', borderRadius: '6px', border: darkMode ? '1px solid #374151' : '1px solid #e2e8f0', fontFamily: 'monospace', fontSize: '12px' }} 
                     itemStyle={{ paddingVertical: '2px' }}
                     labelStyle={{ color: darkMode ? '#94a3b8' : '#64748b', marginBottom: '6px', fontWeight: 'bold' }}
                   />
-                  {/* AQUÍ VUELVE "monotone" (Curvas suaves de montaña) */}
                   <Area 
                     type="monotone" 
                     dataKey="Entradas" 
