@@ -14,9 +14,8 @@ export default function Dashboard() {
   const darkMode = useThemeStore((state) => state.darkMode); 
   const usuario = useAuthStore((state) => state.usuario); 
   
-  // INYECCIÓN DE SEGURIDAD
+  // INYECCIÓN DE SEGURIDAD PARA LAS COOKIES HTTPONLY
   const authenticatedFetch = useAuthStore((state) => state.authenticatedFetch);
-
   const navigate = useNavigate();
 
   const [cargando, setCargando] = useState(true);
@@ -66,21 +65,20 @@ export default function Dashboard() {
         };
       }
 
-    if (mov.action === "suma") agrupados[claveEtiqueta].Entradas += Number(mov.quantity || 0);
+      if (mov.action === "suma") agrupados[claveEtiqueta].Entradas += Number(mov.quantity || 0);
       if (mov.action === "resta") agrupados[claveEtiqueta].Salidas += Number(mov.quantity || 0);
     });
 
     const resultadoFinal = Object.values(agrupados).sort((a, b) => a.timestamp - b.timestamp);
 
-    // --- BLOQUE DE PREVENCIÓN: SÍNDROME DEL PUNTO ÚNICO ---
-    // Si el usuario acaba de empezar y solo hay un punto temporal agrupado, 
-    // inyectamos un punto cero inicial para que Recharts pueda trazar la línea.
+    // --- PREVENCIÓN DE PUNTO ÚNICO ---
+    // Si solo hay un registro de tiempo, forzamos un ancla en cero para que el área se dibuje
     if (resultadoFinal.length === 1) {
       resultadoFinal.unshift({
         etiqueta: "Inicio",
         Entradas: 0,
         Salidas: 0,
-        timestamp: resultadoFinal[0].timestamp - 1 // Se coloca un milisegundo antes para mantener el orden
+        timestamp: resultadoFinal[0].timestamp - 1
       });
     }
 
@@ -93,7 +91,6 @@ export default function Dashboard() {
   ];
 
   useEffect(() => {
-    // Ya no comprobamos tokens crudos, dependemos del store
     if (!usuario?.id) {
       navigate("/login");
       return;
@@ -107,9 +104,9 @@ export default function Dashboard() {
           ? "http://localhost:5001" 
           : `${window.location.protocol}//${window.location.hostname.replace("-5173", "-5001")}`);
 
-    // REFACTOR: Llamada blindada sin configurar cabeceras manualmente
     authenticatedFetch(`${baseApiUrl}/api/history`)
       .then((res) => {
+        if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
         return res.json();
       })
       .then((data) => {
@@ -117,7 +114,7 @@ export default function Dashboard() {
           if (Array.isArray(data)) {
             setMovimientos(data);
           } else {
-            console.warn("[WARNING] Formato inválido:", data);
+            console.warn("[WARNING] Formato de respuesta inválido:", data);
             setMovimientos([]); 
           }
         }
@@ -154,6 +151,7 @@ export default function Dashboard() {
   return (
     <div className={`min-h-screen p-4 sm:p-8 font-sans ${darkMode ? 'bg-[#070B14]' : 'bg-slate-50'}`}>
       
+      {/* CABECERA */}
       <div className="flex justify-between items-end mb-8 pb-4 border-b border-slate-200 dark:border-slate-800/60">
         <div>
           <h1 className={`text-2xl sm:text-3xl font-black tracking-tight uppercase ${darkMode ? 'text-white' : 'text-slate-900'}`}>
@@ -171,6 +169,7 @@ export default function Dashboard() {
         )}
       </div>
 
+      {/* REJILLA DE KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-5 mb-8">
         {[
           { label: "Movimientos totales", value: totalMovimientos },
@@ -187,65 +186,11 @@ export default function Dashboard() {
         ))}
       </div>
 
+      {/* SECCIÓN DE GRÁFICOS */}
       <div className="grid md:grid-cols-2 gap-6 sm:gap-6 mb-8">
         
+        {/* GRÁFICO 1: VOLUMEN (AREA CHART) */}
         <div className={cardClass}>
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
-            <div>
-              <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">Volumen por transacción</h2>
-              {renderCustomLegend([
-                { name: "Entradas", color: darkMode ? "#10b981" : "#059669" },
-                { name: "Salidas", color: darkMode ? "#ef4444" : "#dc2626" }
-              ])}
-            </div>
-            
-            <div className={`flex p-1 rounded-lg border ${darkMode ? 'bg-[#1f2937] border-slate-700' : 'bg-slate-100 border-slate-200'}`}>
-              {['1d', '1w', '1m', 'Max'].map((rango) => (
-                <button
-                  key={rango}
-                  onClick={() => setRangoTiempo(rango)}
-                  className={`px-3 py-1.5 text-[10px] font-bold rounded-md transition-all uppercase tracking-wider ${
-                    rangoTiempo === rango 
-                      ? (darkMode ? 'bg-slate-600 text-white shadow-sm' : 'bg-white text-slate-900 shadow-sm') 
-                      : (darkMode ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-700')
-                  }`}
-                >
-                  {rango}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="w-full h-[250px]">
-            {trendData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={trendData} margin={{ top: 10, right: 0, left: -25, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="2 2" vertical={false} stroke={darkMode ? "#1f2937" : "#e2e8f0"} />
-                <XAxis dataKey="etiqueta" stroke={darkMode ? "#4b5563" : "#94a3b8"} fontSize={10} fontFamily="monospace" tickMargin={12} tickLine={false} axisLine={false} />
-                
-                {/* BLOQUEO DE DECIMALES INYECTADO AQUÍ */}
-                <YAxis allowDecimals={false} stroke={darkMode ? "#4b5563" : "#94a3b8"} fontSize={10} fontFamily="monospace" tickLine={false} axisLine={false} />
-                
-                <Tooltip 
-                  contentStyle={{ backgroundColor: darkMode ? '#1f2937' : '#fff', borderRadius: '6px', border: darkMode ? '1px solid #374151' : '1px solid #e2e8f0', fontFamily: 'monospace', fontSize: '12px' }} 
-                  itemStyle={{ paddingVertical: '2px' }}
-                  labelStyle={{ color: darkMode ? '#94a3b8' : '#64748b', marginBottom: '6px', fontWeight: 'bold' }}
-                  cursor={{ fill: darkMode ? '#1f2937' : '#f1f5f9' }}
-                />
-                
-                <Bar dataKey="Entradas" fill={darkMode ? "#10b981" : "#059669"} radius={[4, 4, 0, 0]} maxBarSize={40} />
-                <Bar dataKey="Salidas" fill={darkMode ? "#ef4444" : "#dc2626"} radius={[4, 4, 0, 0]} maxBarSize={40} />
-              </BarChart>
-            </ResponsiveContainer>
-            ) : (
-              <div className="flex h-full w-full items-center justify-center text-xs font-bold uppercase tracking-widest text-slate-500 text-center">
-                {cargando ? "Sincronizando flujo..." : "Sin actividad en este rango."}
-              </div>
-            )}
-          </div>
-        </div>
-
-       <div className={cardClass}>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
             <div>
               <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">Volumen por transacción</h2>
@@ -288,7 +233,10 @@ export default function Dashboard() {
                   </defs>
                   <CartesianGrid strokeDasharray="2 2" vertical={false} stroke={darkMode ? "#1f2937" : "#e2e8f0"} />
                   <XAxis dataKey="etiqueta" stroke={darkMode ? "#4b5563" : "#94a3b8"} fontSize={10} fontFamily="monospace" tickMargin={12} tickLine={false} axisLine={false} padding={{ left: 0, right: 0 }} minTickGap={20} />
-                  <YAxis stroke={darkMode ? "#4b5563" : "#94a3b8"} fontSize={10} fontFamily="monospace" tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
+                  
+                  {/* BLOQUEO DE DECIMALES EN EL EJE Y */}
+                  <YAxis allowDecimals={false} stroke={darkMode ? "#4b5563" : "#94a3b8"} fontSize={10} fontFamily="monospace" tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
+                  
                   <Tooltip 
                     contentStyle={{ backgroundColor: darkMode ? '#1f2937' : '#fff', borderRadius: '6px', border: darkMode ? '1px solid #374151' : '1px solid #e2e8f0', fontFamily: 'monospace', fontSize: '12px' }} 
                     itemStyle={{ paddingVertical: '2px' }}
@@ -305,8 +253,65 @@ export default function Dashboard() {
             )}
           </div>
         </div>
+
+        {/* GRÁFICO 2: PROPORCIÓN (PIE CHART) */}
+        <div className={cardClass}>
+          <div className="flex justify-between items-start mb-2">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Proporción de flujo</h2>
+            {renderCustomLegend([
+              { name: "Entradas", color: darkMode ? "#10b981" : "#059669" },
+              { name: "Salidas", color: darkMode ? "#ef4444" : "#dc2626" }
+            ])}
+          </div>
+          <div className="relative w-full h-[280px]">
+            {movimientos.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie 
+                    data={categoryData} 
+                    cx="50%" 
+                    cy="50%" 
+                    innerRadius={85} 
+                    outerRadius={105} 
+                    dataKey="value" 
+                    nameKey="name" 
+                    paddingAngle={4}
+                    cornerRadius={4}
+                    stroke="none"
+                    isAnimationActive={true}
+                    animationDuration={500}
+                    animationEasing="ease-out"
+                  >
+                    {categoryData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: darkMode ? '#1f2937' : '#fff', borderRadius: '6px', border: darkMode ? '1px solid #374151' : '1px solid #e2e8f0', fontFamily: 'monospace', fontSize: '12px' }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+               <div className="flex h-full w-full items-center justify-center text-xs font-bold uppercase tracking-widest text-slate-500 text-center">
+                 {cargando ? "Calculando proporciones..." : "Sin registros de actividad."}
+               </div>
+            )}
+            
+            {movimientos.length > 0 && !cargando && (
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center pointer-events-none">
+                <span className="text-4xl font-mono font-bold tracking-tight leading-none">
+                  {operacionesRegistradas}
+                </span>
+                <span className={`text-[9px] font-bold uppercase tracking-widest mt-2 ${darkMode ? 'text-slate-600' : 'text-slate-400'}`}>
+                  Órdenes OK
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
+      {/* TABLA DE TRANSACCIONES RECIENTES */}
       <div className={cardClass}>
         <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-6">Registro de transacciones recientes</h2>
         <div className="space-y-3">
