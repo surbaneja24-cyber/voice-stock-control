@@ -4,7 +4,7 @@ import { useHistoryStore } from "../store/historyStore";
 import { useThemeStore } from "../store/themeStore";
 import { useAuthStore } from "../store/authStore"; 
 import {
-  BarChart, Bar, ReferenceLine, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid
+  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid
 } from "recharts";
 
 export default function Dashboard() {
@@ -64,12 +64,24 @@ export default function Dashboard() {
         };
       }
 
-      // MATEMÁTICAS DIVERGENTES: Las entradas suman, las salidas restan en el eje Y
       if (mov.action === "suma") agrupados[claveEtiqueta].Entradas += Number(mov.quantity || 0);
-      if (mov.action === "resta") agrupados[claveEtiqueta].Salidas -= Number(mov.quantity || 0);
+      if (mov.action === "resta") agrupados[claveEtiqueta].Salidas += Number(mov.quantity || 0);
     });
 
-    return Object.values(agrupados).sort((a, b) => a.timestamp - b.timestamp);
+    const resultadoFinal = Object.values(agrupados).sort((a, b) => a.timestamp - b.timestamp);
+
+    // Solo inyectamos un punto inicial en 0 si hay un ÚNICO registro para que trace una línea ascendente.
+    // HEMOS ELIMINADO la caída forzada al final. La línea se quedará en su último valor real.
+    if (resultadoFinal.length === 1) {
+      resultadoFinal.unshift({
+        etiqueta: "Inicio",
+        Entradas: 0,
+        Salidas: 0,
+        timestamp: resultadoFinal[0].timestamp - 1
+      });
+    }
+
+    return resultadoFinal;
   }, [movimientos, rangoTiempo]);
   
   const categoryData = [
@@ -101,7 +113,7 @@ export default function Dashboard() {
           if (Array.isArray(data)) {
             setMovimientos(data);
           } else {
-            console.warn("[WARNING] Formato de respuesta inválido:", data);
+            console.warn("[WARNING] Formato inválido:", data);
             setMovimientos([]); 
           }
         }
@@ -157,10 +169,10 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-5 mb-8">
         {[
-          { label: "Movimientos totales", value: totalMovimientos },
-          { label: "Entradas procesadas", value: totalEntradas },
-          { label: "Salidas procesadas", value: totalSalidas },
-          { label: "Transacciones IA", value: operacionesRegistradas }
+          { label: "Total de Órdenes", value: totalMovimientos },
+          { label: "Órdenes de Entrada", value: totalEntradas },
+          { label: "Órdenes de Salida", value: totalSalidas },
+          { label: "Órdenes Validadas", value: operacionesRegistradas }
         ].map((kpi, idx) => (
           <div key={idx} className={cardClass}>
             <p className={`text-[10px] font-bold uppercase tracking-widest ${darkMode ? "text-slate-500" : "text-slate-400"}`}>{kpi.label}</p>
@@ -173,11 +185,11 @@ export default function Dashboard() {
 
       <div className="grid md:grid-cols-2 gap-6 sm:gap-6 mb-8">
         
-        {/* GRÁFICO PROFESIONAL: BARRAS DIVERGENTES */}
+        {/* GRÁFICO 1: OPCIÓN 1 (CURVAS SUAVES + PUNTOS EXACTOS) */}
         <div className={cardClass}>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
             <div>
-              <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">Impacto de Volumen</h2>
+              <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">Volumen por transacción</h2>
               {renderCustomLegend([
                 { name: "Entradas", color: darkMode ? "#10b981" : "#059669" },
                 { name: "Salidas", color: darkMode ? "#ef4444" : "#dc2626" }
@@ -204,35 +216,55 @@ export default function Dashboard() {
           <div className="w-full h-[250px]">
             {trendData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={trendData} margin={{ top: 10, right: 0, left: -25, bottom: 0 }} stackOffset="sign">
-                  <CartesianGrid strokeDasharray="2 2" vertical={false} stroke={darkMode ? "#1f2937" : "#e2e8f0"} />
-                  <XAxis dataKey="etiqueta" stroke={darkMode ? "#4b5563" : "#94a3b8"} fontSize={10} fontFamily="monospace" tickMargin={12} tickLine={false} axisLine={false} />
+                <AreaChart data={trendData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorEntradas" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={darkMode ? "#10b981" : "#059669"} stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor={darkMode ? "#10b981" : "#059669"} stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="colorSalidas" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={darkMode ? "#ef4444" : "#dc2626"} stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor={darkMode ? "#ef4444" : "#dc2626"} stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={darkMode ? "#1f2937" : "#e2e8f0"} />
+                  <XAxis dataKey="etiqueta" stroke={darkMode ? "#4b5563" : "#94a3b8"} fontSize={10} fontFamily="monospace" tickMargin={12} tickLine={false} axisLine={false} padding={{ left: 0, right: 0 }} minTickGap={20} />
                   
-                  {/* FORZAR VALORES ABSOLUTOS EN EL EJE Y PARA NO MOSTRAR NEGATIVOS */}
-                  <YAxis 
-                    allowDecimals={false} 
-                    stroke={darkMode ? "#4b5563" : "#94a3b8"} 
-                    fontSize={10} 
-                    fontFamily="monospace" 
-                    tickLine={false} 
-                    axisLine={false} 
-                    tickFormatter={(value) => Math.abs(value)} 
-                  />
+                  {/* BLOQUEO DE DECIMALES EN EL EJE Y */}
+                  <YAxis allowDecimals={false} stroke={darkMode ? "#4b5563" : "#94a3b8"} fontSize={10} fontFamily="monospace" tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
                   
                   <Tooltip 
-                    cursor={{ fill: darkMode ? '#1f2937' : '#f1f5f9' }}
                     contentStyle={{ backgroundColor: darkMode ? '#1f2937' : '#fff', borderRadius: '6px', border: darkMode ? '1px solid #374151' : '1px solid #e2e8f0', fontFamily: 'monospace', fontSize: '12px' }} 
                     itemStyle={{ paddingVertical: '2px' }}
                     labelStyle={{ color: darkMode ? '#94a3b8' : '#64748b', marginBottom: '6px', fontWeight: 'bold' }}
-                    formatter={(value) => Math.abs(value)}
                   />
-                  
-                  {/* LÍNEA BASE EN CERO PARA SEPARAR ENTRADAS Y SALIDAS */}
-                  <ReferenceLine y={0} stroke={darkMode ? "#4b5563" : "#94a3b8"} />
-                  
-                  <Bar dataKey="Entradas" fill={darkMode ? "#10b981" : "#059669"} radius={[4, 4, 0, 0]} maxBarSize={30} />
-                  <Bar dataKey="Salidas" fill={darkMode ? "#ef4444" : "#dc2626"} radius={[0, 0, 4, 4]} maxBarSize={30} />
-                </BarChart>
+                  <Area 
+                    type="monotone" 
+                    dataKey="Entradas" 
+                    stroke={darkMode ? "#10b981" : "#059669"} 
+                    strokeWidth={3} 
+                    fillOpacity={1} 
+                    fill="url(#colorEntradas)" 
+                    isAnimationActive={true} 
+                    animationDuration={400} 
+                    animationEasing="ease-out" 
+                    dot={{ r: 4, strokeWidth: 2, fill: darkMode ? '#111827' : '#fff' }} 
+                    activeDot={{ r: 6 }} 
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="Salidas" 
+                    stroke={darkMode ? "#ef4444" : "#dc2626"} 
+                    strokeWidth={3} 
+                    fillOpacity={1} 
+                    fill="url(#colorSalidas)" 
+                    isAnimationActive={true} 
+                    animationDuration={400} 
+                    animationEasing="ease-out" 
+                    dot={{ r: 4, strokeWidth: 2, fill: darkMode ? '#111827' : '#fff' }} 
+                    activeDot={{ r: 6 }} 
+                  />
+                </AreaChart>
               </ResponsiveContainer>
             ) : (
               <div className="flex h-full w-full items-center justify-center text-xs font-bold uppercase tracking-widest text-slate-500 text-center">
@@ -242,7 +274,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* PIE CHART */}
+        {/* GRÁFICO 2: PROPORCIÓN (PIE CHART) */}
         <div className={cardClass}>
           <div className="flex justify-between items-start mb-2">
             <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Proporción de flujo</h2>
