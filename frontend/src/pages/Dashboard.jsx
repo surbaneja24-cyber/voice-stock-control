@@ -4,7 +4,7 @@ import { useHistoryStore } from "../store/historyStore";
 import { useThemeStore } from "../store/themeStore";
 import { useAuthStore } from "../store/authStore"; 
 import {
-  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid
+  BarChart, Bar, ReferenceLine, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid
 } from "recharts";
 
 export default function Dashboard() {
@@ -64,23 +64,12 @@ export default function Dashboard() {
         };
       }
 
+      // MATEMÁTICAS DIVERGENTES: Las entradas suman, las salidas restan en el eje Y
       if (mov.action === "suma") agrupados[claveEtiqueta].Entradas += Number(mov.quantity || 0);
-      if (mov.action === "resta") agrupados[claveEtiqueta].Salidas += Number(mov.quantity || 0);
+      if (mov.action === "resta") agrupados[claveEtiqueta].Salidas -= Number(mov.quantity || 0);
     });
 
-    const resultadoFinal = Object.values(agrupados).sort((a, b) => a.timestamp - b.timestamp);
-
-    // --- BLOQUE DE PREVENCIÓN: SÍNDROME DEL PUNTO ÚNICO ---
-    if (resultadoFinal.length === 1) {
-      resultadoFinal.unshift({
-        etiqueta: "Inicio",
-        Entradas: 0,
-        Salidas: 0,
-        timestamp: resultadoFinal[0].timestamp - 1
-      });
-    }
-
-    return resultadoFinal;
+    return Object.values(agrupados).sort((a, b) => a.timestamp - b.timestamp);
   }, [movimientos, rangoTiempo]);
   
   const categoryData = [
@@ -104,7 +93,6 @@ export default function Dashboard() {
 
     authenticatedFetch(`${baseApiUrl}/api/history`)
       .then((res) => {
-        // CORRECCIÓN RED: Previene el crasheo si el backend falla y no devuelve JSON
         if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
         return res.json();
       })
@@ -113,7 +101,7 @@ export default function Dashboard() {
           if (Array.isArray(data)) {
             setMovimientos(data);
           } else {
-            console.warn("[WARNING] Formato inválido:", data);
+            console.warn("[WARNING] Formato de respuesta inválido:", data);
             setMovimientos([]); 
           }
         }
@@ -185,11 +173,11 @@ export default function Dashboard() {
 
       <div className="grid md:grid-cols-2 gap-6 sm:gap-6 mb-8">
         
-        {/* GRÁFICO DE ÁREA ÚNICO (Duplicado eliminado) */}
+        {/* GRÁFICO PROFESIONAL: BARRAS DIVERGENTES */}
         <div className={cardClass}>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
             <div>
-              <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">Volumen por transacción</h2>
+              <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">Impacto de Volumen</h2>
               {renderCustomLegend([
                 { name: "Entradas", color: darkMode ? "#10b981" : "#059669" },
                 { name: "Salidas", color: darkMode ? "#ef4444" : "#dc2626" }
@@ -216,28 +204,35 @@ export default function Dashboard() {
           <div className="w-full h-[250px]">
             {trendData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={trendData} margin={{ top: 10, right: 0, left: -25, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorEntradas" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={darkMode ? "#10b981" : "#059669"} stopOpacity={0.25}/>
-                      <stop offset="95%" stopColor={darkMode ? "#10b981" : "#059669"} stopOpacity={0}/>
-                    </linearGradient>
-                    <linearGradient id="colorSalidas" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={darkMode ? "#ef4444" : "#dc2626"} stopOpacity={0.25}/>
-                      <stop offset="95%" stopColor={darkMode ? "#ef4444" : "#dc2626"} stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
+                <BarChart data={trendData} margin={{ top: 10, right: 0, left: -25, bottom: 0 }} stackOffset="sign">
                   <CartesianGrid strokeDasharray="2 2" vertical={false} stroke={darkMode ? "#1f2937" : "#e2e8f0"} />
-                  <XAxis dataKey="etiqueta" stroke={darkMode ? "#4b5563" : "#94a3b8"} fontSize={10} fontFamily="monospace" tickMargin={12} tickLine={false} axisLine={false} padding={{ left: 0, right: 0 }} minTickGap={20} />
-                  <YAxis allowDecimals={false} stroke={darkMode ? "#4b5563" : "#94a3b8"} fontSize={10} fontFamily="monospace" tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
+                  <XAxis dataKey="etiqueta" stroke={darkMode ? "#4b5563" : "#94a3b8"} fontSize={10} fontFamily="monospace" tickMargin={12} tickLine={false} axisLine={false} />
+                  
+                  {/* FORZAR VALORES ABSOLUTOS EN EL EJE Y PARA NO MOSTRAR NEGATIVOS */}
+                  <YAxis 
+                    allowDecimals={false} 
+                    stroke={darkMode ? "#4b5563" : "#94a3b8"} 
+                    fontSize={10} 
+                    fontFamily="monospace" 
+                    tickLine={false} 
+                    axisLine={false} 
+                    tickFormatter={(value) => Math.abs(value)} 
+                  />
+                  
                   <Tooltip 
+                    cursor={{ fill: darkMode ? '#1f2937' : '#f1f5f9' }}
                     contentStyle={{ backgroundColor: darkMode ? '#1f2937' : '#fff', borderRadius: '6px', border: darkMode ? '1px solid #374151' : '1px solid #e2e8f0', fontFamily: 'monospace', fontSize: '12px' }} 
                     itemStyle={{ paddingVertical: '2px' }}
                     labelStyle={{ color: darkMode ? '#94a3b8' : '#64748b', marginBottom: '6px', fontWeight: 'bold' }}
+                    formatter={(value) => Math.abs(value)}
                   />
-                  <Area type="monotone" dataKey="Entradas" stroke={darkMode ? "#10b981" : "#059669"} strokeWidth={2} fillOpacity={1} fill="url(#colorEntradas)" isAnimationActive={true} animationDuration={400} animationEasing="ease-out" dot={false} activeDot={{ r: 4, strokeWidth: 0 }} />
-                  <Area type="monotone" dataKey="Salidas" stroke={darkMode ? "#ef4444" : "#dc2626"} strokeWidth={2} fillOpacity={1} fill="url(#colorSalidas)" isAnimationActive={true} animationDuration={400} animationEasing="ease-out" dot={false} activeDot={{ r: 4, strokeWidth: 0 }} />
-                </AreaChart>
+                  
+                  {/* LÍNEA BASE EN CERO PARA SEPARAR ENTRADAS Y SALIDAS */}
+                  <ReferenceLine y={0} stroke={darkMode ? "#4b5563" : "#94a3b8"} />
+                  
+                  <Bar dataKey="Entradas" fill={darkMode ? "#10b981" : "#059669"} radius={[4, 4, 0, 0]} maxBarSize={30} />
+                  <Bar dataKey="Salidas" fill={darkMode ? "#ef4444" : "#dc2626"} radius={[0, 0, 4, 4]} maxBarSize={30} />
+                </BarChart>
               </ResponsiveContainer>
             ) : (
               <div className="flex h-full w-full items-center justify-center text-xs font-bold uppercase tracking-widest text-slate-500 text-center">
@@ -304,6 +299,7 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* TABLA DE TRANSACCIONES */}
       <div className={cardClass}>
         <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-6">Registro de transacciones recientes</h2>
         <div className="space-y-3">
