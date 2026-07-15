@@ -70,14 +70,15 @@ export default function Dashboard() {
 
     const resultadoFinal = Object.values(agrupados).sort((a, b) => a.timestamp - b.timestamp);
 
-    // Solo inyectamos un punto inicial en 0 si hay un ÚNICO registro para que trace una línea ascendente.
-    // HEMOS ELIMINADO la caída forzada al final. La línea se quedará en su último valor real.
-    if (resultadoFinal.length === 1) {
+    // LÓGICA DE MONTAÑA CORREGIDA:
+    // Siempre obligamos a que nazca desde cero al inicio para formar la curva de subida.
+    // PERO no tocamos el final. El final se queda flotando en tu último escaneo.
+    if (resultadoFinal.length > 0) {
       resultadoFinal.unshift({
         etiqueta: "Inicio",
         Entradas: 0,
         Salidas: 0,
-        timestamp: resultadoFinal[0].timestamp - 1
+        timestamp: resultadoFinal[0].timestamp - 60000 // 1 minuto antes
       });
     }
 
@@ -185,7 +186,7 @@ export default function Dashboard() {
 
       <div className="grid md:grid-cols-2 gap-6 sm:gap-6 mb-8">
         
-        {/* GRÁFICO 1: OPCIÓN 1 (CURVAS SUAVES + PUNTOS EXACTOS) */}
+        {/* GRÁFICO 1: CURVAS SUAVES + PUNTOS EXACTOS (SIN BAJAR A CERO AL FINAL) */}
         <div className={cardClass}>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
             <div>
@@ -238,6 +239,7 @@ export default function Dashboard() {
                     itemStyle={{ paddingVertical: '2px' }}
                     labelStyle={{ color: darkMode ? '#94a3b8' : '#64748b', marginBottom: '6px', fontWeight: 'bold' }}
                   />
+                  {/* AQUÍ VUELVE "monotone" (Curvas suaves de montaña) */}
                   <Area 
                     type="monotone" 
                     dataKey="Entradas" 
