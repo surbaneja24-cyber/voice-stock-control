@@ -14,7 +14,6 @@ export default function Dashboard() {
   const darkMode = useThemeStore((state) => state.darkMode); 
   const usuario = useAuthStore((state) => state.usuario); 
   
-  // INYECCIÓN DE SEGURIDAD PARA LAS COOKIES HTTPONLY
   const authenticatedFetch = useAuthStore((state) => state.authenticatedFetch);
   const navigate = useNavigate();
 
@@ -71,8 +70,7 @@ export default function Dashboard() {
 
     const resultadoFinal = Object.values(agrupados).sort((a, b) => a.timestamp - b.timestamp);
 
-    // --- PREVENCIÓN DE PUNTO ÚNICO ---
-    // Si solo hay un registro de tiempo, forzamos un ancla en cero para que el área se dibuje
+    // --- BLOQUE DE PREVENCIÓN: SÍNDROME DEL PUNTO ÚNICO ---
     if (resultadoFinal.length === 1) {
       resultadoFinal.unshift({
         etiqueta: "Inicio",
@@ -106,6 +104,7 @@ export default function Dashboard() {
 
     authenticatedFetch(`${baseApiUrl}/api/history`)
       .then((res) => {
+        // CORRECCIÓN RED: Previene el crasheo si el backend falla y no devuelve JSON
         if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
         return res.json();
       })
@@ -114,7 +113,7 @@ export default function Dashboard() {
           if (Array.isArray(data)) {
             setMovimientos(data);
           } else {
-            console.warn("[WARNING] Formato de respuesta inválido:", data);
+            console.warn("[WARNING] Formato inválido:", data);
             setMovimientos([]); 
           }
         }
@@ -151,7 +150,6 @@ export default function Dashboard() {
   return (
     <div className={`min-h-screen p-4 sm:p-8 font-sans ${darkMode ? 'bg-[#070B14]' : 'bg-slate-50'}`}>
       
-      {/* CABECERA */}
       <div className="flex justify-between items-end mb-8 pb-4 border-b border-slate-200 dark:border-slate-800/60">
         <div>
           <h1 className={`text-2xl sm:text-3xl font-black tracking-tight uppercase ${darkMode ? 'text-white' : 'text-slate-900'}`}>
@@ -169,7 +167,6 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* REJILLA DE KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-5 mb-8">
         {[
           { label: "Movimientos totales", value: totalMovimientos },
@@ -186,10 +183,9 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* SECCIÓN DE GRÁFICOS */}
       <div className="grid md:grid-cols-2 gap-6 sm:gap-6 mb-8">
         
-        {/* GRÁFICO 1: VOLUMEN (AREA CHART) */}
+        {/* GRÁFICO DE ÁREA ÚNICO (Duplicado eliminado) */}
         <div className={cardClass}>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
             <div>
@@ -233,10 +229,7 @@ export default function Dashboard() {
                   </defs>
                   <CartesianGrid strokeDasharray="2 2" vertical={false} stroke={darkMode ? "#1f2937" : "#e2e8f0"} />
                   <XAxis dataKey="etiqueta" stroke={darkMode ? "#4b5563" : "#94a3b8"} fontSize={10} fontFamily="monospace" tickMargin={12} tickLine={false} axisLine={false} padding={{ left: 0, right: 0 }} minTickGap={20} />
-                  
-                  {/* BLOQUEO DE DECIMALES EN EL EJE Y */}
                   <YAxis allowDecimals={false} stroke={darkMode ? "#4b5563" : "#94a3b8"} fontSize={10} fontFamily="monospace" tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
-                  
                   <Tooltip 
                     contentStyle={{ backgroundColor: darkMode ? '#1f2937' : '#fff', borderRadius: '6px', border: darkMode ? '1px solid #374151' : '1px solid #e2e8f0', fontFamily: 'monospace', fontSize: '12px' }} 
                     itemStyle={{ paddingVertical: '2px' }}
@@ -254,7 +247,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* GRÁFICO 2: PROPORCIÓN (PIE CHART) */}
+        {/* PIE CHART */}
         <div className={cardClass}>
           <div className="flex justify-between items-start mb-2">
             <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Proporción de flujo</h2>
@@ -311,7 +304,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* TABLA DE TRANSACCIONES RECIENTES */}
       <div className={cardClass}>
         <h2 className="text-sm font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-6">Registro de transacciones recientes</h2>
         <div className="space-y-3">
