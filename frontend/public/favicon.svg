@@ -1,16 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
-  <rect width="400" height="400" rx="90" fill="#0B1120"/>
-  
-  <text 
-    x="50%" 
-    y="54%" 
-    font-family="system-ui, -apple-system, sans-serif" 
-    font-weight="900" 
-    font-size="240" 
-    text-anchor="middle" 
-    dominant-baseline="middle" 
-    letter-spacing="-15"
-  >
-    <tspan fill="#ffffff">V</tspan><tspan fill="#3b82f6">X</tspan>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Fondo oscuro redondeado -->
+  <rect width="64" height="64" rx="14" fill="#0f172a"/>
+  <!-- Texto MS -->
+  <text x="50%" y="54%" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="28" text-anchor="middle" dominant-baseline="middle">
+    <tspan fill="#ffffff">M</tspan><tspan fill="#3b82f6">S</tspan>
   </text>
 </svg>
