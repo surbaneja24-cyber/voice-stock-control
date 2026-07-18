@@ -7,12 +7,12 @@
   "lightMode": "Light Mode",
   "darkMode": "Dark Mode",
 
-  "managePreferences": "Manage your VoxStock preferences",
+  "managePreferences": "Manage your MyStock preferences",
   "appearance": "Appearance",
   "language": "Language",
   "currentLanguage": "Current Language",
   "notifications": "Notifications",
-  "about": "About VoxStock",
+  "about": "About MyStock",
 
   "enabled": "Enabled",
   "disabled": "Disabled",

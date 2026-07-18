@@ -1,6 +1,6 @@
 <div align="center">
 
-  <h1>VoxStock WMS</h1>
+  <h1>MyStock WMS</h1>
   <p><strong>Sistema SaaS de Gestión de Inventario dirigido por IA y Procesamiento de Lenguaje Natural</strong></p>
 
   <img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" />
@@ -16,7 +16,7 @@
 
 ## Sobre el Proyecto
 
-**VoxStock** es una solución de software B2B diseñada para modernizar el control de almacenes. Elimina la fricción de los sistemas tradicionales permitiendo a los operarios gestionar stock, registrar entradas/salidas y consultar el inventario mediante comandos de voz naturales o entradas de texto ágiles, adaptándose a las realidades de la planta logística.
+**MyStock** es una solución de software B2B diseñada para modernizar el control de almacenes. Elimina la fricción de los sistemas tradicionales permitiendo a los operarios gestionar stock, registrar entradas/salidas y consultar el inventario mediante comandos de voz naturales o entradas de texto ágiles, adaptándose a las realidades de la planta logística.
 
 Diseñado bajo una arquitectura **SaaS Multi-Tenant**, permite que múltiples operarios interactúen con el sistema simultáneamente manteniendo sus catálogos e historiales de forma completamente aislada en la nube.
 

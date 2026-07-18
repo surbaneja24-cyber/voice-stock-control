@@ -4,7 +4,7 @@ import requests
 BASE_URL = "http://localhost:5001/api"
 
 def test_flujo_completo():
-    print("🚀 Iniciando suite de pruebas de integración VoxStock...")
+    print("🚀 Iniciando suite de pruebas de integración MyStock...")
     
     # 1. Probar endpoint de Pricing (Backend-Driven UI)
     res_pricing = requests.get(f"{BASE_URL}/pricing")

@@ -17,7 +17,7 @@ from models import Producto, Movimiento, Usuario, LeadPiloto
 # Inicialización de DB
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="VoxStock IA Motor - Secure Edition")
+app = FastAPI(title="MyStock IA Motor - Secure Edition")
 
 # --- CONFIGURACIÓN DE SEGURIDAD Y JWT ---
 SECRET_KEY = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7" # Mover a .env en producción
@@ -237,9 +237,9 @@ def registrar_lead_piloto(lead: LeadCreate, db: Session = Depends(get_db)):
 @app.get("/api/pricing")
 def obtener_planes_monetizacion():
     return [
-        {"name": "VoxStock Lite", "price": "Gratis", "period": "", "description": "Para pequeños negocios.", "features": ["Hasta 50 productos", "Reconocimiento básico", "1 Usuario"], "icon_type": "user", "buttonText": "Empezar Gratis", "popular": False},
-        {"name": "VoxStock Pro", "price": "$49", "period": "/mes", "description": "Para almacenes en crecimiento.", "features": ["Productos ilimitados", "Alta prioridad", "Hasta 5 usuarios"], "icon_type": "star", "buttonText": "Probar Gratis", "popular": True},
-        {"name": "VoxStock Industrial", "price": "Custom", "period": "", "description": "Grandes centros logísticos.", "features": ["Sedes múltiples", "Integración ERP", "Usuarios ilimitados"], "icon_type": "building", "buttonText": "Contactar", "popular": False}
+        {"name": "MyStock Lite", "price": "Gratis", "period": "", "description": "Para pequeños negocios.", "features": ["Hasta 50 productos", "Reconocimiento básico", "1 Usuario"], "icon_type": "user", "buttonText": "Empezar Gratis", "popular": False},
+        {"name": "MyStock Pro", "price": "$49", "period": "/mes", "description": "Para almacenes en crecimiento.", "features": ["Productos ilimitados", "Alta prioridad", "Hasta 5 usuarios"], "icon_type": "star", "buttonText": "Probar Gratis", "popular": True},
+        {"name": "MyStock Industrial", "price": "Custom", "period": "", "description": "Grandes centros logísticos.", "features": ["Sedes múltiples", "Integración ERP", "Usuarios ilimitados"], "icon_type": "building", "buttonText": "Contactar", "popular": False}
     ]
 
 # ==========================================

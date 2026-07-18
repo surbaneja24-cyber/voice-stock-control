@@ -71,7 +71,7 @@ export default function Historial() {
 
     const fechaCorte = new Date().toLocaleString();
     const metadatos = [
-      ["VOXSTOCK - SISTEMA DE CONTROL DE INVENTARIO"],
+      ["MyStock - SISTEMA DE CONTROL DE INVENTARIO"],
       [`Operador responsable: ${usuario?.nombre || 'Operario'}`],
       [`Fecha y hora de corte: ${fechaCorte}`],
       [`Total de transacciones: ${movimientos.length}`],
@@ -99,7 +99,7 @@ export default function Historial() {
     ];
 
     XLSX.utils.book_append_sheet(wb, ws, "Auditoria");
-    XLSX.writeFile(wb, `VoxStock_Auditoria_${new Date().getTime()}.xlsx`);
+    XLSX.writeFile(wb, `MyStock_Auditoria_${new Date().getTime()}.xlsx`);
   };
 
   const exportPDF = () => {
@@ -108,7 +108,7 @@ export default function Historial() {
 
     doc.setFontSize(18);
     doc.setTextColor(37, 99, 235);
-    doc.text("VOXSTOCK", 14, 22);
+    doc.text("MyStock", 14, 22);
     
     doc.setFontSize(12);
     doc.setTextColor(50);
@@ -150,7 +150,7 @@ export default function Historial() {
       }
     });
 
-    doc.save(`VoxStock_Auditoria_${new Date().getTime()}.pdf`);
+    doc.save(`MyStock_Auditoria_${new Date().getTime()}.pdf`);
   };
 
   return (

@@ -93,7 +93,7 @@ export default function Login() {
       >
         <div className="text-center mb-8">
           <h2 className="text-3xl font-extrabold tracking-tight">
-            {language === 'es' ? 'Acceso ' : 'Access '}<span className="text-blue-500">VoxStock</span>
+            {language === 'es' ? 'Acceso ' : 'Access '}<span className="text-blue-500">MyStock</span>
           </h2>
           <p className={`text-sm mt-2 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
             {t.subtitle || "Introduce tus credenciales operativas"}

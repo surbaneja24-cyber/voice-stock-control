@@ -1,7 +1,7 @@
 export const translations = {
   es: {
     navbar: {
-      descubre: "Descubre VoxStock",
+      descubre: "Descubre MyStock",
       instrucciones: "Instrucciones de Uso",
       planes: "Planes de Pago",
       piloto: "Programa Early Adopter",
@@ -38,7 +38,7 @@ export const translations = {
     },
     manual: {
       title: "Guía de Operación y Control de Errores",
-      subtitle: "Manual técnico para operarios y administradores del motor de voz VoxStock.",
+      subtitle: "Manual técnico para operarios y administradores del motor de voz MyStock.",
       rulesTitle: "Reglas de Oro para Mitigar Fallos",
       rules: [
         {
@@ -94,11 +94,11 @@ export const translations = {
       ]
     },
     equipo: {
-      badge: "Equipo de VoxStock",
+      badge: "Equipo de MyStock",
       title: "El motor detrás de la voz.",
-      subtitle: "VoxStock no es magia; es infraestructura pura. Conoce a los ingenieros responsables de traducir ondas sonoras en persistencia de datos.",
+      subtitle: "MyStock no es magia; es infraestructura pura. Conoce a los ingenieros responsables de traducir ondas sonoras en persistencia de datos.",
       advisorsTitle: "Orígenes & Technical Advisors",
-      advisorsDesc: "La arquitectura fundamental de VoxStock fue incubada dentro del ecosistema tecnológico de 4Geeks Academy. Este proyecto no sería posible sin la auditoría de código, dirección arquitectónica y revisión crítica de nuestra junta de asesores.",
+      advisorsDesc: "La arquitectura fundamental de MyStock fue incubada dentro del ecosistema tecnológico de 4Geeks Academy. Este proyecto no sería posible sin la auditoría de código, dirección arquitectónica y revisión crítica de nuestra junta de asesores.",
       members: [
         {
           name: "Marc Dominguez",
@@ -120,18 +120,18 @@ export const translations = {
     faq: {
       badge: "Centro de Ayuda BETA",
       title: "Preguntas Frecuentes",
-      subtitle: "Resolvemos tus dudas sobre el motor de VoxStock, integraciones y límites de uso.",
+      subtitle: "Resolvemos tus dudas sobre el motor de MyStock, integraciones y límites de uso.",
       categories: [
         {
           title: "General",
           questions: [
             {
-              q: "¿Qué es VoxStock y en qué fase se encuentra?",
-              a: "VoxStock es un motor de gestión de inventario por voz (WMS). Actualmente nos encontramos en fase BETA cerrada, optimizando nuestro modelo acústico para entornos industriales."
+              q: "¿Qué es MyStock y en qué fase se encuentra?",
+              a: "MyStock es un motor de gestión de inventario por voz (WMS). Actualmente nos encontramos en fase BETA cerrada, optimizando nuestro modelo acústico para entornos industriales."
             },
             {
               q: "¿Necesito hardware especial para usarlo?",
-              a: "No. VoxStock funciona en cualquier dispositivo con navegador web moderno y micrófono (smartphones, tablets industriales, o PCs). Recomendamos micrófonos con cancelación de ruido para almacenes muy ruidosos."
+              a: "No. MyStock funciona en cualquier dispositivo con navegador web moderno y micrófono (smartphones, tablets industriales, o PCs). Recomendamos micrófonos con cancelación de ruido para almacenes muy ruidosos."
             }
           ]
         },
@@ -144,7 +144,7 @@ export const translations = {
             },
             {
               q: "¿Qué pasa si el sistema no entiende mi pronunciación?",
-              a: "VoxStock incorpora algoritmos de 'Fuzzy Matching' (Coincidencia Difusa) que toleran ligeras variaciones silábicas. Sin embargo, para mayor precisión, recomendamos usar el formato: [Acción] + [Cantidad] + [Producto]."
+              a: "MyStock incorpora algoritmos de 'Fuzzy Matching' (Coincidencia Difusa) que toleran ligeras variaciones silábicas. Sin embargo, para mayor precisión, recomendamos usar el formato: [Acción] + [Cantidad] + [Producto]."
             },
             {
               q: "¿Puedo importar mi catálogo actual?",
@@ -169,7 +169,7 @@ export const translations = {
     },
     settings: {
       title: "Configuración",
-      subtitle: "Gestiona tus preferencias de VoxStock.",
+      subtitle: "Gestiona tus preferencias de MyStock.",
       appearance: "Apariencia",
       darkMode: "Modo Oscuro",
       enabled: "Activado",
@@ -188,7 +188,7 @@ export const translations = {
     },
     pilot: {
       badge: "Programa Early Adopter",
-      title: "Únete al Piloto de VoxStock",
+      title: "Únete al Piloto de MyStock",
       subtitle: "Buscamos empresas asociadas para implementar la gestión de inventario por voz sin costes de licencia durante la fase BETA.",
       cardTitle: "Beneficios del Programa",
       benefit1: "Acceso gratuito e ilimitado al Plan Industrial durante el piloto.",
@@ -231,7 +231,7 @@ export const translations = {
 
   en: {
     navbar: {
-      descubre: "Discover VoxStock",
+      descubre: "Discover MyStock",
       instrucciones: "How it Works",
       planes: "Pricing Plans",
       piloto: "Early Adopter Program",
@@ -268,7 +268,7 @@ export const translations = {
     },
     manual: {
       title: "Operation and Error Control Guide",
-      subtitle: "Technical manual for operators and administrators of the VoxStock voice engine.",
+      subtitle: "Technical manual for operators and administrators of the MyStock voice engine.",
       rulesTitle: "Golden Rules to Mitigate Errors",
       rules: [
         {
@@ -324,11 +324,11 @@ export const translations = {
       ]
     },
     equipo: {
-      badge: "VoxStock Team",
+      badge: "MyStock Team",
       title: "The engine behind the voice.",
-      subtitle: "VoxStock isn't magic; it's pure infrastructure. Meet the engineers responsible for translating sound waves into data persistence.",
+      subtitle: "MyStock isn't magic; it's pure infrastructure. Meet the engineers responsible for translating sound waves into data persistence.",
       advisorsTitle: "Origins & Technical Advisors",
-      advisorsDesc: "The core architecture of VoxStock was incubated within the 4Geeks Academy tech ecosystem. This project would not be possible without the code auditing, architectural guidance, and critical review of our advisory board.",
+      advisorsDesc: "The core architecture of MyStock was incubated within the 4Geeks Academy tech ecosystem. This project would not be possible without the code auditing, architectural guidance, and critical review of our advisory board.",
       members: [
         {
           name: "Marc Dominguez",
@@ -350,18 +350,18 @@ export const translations = {
     faq: {
       badge: "BETA Help Center",
       title: "Frequently Asked Questions",
-      subtitle: "We answer your questions about the VoxStock engine, integrations, and usage limits.",
+      subtitle: "We answer your questions about the MyStock engine, integrations, and usage limits.",
       categories: [
         {
           title: "General",
           questions: [
             {
-              q: "What is VoxStock and what phase is it in?",
-              a: "VoxStock is a voice-controlled inventory management engine (WMS). We are currently in a closed BETA phase, optimizing our acoustic model for industrial environments."
+              q: "What is MyStock and what phase is it in?",
+              a: "MyStock is a voice-controlled inventory management engine (WMS). We are currently in a closed BETA phase, optimizing our acoustic model for industrial environments."
             },
             {
               q: "Do I need special hardware to use it?",
-              a: "No. VoxStock works on any device with a modern web browser and microphone (smartphones, industrial tablets, or PCs). We recommend noise-canceling microphones for very noisy warehouses."
+              a: "No. MyStock works on any device with a modern web browser and microphone (smartphones, industrial tablets, or PCs). We recommend noise-canceling microphones for very noisy warehouses."
             }
           ]
         },
@@ -374,7 +374,7 @@ export const translations = {
             },
             {
               q: "What happens if the system doesn't understand my pronunciation?",
-              a: "VoxStock incorporates 'Fuzzy Matching' algorithms that tolerate slight syllabic variations. However, for higher accuracy, we recommend using the format: [Action] + [Quantity] + [Product]."
+              a: "MyStock incorporates 'Fuzzy Matching' algorithms that tolerate slight syllabic variations. However, for higher accuracy, we recommend using the format: [Action] + [Quantity] + [Product]."
             },
             {
               q: "Can I import my current catalog?",
@@ -399,7 +399,7 @@ export const translations = {
     },
     settings: {
       title: "Settings",
-      subtitle: "Manage your VoxStock preferences.",
+      subtitle: "Manage your MyStock preferences.",
       appearance: "Appearance",
       darkMode: "Dark Mode",
       enabled: "Enabled",
@@ -418,7 +418,7 @@ export const translations = {
     },
     pilot: {
       badge: "Early Adopter Program",
-      title: "Join the VoxStock Pilot",
+      title: "Join the MyStock Pilot",
       subtitle: "We are looking for partner companies to deploy voice-powered inventory management with zero license fees during the BETA phase.",
       cardTitle: "Program Benefits",
       benefit1: "Free and unlimited access to the Industrial Plan during the pilot.",
@@ -461,7 +461,7 @@ export const translations = {
 
   zh: {
     navbar: {
-      descubre: "探索 VoxStock",
+      descubre: "探索 MyStock",
       instrucciones: "使用说明",
       planes: "付费方案",
       piloto: "早期采纳者计划",
@@ -498,7 +498,7 @@ export const translations = {
     },
     manual: {
       title: "操作与错误控制指南",
-      subtitle: "VoxStock 语音引擎操作员 and 管理员技术手册。",
+      subtitle: "MyStock 语音引擎操作员 and 管理员技术手册。",
       rulesTitle: "减少错误的核心规则",
       rules: [
         {
@@ -554,11 +554,11 @@ export const translations = {
       ]
     },
     equipo: {
-      badge: "VoxStock 团队",
+      badge: "MyStock 团队",
       title: "语音背后的核心引擎",
-      subtitle: "VoxStock 并非魔法，而是纯粹的底层架构。见证将声波转化为数据持久化存储的工程师们。",
+      subtitle: "MyStock 并非魔法，而是纯粹的底层架构。见证将声波转化为数据持久化存储的工程师们。",
       advisorsTitle: "起源与技术顾问",
-      advisorsDesc: "VoxStock 的核心架构孵化于 4Geeks Academy 技术生态系统。如果没有顾问委员会的代码审计、架构指导和审慎评估，该项目就不可能实现。",
+      advisorsDesc: "MyStock 的核心架构孵化于 4Geeks Academy 技术生态系统。如果没有顾问委员会的代码审计、架构指导和审慎评估，该项目就不可能实现。",
       members: [
         {
           name: "Marc Dominguez",
@@ -580,18 +580,18 @@ export const translations = {
     faq: {
       badge: "BETA 帮助中心",
       title: "常见问题",
-      subtitle: "为您解答关于 VoxStock 引擎、系统集成以及使用限制的所有疑问。",
+      subtitle: "为您解答关于 MyStock 引擎、系统集成以及使用限制的所有疑问。",
       categories: [
         {
           title: "常规问题",
           questions: [
             {
-              q: "什么是 VoxStock？目前处于什么阶段？",
-              a: "VoxStock 是一款语音驱动的库存管理系统 (WMS)。目前我们正处于封闭式 BETA 测试阶段，致力于针对工业生产环境优化声学模型。"
+              q: "什么是 MyStock？目前处于什么阶段？",
+              a: "MyStock 是一款语音驱动的库存管理系统 (WMS)。目前我们正处于封闭式 BETA 测试阶段，致力于针对工业生产环境优化声学模型。"
             },
             {
               q: "我需要特殊的硬件设备来运行 it 吗？",
-              a: "不需要。VoxStock 可以在任何配备现代浏览器和麦克风的设备上运行（智能手机、工业平板电脑或电脑）。对于噪音极大的仓库环境，我们建议使用带降噪功能的麦克风。"
+              a: "不需要。MyStock 可以在任何配备现代浏览器和麦克风的设备上运行（智能手机、工业平板电脑或电脑）。对于噪音极大的仓库环境，我们建议使用带降噪功能的麦克风。"
             }
           ]
         },
@@ -604,7 +604,7 @@ export const translations = {
             },
             {
               q: "如果系统无法准确识别我的发音该怎么办？",
-              a: "VoxStock 内置了“模糊匹配” (Fuzzy Matching) 算法，能容忍轻微的音节偏差。不过为了达到最高精确度，我们建议使用标准指令格式：[操作] + [数量] + [产品名称]。"
+              a: "MyStock 内置了“模糊匹配” (Fuzzy Matching) 算法，能容忍轻微的音节偏差。不过为了达到最高精确度，我们建议使用标准指令格式：[操作] + [数量] + [产品名称]。"
             },
             {
               q: "我可以导入现有的产品目录吗？",
@@ -629,7 +629,7 @@ export const translations = {
     },
     settings: {
       title: "设置",
-      subtitle: "管理您的 VoxStock 偏好设置。",
+      subtitle: "管理您的 MyStock 偏好设置。",
       appearance: "外观界面",
       darkMode: "深色模式",
       enabled: "已启用",
@@ -648,7 +648,7 @@ export const translations = {
     },
     pilot: {
       badge: "早期采纳者计划",
-      title: "加入 VoxStock 试点项目",
+      title: "加入 MyStock 试点项目",
       subtitle: "我们正在寻找企业合作伙伴，在 BETA 测试阶段免费部署人工智能语音库存管理系统，免除一切授权费用。",
       cardTitle: "项目核心权益",
       benefit1: "试点期间免费且无限制地使用“工业级方案”所有功能。",

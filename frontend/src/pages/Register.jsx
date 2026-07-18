@@ -139,7 +139,7 @@ export default function Register() {
             <input
               id="email"
               type="email"
-              placeholder="operario@voxstock.com"
+              placeholder="operario@mystock.com"
               className={`w-full rounded-xl border p-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${darkMode ? 'border-slate-700 bg-slate-800 text-white placeholder-slate-500' : 'border-slate-200 bg-slate-50 text-slate-900 placeholder-slate-400'}`}
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}

@@ -91,7 +91,7 @@ export default function Instrucciones() {
           <div>
             <h2 className="text-xl font-bold text-amber-500 mb-2">Descargo de Responsabilidad Importante</h2>
             <p className={`text-base leading-relaxed ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-              VoxStock se encuentra actualmente en desarrollo activo. El reconocimiento de voz neuronal y la lógica de inteligencia artificial pueden presentar fallos aleatorios. <strong>No utilice este sistema como su único método de auditoría</strong>.
+              MyStock se encuentra actualmente en desarrollo activo. El reconocimiento de voz neuronal y la lógica de inteligencia artificial pueden presentar fallos aleatorios. <strong>No utilice este sistema como su único método de auditoría</strong>.
             </p>
           </div>
         </motion.section>

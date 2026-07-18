@@ -22,8 +22,8 @@ export default function Terminal() {
         ? "http://localhost:5001" 
         : `${window.location.protocol}//${window.location.hostname.replace("-5173", "-5001")}`);
 
-  const getInitialSector = () => localStorage.getItem(`voxstock_sector_${usuario?.id}`) || "universal";
-  const getInitialOnboarding = () => !localStorage.getItem(`voxstock_onboarding_${usuario?.id}`);
+  const getInitialSector = () => localStorage.getItem(`mystock_sector_${usuario?.id}`) || "universal";
+  const getInitialOnboarding = () => !localStorage.getItem(`mystock_onboarding_${usuario?.id}`);
 
   const [sectorActivo, setSectorActivo] = useState(getInitialSector());
   const [mostrarModalSectores, setMostrarModalSectores] = useState(getInitialOnboarding());
@@ -178,8 +178,8 @@ export default function Terminal() {
   const handleSelectSector = (sectorId) => { 
     setSectorActivo(sectorId);
     setMostrarModalSectores(false);
-    localStorage.setItem(`voxstock_sector_${usuario?.id}`, sectorId);
-    localStorage.setItem(`voxstock_onboarding_${usuario?.id}`, "done");
+    localStorage.setItem(`mystock_sector_${usuario?.id}`, sectorId);
+    localStorage.setItem(`mystock_onboarding_${usuario?.id}`, "done");
   };
 
   const ejecutarCerrarSesion = async () => { 
@@ -299,7 +299,7 @@ export default function Terminal() {
             
             <div className="mb-5 pr-8">
               <h2 className={`text-xl sm:text-2xl font-bold tracking-tight flex items-center gap-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                <Info className="text-blue-500" size={24}/> ¿Cómo usar VoxStock?
+                <Info className="text-blue-500" size={24}/> ¿Cómo usar MyStock?
               </h2>
             </div>
 

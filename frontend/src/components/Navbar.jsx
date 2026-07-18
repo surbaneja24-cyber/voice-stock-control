@@ -8,7 +8,7 @@ import { useLanguageStore } from "../store/languageStore";
 import { useAuthStore } from "../store/authStore";
 import { translations } from "../utils/translations";
 
-export default function Navbar({ logo, logoAlt = "VoxStock" }) {
+export default function Navbar({ logo, logoAlt = "MyStock" }) {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
   
