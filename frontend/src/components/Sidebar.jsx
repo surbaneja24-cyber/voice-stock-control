@@ -42,8 +42,8 @@ const Sidebar = ({ isOpen = false, setIsOpen = () => {} }) => {
         <button onClick={() => setIsOpen(true)} className={`p-2 -ml-2 rounded-lg ${darkMode ? "text-slate-300 hover:bg-slate-800" : "text-slate-600 hover:bg-slate-100"}`}>
           <Menu size={26} />
         </button>
-        {/* LOGO INTERACTIVO MÓVIL (TOP BAR) */}
-        <Link to="/dashboard" className={`font-extrabold tracking-wider text-xl hover:opacity-80 transition-opacity focus:outline-none ${darkMode ? "text-white" : "text-slate-900"}`}>
+        {/* LOGO INTERACTIVO MÓVIL (TOP BAR) - Ya apuntaba bien a "/" */}
+        <Link to="/" className={`font-extrabold tracking-wider text-xl hover:opacity-80 transition-opacity focus:outline-none ${darkMode ? "text-white" : "text-slate-900"}`}>
           VOX<span className="text-blue-500">STOCK</span>
         </Link>
         <div className="w-8" /> 
@@ -56,8 +56,8 @@ const Sidebar = ({ isOpen = false, setIsOpen = () => {} }) => {
         <aside className={`absolute top-0 left-0 w-[80%] max-w-[320px] h-full flex flex-col justify-between shadow-2xl transition-transform duration-300 ${isOpen ? "translate-x-0" : "-translate-x-full"} ${darkMode ? "bg-slate-950 border-r border-slate-800" : "bg-white border-r border-slate-200"}`}>
           <div>
             <div className={`h-16 flex items-center justify-between px-6 border-b ${darkMode ? "border-slate-800" : "border-slate-100"}`}>
-              {/* LOGO INTERACTIVO MÓVIL (DRAWER) */}
-              <Link to="/dashboard" onClick={handleMobileNav} className={`font-extrabold tracking-wider text-2xl hover:opacity-80 transition-opacity focus:outline-none ${darkMode ? "text-white" : "text-slate-900"}`}>
+              {/* LOGO INTERACTIVO MÓVIL (DRAWER) - CORREGIDO de "/d" a "/" */}
+              <Link to="/" onClick={handleMobileNav} className={`font-extrabold tracking-wider text-2xl hover:opacity-80 transition-opacity focus:outline-none ${darkMode ? "text-white" : "text-slate-900"}`}>
                 VOX<span className="text-blue-500">STOCK</span>
               </Link>
               <button onClick={() => setIsOpen(false)} className={`p-2 rounded-lg ${darkMode ? "text-slate-400 hover:bg-slate-800" : "text-slate-500 hover:bg-slate-100"}`}>
@@ -107,8 +107,8 @@ const Sidebar = ({ isOpen = false, setIsOpen = () => {} }) => {
           <div className={`h-20 flex items-center transition-all duration-300 ${isOpen ? "justify-between px-6" : "justify-center"} ${darkMode ? "border-b border-slate-800" : "border-b border-slate-100"}`}>
             {isOpen && (
               <>
-                {/* LOGO INTERACTIVO ESCRITORIO */}
-                <Link to="/dashboard" className={`font-extrabold tracking-wider text-2xl whitespace-nowrap overflow-hidden hover:opacity-80 transition-opacity focus:outline-none ${darkMode ? "text-white" : "text-slate-900"}`}>
+                {/* LOGO INTERACTIVO ESCRITORIO - CORREGIDO de "/dashboard" a "/" */}
+                <Link to="/" className={`font-extrabold tracking-wider text-2xl whitespace-nowrap overflow-hidden hover:opacity-80 transition-opacity focus:outline-none ${darkMode ? "text-white" : "text-slate-900"}`}>
                   VOX<span className="text-blue-500">STOCK</span>
                 </Link>
               </>
