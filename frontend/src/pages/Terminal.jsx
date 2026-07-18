@@ -313,7 +313,7 @@ export default function Terminal() {
                 <h3 className={`font-bold text-sm sm:text-base mb-1 ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>2. Modo Texto (Ruido/iOS)</h3>
                 <p className={`text-xs sm:text-sm mb-2 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>Si el micrófono falla, pulsa el icono del teclado a la derecha para escribir la orden manualmente.</p>
                 <div className={`mt-2 p-2 rounded-lg text-xs font-mono italic border ${darkMode ? 'bg-[#0B1120] border-blue-900/30 text-blue-400' : 'bg-blue-50/50 border-blue-100 text-blue-700'}`}>
-                  Ej: "Suma 5 unidades al pallet rojo"
+                  Ej: "Suma 5 unidades de material general"
                 </div>
               </div>
 
