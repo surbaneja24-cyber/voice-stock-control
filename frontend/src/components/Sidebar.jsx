@@ -43,7 +43,7 @@ const Sidebar = ({ isOpen = false, setIsOpen = () => {} }) => {
           <Menu size={26} />
         </button>
         <span className={`font-extrabold tracking-wider text-xl ${darkMode ? "text-white" : "text-slate-900"}`}>
-          VOX<span className="text-blue-500">STOCK</span>
+          MY<span className="text-blue-500">STOCK</span>
         </span>
         <div className="w-8" /> 
       </div>
