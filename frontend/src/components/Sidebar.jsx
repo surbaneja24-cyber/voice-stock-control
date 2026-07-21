@@ -44,7 +44,7 @@ const Sidebar = ({ isOpen = false, setIsOpen = () => {} }) => {
         </button>
         {/* LOGO INTERACTIVO MÓVIL (TOP BAR) - Ya apuntaba bien a "/" */}
         <Link to="/" className={`font-extrabold tracking-wider text-xl hover:opacity-80 transition-opacity focus:outline-none ${darkMode ? "text-white" : "text-slate-900"}`}>
-          VOX<span className="text-blue-500">STOCK</span>
+          MY<span className="text-blue-500">STOCK</span>
         </Link>
         <div className="w-8" /> 
       </div>
