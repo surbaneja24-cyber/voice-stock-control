@@ -109,7 +109,7 @@ const Sidebar = ({ isOpen = false, setIsOpen = () => {} }) => {
               <>
                 {/* LOGO INTERACTIVO ESCRITORIO - CORREGIDO de "/dashboard" a "/" */}
                 <Link to="/" className={`font-extrabold tracking-wider text-2xl whitespace-nowrap overflow-hidden hover:opacity-80 transition-opacity focus:outline-none ${darkMode ? "text-white" : "text-slate-900"}`}>
-                  VOX<span className="text-blue-500">STOCK</span>
+                  MY<span className="text-blue-500">STOCK</span>
                 </Link>
               </>
             )}
