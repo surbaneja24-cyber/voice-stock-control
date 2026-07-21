@@ -157,8 +157,7 @@ export default function Terminal() {
         const err = await res.json(); 
         alert(err.detail); 
       }
-    } catch (error) { 
-      console.error("Error al añadir:", error); 
+    } catch (error) {       console.error("Error al añadir:", error); 
     }
   };
 
@@ -197,7 +196,7 @@ export default function Terminal() {
   ];
 
   return (
-    <div className={`w-full h-full flex flex-col items-center pt-4 sm:pt-8 pb-4 px-4 overflow-hidden ${darkMode ? 'bg-[#0B1120]' : 'bg-slate-50'}`}>
+    <div className={`w-full min-h-[100dvh] flex flex-col items-center pt-4 sm:pt-8 pb-4 px-4 overflow-x-hidden ${darkMode ? 'bg-[#0B1120]' : 'bg-slate-50'}`}>
       
       {/* MODAL SECTORES */}
       {mostrarModalSectores && (
@@ -352,7 +351,7 @@ export default function Terminal() {
       </div>
 
       {/* ÁREA CENTRAL */}
-      <div className="flex-1 w-full max-w-3xl flex flex-col justify-center gap-4 px-2 sm:px-0 min-h-0 mb-4 sm:mb-6">
+      <div className="w-full max-w-3xl flex flex-col my-auto gap-4 px-2 sm:px-0 mb-4 sm:mb-6 flex-shrink-0">
         <div className={`w-full p-5 sm:p-8 rounded-3xl border shadow-xl flex flex-col justify-center transition-colors ${darkMode ? 'bg-[#151C2C] border-slate-800/50' : 'bg-white border-slate-200'}`}>
           <div className="mb-3 sm:mb-5 pb-3 sm:pb-5 border-b border-dashed border-slate-400/30 dark:border-slate-700">
             <h3 className={`text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-1.5 sm:mb-2 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Última Orden Procesada</h3>
