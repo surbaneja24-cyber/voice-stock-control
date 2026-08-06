@@ -7,7 +7,6 @@ const useVoiceCommand = () => {
   const [recognition, setRecognition] = useState(null);
 
   useEffect(() => {
-    // 1. Defensa contra Renderizado en Servidor (SSR)
     if (typeof window === 'undefined') {
       setError('La voz no está disponible en este entorno.');
       return;
@@ -15,9 +14,8 @@ const useVoiceCommand = () => {
 
     const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-    // 2. Defensa contra navegadores no compatibles
     if (!SpeechRecognitionCtor) {
-      setError('Tu navegador o dispositivo bloquea el reconocimiento de voz nativo. Utiliza Google Chrome o Edge.');
+      setError('Tu navegador bloquea el reconocimiento de voz nativo. Utiliza Google Chrome.');
       return;
     }
 
@@ -26,7 +24,6 @@ const useVoiceCommand = () => {
     recog.lang = 'es-ES'; 
     recog.interimResults = false; 
 
-    // 3. Sincronización Real del Hardware con la UI
     recog.onstart = () => {
       setIsListening(true);
     };
@@ -37,12 +34,37 @@ const useVoiceCommand = () => {
     };
 
     recog.onerror = (event) => {
-      // 4. Traductor de Errores para el Operario
+      // INYECCIÓN DE DEPURACIÓN: Ver el error nativo en consola
+      console.error("[SpeechRecognition Error Nativo]:", event.error);
+      
       let mensaje = "Error desconocido del micrófono.";
-      if (event.error === 'not-allowed') mensaje = "Permiso denegado. Habilita el micrófono en tu navegador.";
-      if (event.error === 'network') mensaje = "Fallo de red en el servicio de voz.";
-      if (event.error === 'no-speech') mensaje = "No se detectó voz. Acércate al micrófono.";
-      if (event.error === 'aborted') mensaje = "La grabación fue interrumpida.";
+      
+      // Diccionario completo de errores de la W3C
+      switch (event.error) {
+        case 'not-allowed':
+          mensaje = "Permiso denegado. Habilita el micrófono en tu navegador.";
+          break;
+        case 'audio-capture':
+          mensaje = "No se detectó hardware de micrófono en este equipo o entorno.";
+          break;
+        case 'service-not-allowed':
+          mensaje = "El navegador denegó el uso del servicio de voz.";
+          break;
+        case 'network':
+          mensaje = "Fallo de red en el servicio de voz de Google/Apple.";
+          break;
+        case 'no-speech':
+          mensaje = "No se detectó voz. Acércate al micrófono.";
+          break;
+        case 'aborted':
+          mensaje = "La grabación fue interrumpida de forma inesperada.";
+          break;
+        case 'language-not-supported':
+          mensaje = "El idioma configurado no está soportado en este dispositivo.";
+          break;
+        default:
+          mensaje = `Error del micrófono: ${event.error}`;
+      }
       
       setError(mensaje);
       setIsListening(false);
@@ -53,11 +75,24 @@ const useVoiceCommand = () => {
     };
 
     setRecognition(recog);
+
+    // FUNCIÓN DE LIMPIEZA (Memory Leak Fix)
+    return () => {
+      recog.onstart = null;
+      recog.onresult = null;
+      recog.onerror = null;
+      recog.onend = null;
+      try {
+        recog.abort();
+      } catch (e) {
+        // Ignorar error al abortar si ya estaba detenido
+      }
+    };
   }, []);
 
   const startListening = useCallback(() => {
     if (!recognition) {
-      setError('El reconocimiento de voz no está disponible en este navegador.');
+      setError('El reconocimiento de voz no está disponible.');
       return;
     }
 
@@ -66,8 +101,6 @@ const useVoiceCommand = () => {
 
     try {
       recognition.start();
-      // NOTA: No forzamos setIsListening(true) aquí. 
-      // Esperamos a que onstart confirme que el hardware arrancó.
     } catch (e) {
       console.warn('El reconocimiento ya estaba en curso.');
     }
@@ -75,8 +108,11 @@ const useVoiceCommand = () => {
 
   const stopListening = useCallback(() => {
     if (recognition) {
-      recognition.stop();
-      // Mantenemos esto por seguridad en caso de que onend falle silenciosamente (típico en iOS)
+      try {
+        recognition.stop();
+      } catch (e) {
+        console.warn('Error al detener el reconocimiento.');
+      }
       setIsListening(false);
     }
   }, [recognition]);
