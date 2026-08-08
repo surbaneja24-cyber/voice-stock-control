@@ -85,7 +85,7 @@ export default function Terminal() {
     }
   }, [fetchCatalogo, mostrarModalSectores]);
 
-  const procesarComandoIA = useCallback(async (textoComando) => {
+  const procesarComandoIA = async (textoComando) => {
     if (isProcessing) return;
     setIsProcessing(true);
 
@@ -122,14 +122,15 @@ export default function Terminal() {
     } finally {
       setIsProcessing(false);
     }
-  }, [isProcessing, authenticatedFetch, baseApiUrl, sectorActivo, addMovimiento, usuario, modoTexto, fetchCatalogo]);
+  };
 
   useEffect(() => {
     if (transcript && !isProcessing) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- procesarComandoIA es async, el setState real ocurre tras el await
       procesarComandoIA(transcript);
     }
-  }, [transcript, isProcessing, procesarComandoIA]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo debe reaccionar a un transcript nuevo, no a isProcessing/procesarComandoIA (evita reprocesar el mismo comando en bucle)
+  }, [transcript]);
 
   const handleSubmitTexto = (e) => {
     e.preventDefault();
