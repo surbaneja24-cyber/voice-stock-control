@@ -16,7 +16,7 @@ export default function Pricing() {
 
   const [backendPlans, setBackendPlans] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error] = useState(null);
   const [isFallback, setIsFallback] = useState(false);
 
   const iconMap = {

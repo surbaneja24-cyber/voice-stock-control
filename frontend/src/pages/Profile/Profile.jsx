@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import ProfileHeader from './components/ProfileHeader';
 import PersonalInfoForm from './components/PersonalInfoForm';
 import SecuritySection from './components/SecuritySection';

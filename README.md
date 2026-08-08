@@ -40,6 +40,13 @@ El flujo de datos está diseñado para garantizar persistencia y baja latencia e
 [ BD: PostgreSQL (Neon) ]     <- Almacén definitivo en la nube
 ```
 
+En producción, el frontend (Vercel) y el backend (Render) viven en dominios
+distintos. Para que la cookie de sesión sea same-origin (requisito de Safari
+y de varios navegadores in-app de Android), Vercel actúa de proxy: las
+llamadas a `/api/*` se reescriben internamente hacia el backend (ver
+`frontend/vercel.json`), de modo que desde el navegador todo parece un único
+origen aunque por debajo sean dos servicios separados.
+
 ## Características Principales
  - **Cloud-Native Persistence**: Base de datos relacional PostgreSQL alojada en un clúster serverless (Neon), garantizando integridad ACID y persistencia frente a caídas de instancias.
 
@@ -64,6 +71,13 @@ Crea un archivo .env en el directorio /frontend:
 ````
 VITE_BACKEND_URL="http://localhost:5001"
 ````
+> `VITE_BACKEND_URL` es solo para desarrollo local. En producción (Vercel) esta
+> variable debe quedar **sin definir**: `frontend/vercel.json` reescribe
+> `/api/*` hacia el backend, así que el frontend llama en su propio origen y
+> la cookie de sesión (`SameSite=Lax`) funciona correctamente en Safari y en
+> navegadores in-app de Android. Definir `VITE_BACKEND_URL` en el entorno de
+> producción de Vercel rompe ese comportamiento.
+
 ##  Despliegue Local
 
 ### Terminal A (Backend):

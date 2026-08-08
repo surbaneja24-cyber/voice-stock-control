@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useThemeStore } from '../../../store/themeStore';
 
 export default function SecuritySection({

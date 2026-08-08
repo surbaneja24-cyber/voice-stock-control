@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useThemeStore } from '../../../store/themeStore';
 
 const Field = ({ label, children, darkMode }) => (
@@ -30,6 +30,7 @@ export default function PersonalInfoForm({
 
     useEffect(() => {
         if (profile) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect -- sincroniza el formulario local cuando el perfil llega desde el backend
             setForm({
                 fullName: profile.fullName || '',
                 phone: profile.phone || '',

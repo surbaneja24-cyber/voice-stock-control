@@ -8,6 +8,7 @@ const useVoiceCommand = () => {
 
   useEffect(() => {
     if (typeof window === 'undefined') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- guarda de entorno SSR, no se alcanza en esta SPA pero se mantiene por seguridad
       setError('La voz no está disponible en este entorno.');
       return;
     }
@@ -37,7 +38,7 @@ const useVoiceCommand = () => {
       // INYECCIÓN DE DEPURACIÓN: Ver el error nativo en consola
       console.error("[SpeechRecognition Error Nativo]:", event.error);
       
-      let mensaje = "Error desconocido del micrófono.";
+      let mensaje;
       
       // Diccionario completo de errores de la W3C
       switch (event.error) {
@@ -84,7 +85,7 @@ const useVoiceCommand = () => {
       recog.onend = null;
       try {
         recog.abort();
-      } catch (e) {
+      } catch {
         // Ignorar error al abortar si ya estaba detenido
       }
     };
@@ -101,7 +102,7 @@ const useVoiceCommand = () => {
 
     try {
       recognition.start();
-    } catch (e) {
+    } catch {
       console.warn('El reconocimiento ya estaba en curso.');
     }
   }, [recognition]);
@@ -110,7 +111,7 @@ const useVoiceCommand = () => {
     if (recognition) {
       try {
         recognition.stop();
-      } catch (e) {
+      } catch {
         console.warn('Error al detener el reconocimiento.');
       }
       setIsListening(false);

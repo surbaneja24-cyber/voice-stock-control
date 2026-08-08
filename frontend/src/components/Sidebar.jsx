@@ -24,7 +24,7 @@ const Sidebar = ({ isOpen = false, setIsOpen = () => {} }) => {
     try {
       if (!usuario?.nombre) return "OP";
       return String(usuario.nombre).trim().split(" ").filter(Boolean).map((n) => n[0]).join("").toUpperCase().substring(0, 2);
-    } catch (error) {
+    } catch {
       return "OP";
     }
   };
@@ -58,7 +58,7 @@ const Sidebar = ({ isOpen = false, setIsOpen = () => {} }) => {
             <div className={`h-16 flex items-center justify-between px-6 border-b ${darkMode ? "border-slate-800" : "border-slate-100"}`}>
               {/* LOGO INTERACTIVO MÓVIL (DRAWER) - CORREGIDO de "/d" a "/" */}
               <Link to="/" onClick={handleMobileNav} className={`font-extrabold tracking-wider text-2xl hover:opacity-80 transition-opacity focus:outline-none ${darkMode ? "text-white" : "text-slate-900"}`}>
-                VOX<span className="text-blue-500">STOCK</span>
+                MY<span className="text-blue-500">STOCK</span>
               </Link>
               <button onClick={() => setIsOpen(false)} className={`p-2 rounded-lg ${darkMode ? "text-slate-400 hover:bg-slate-800" : "text-slate-500 hover:bg-slate-100"}`}>
                 <X size={24} />

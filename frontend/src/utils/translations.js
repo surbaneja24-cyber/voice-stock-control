@@ -26,16 +26,6 @@ export const translations = {
       btnLoading: "Autenticando...",
       back: "Volver al inicio"
     },
-    register: {
-      title: "Registrar Operario",
-      subtitle: "Crea una credencial nueva para el acceso al WMS.",
-      nameLabel: "Nombre Completo",
-      emailLabel: "Correo Corporativo",
-      passLabel: "Contraseña de Acceso",
-      confirmLabel: "Confirmar Contraseña",
-      btnSubmit: "Confirmar Registro",
-      btnLoading: "Creando cuenta..."
-    },
     manual: {
       title: "Guía de Operación y Control de Errores",
       subtitle: "Manual técnico para operarios y administradores del motor de voz MyStock.",
@@ -195,12 +185,25 @@ export const translations = {
       benefit2: "Soporte técnico prioritario directo con nuestros ingenieros.",
       benefit3: "Modelos acústicos personalizados adaptados al ruido de tu almacén.",
       formTitle: "Solicitar Acceso Piloto",
+      labelName: "Tu Nombre",
+      namePlaceholder: "Ej. Juan Pérez",
       labelCompany: "Nombre de la Empresa",
       labelEmail: "Correo Electrónico de Contacto",
-      labelWarehouse: "Tamaño del Almacén / Sector",
-      placeholderWarehouse: "Ej. Distribución de Bebidas, 1200m²",
+      labelVolumen: "Tamaño del Catálogo",
+      volumenOptions: {
+        "0-50": "Menos de 50 productos",
+        "51-200": "Entre 51 y 200 productos",
+        "201-500": "Entre 201 y 500 productos",
+        "500+": "Más de 500 productos"
+      },
       btnSubmit: "Enviar Solicitud",
-      successMsg: "¡Solicitud recibida! Nuestro equipo se pondrá en contacto pronto."
+      btnLoading: "Enviando...",
+      successMsg: "¡Solicitud recibida! Revisa tu correo para la confirmación.",
+      errors: {
+        duplicate: "Este correo ya está inscrito en el programa piloto.",
+        generic: "No se pudo enviar la solicitud. Inténtalo de nuevo.",
+        unreachable: "Error: el servidor es inalcanzable."
+      }
     },
     register: {
       title: "Registrar Operario",
@@ -209,7 +212,7 @@ export const translations = {
       namePlaceholder: "Ej. Juan Pérez",
       emailLabel: "Correo Corporativo",
       passLabel: "Contraseña de Acceso",
-      passPlaceholder: "Mínimo 6 caracteres",
+      passPlaceholder: "Mínimo 8 caracteres",
       confirmLabel: "Confirmar Contraseña",
       confirmPlaceholder: "Repite la contraseña",
       strengthLabel: "Fuerza de la contraseña",
@@ -221,7 +224,7 @@ export const translations = {
       errors: {
         required: "Por favor, completa todos los campos requeridos.",
         match: "Las contraseñas no coinciden.",
-        length: "La contraseña debe tener al menos 6 caracteres.",
+        length: "La contraseña debe tener al menos 8 caracteres.",
         validation: "Error de validación en el formulario.",
         generic: "Error en el proceso de registro.",
         unreachable: "Error crítico: Servidor inalcanzable."
@@ -255,16 +258,6 @@ export const translations = {
       btnSubmit: "Enter Warehouse",
       btnLoading: "Authenticating...",
       back: "Back to home"
-    },
-    register: {
-      title: "Register Operator",
-      subtitle: "Create a new credential to access the WMS.",
-      nameLabel: "Full Name",
-      emailLabel: "Corporate Email",
-      passLabel: "Access Password",
-      confirmLabel: "Confirm Password",
-      btnSubmit: "Confirm Registration",
-      btnLoading: "Creating account..."
     },
     manual: {
       title: "Operation and Error Control Guide",
@@ -425,12 +418,25 @@ export const translations = {
       benefit2: "Priority technical support directly with our engineers.",
       benefit3: "Custom acoustic models optimized for your warehouse background noise.",
       formTitle: "Apply for Pilot Access",
+      labelName: "Your Name",
+      namePlaceholder: "e.g., John Smith",
       labelCompany: "Company Name",
       labelEmail: "Contact Email",
-      labelWarehouse: "Warehouse Size / Sector",
-      placeholderWarehouse: "e.g., Beverage Distribution, 1200m²",
+      labelVolumen: "Catalog Size",
+      volumenOptions: {
+        "0-50": "Fewer than 50 products",
+        "51-200": "51 to 200 products",
+        "201-500": "201 to 500 products",
+        "500+": "More than 500 products"
+      },
       btnSubmit: "Submit Application",
-      successMsg: "Application received! Our team will get in touch shortly."
+      btnLoading: "Sending...",
+      successMsg: "Application received! Check your email for the confirmation.",
+      errors: {
+        duplicate: "This email is already registered in the pilot program.",
+        generic: "Could not send the application. Please try again.",
+        unreachable: "Error: the server is unreachable."
+      }
     },
     register: {
       title: "Register Operator",
@@ -439,7 +445,7 @@ export const translations = {
       namePlaceholder: "e.g. John Doe",
       emailLabel: "Corporate Email",
       passLabel: "Access Password",
-      passPlaceholder: "Minimum 6 characters",
+      passPlaceholder: "Minimum 8 characters",
       confirmLabel: "Confirm Password",
       confirmPlaceholder: "Repeat password",
       strengthLabel: "Password Strength",
@@ -451,7 +457,7 @@ export const translations = {
       errors: {
         required: "Please fill in all required fields.",
         match: "Passwords do not match.",
-        length: "Password must be at least 6 characters.",
+        length: "Password must be at least 8 characters.",
         validation: "Form validation error.",
         generic: "Error during registration.",
         unreachable: "Critical error: Server unreachable."
@@ -485,16 +491,6 @@ export const translations = {
       btnSubmit: "进入仓库",
       btnLoading: "正在验证...",
       back: "返回首页"
-    },
-    register: {
-      title: "注册操作员",
-      subtitle: "创建新凭证以访问 WMS 仓库管理系统。",
-      nameLabel: "全名",
-      emailLabel: "公司邮箱",
-      passLabel: "访问密码",
-      confirmLabel: "确认密码",
-      btnSubmit: "确认注册",
-      btnLoading: "正在创建账户..."
     },
     manual: {
       title: "操作与错误控制指南",
@@ -655,12 +651,25 @@ export const translations = {
       benefit2: "与我们的核心研发工程师直接对接，享有最高优先级的技术支持。",
       benefit3: "针对您仓库的特定背景噪音，定制专属的声学识别模型。",
       formTitle: "申请试点入驻",
+      labelName: "您的姓名",
+      namePlaceholder: "例如：张三",
       labelCompany: "企业 / 公司名称",
       labelEmail: "业务联系邮箱",
-      labelWarehouse: "仓库规模 / 所属行业",
-      placeholderWarehouse: "例如：饮品物流仓储，1200平米",
+      labelVolumen: "商品目录规模",
+      volumenOptions: {
+        "0-50": "少于 50 件商品",
+        "51-200": "51 至 200 件商品",
+        "201-500": "201 至 500 件商品",
+        "500+": "超过 500 件商品"
+      },
       btnSubmit: "提交入驻申请",
-      successMsg: "申请已成功提交！我们的团队将尽快与您取得联系。"
+      btnLoading: "正在发送...",
+      successMsg: "申请已成功提交！请查收确认邮件。",
+      errors: {
+        duplicate: "该邮箱已在试点计划中注册。",
+        generic: "申请发送失败，请重试。",
+        unreachable: "错误：无法连接到服务器。"
+      }
     },
     register: {
       title: "注册仓储操作员",
@@ -669,7 +678,7 @@ export const translations = {
       namePlaceholder: "例如：张三",
       emailLabel: "企业电子邮箱",
       passLabel: "访问密码",
-      passPlaceholder: "至少 6 个字符",
+      passPlaceholder: "至少 8 个字符",
       confirmLabel: "确认密码",
       confirmPlaceholder: "请再次输入密码",
       strengthLabel: "密码强度",
@@ -681,7 +690,7 @@ export const translations = {
       errors: {
         required: "请填写所有必填字段。",
         match: "两次输入的密码不一致。",
-        length: "密码长度必须至少为 6 个字符。",
+        length: "密码长度必须至少为 8 个字符。",
         validation: "表单验证错误。",
         generic: "注册过程中发生错误。",
         unreachable: "关键错误：无法连接到服务器。"

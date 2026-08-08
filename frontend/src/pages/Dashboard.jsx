@@ -21,7 +21,10 @@ export default function Dashboard() {
   const [cargando, setCargando] = useState(true);
   const [rangoTiempo, setRangoTiempo] = useState("1d");
 
-  const movimientos = Array.isArray(storeMovimientos) ? storeMovimientos : [];
+  const movimientos = useMemo(
+    () => (Array.isArray(storeMovimientos) ? storeMovimientos : []),
+    [storeMovimientos]
+  );
 
   const totalMovimientos = movimientos.length;
   const totalEntradas = movimientos.filter((m) => m.action === "suma").length;
@@ -46,8 +49,8 @@ export default function Dashboard() {
       const fechaObj = new Date(mov.dateTime);
       if (isNaN(fechaObj.getTime())) return;
 
-      let claveEtiqueta = "";
-      let timestampOrden = 0;
+      let claveEtiqueta;
+      let timestampOrden;
 
       // CORRECCIÓN MATEMÁTICA: Creamos un timestamp absoluto para el inicio exacto del bloque de tiempo
       if (rangoTiempo === "1d") {
@@ -102,7 +105,8 @@ export default function Dashboard() {
       return;
     }
 
-    let isMounted = true; 
+    let isMounted = true;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- loading flag para el fetch que arranca justo debajo, patrón estándar de React
     setCargando(true);
 
     const baseApiUrl = getApiBaseUrl();
