@@ -458,8 +458,26 @@ def procesar_comando(payload: ComandoPayload, db: Session = Depends(get_db), cur
         return {"estado": "error", "mensaje": f"No encontré el producto. Lo más parecido es '{mejor_coincidencia}' pero no estoy seguro."}
         
     producto_objetivo = next(p for p in productos_db if p.nombre.lower() == mejor_coincidencia)
-    
+
     try:
+        # Bloqueamos la fila (SELECT ... FOR UPDATE) justo antes de leer/modificar
+        # el stock: sin esto, dos comandos de voz concurrentes sobre el mismo
+        # producto pueden leer el mismo valor antes de que el otro confirme su
+        # cambio, y uno de los dos incrementos/decrementos se pierde ("lost update").
+        # populate_existing() es imprescindible: producto_objetivo ya estaba en el
+        # identity map de la sesión (viene del .all() de más arriba), así que sin
+        # esto SQLAlchemy devolvía el objeto Python cacheado con el stock viejo en
+        # vez de refrescar sus atributos con la fila recién bloqueada — el lock se
+        # adquiría bien a nivel de base de datos, pero se seguía leyendo un valor
+        # obsoleto en Python.
+        producto_objetivo = (
+            db.query(Producto)
+            .filter(Producto.id == producto_objetivo.id)
+            .populate_existing()
+            .with_for_update()
+            .one()
+        )
+
         if accion == "resta":
             if producto_objetivo.stock < cantidad:
                 return {"estado": "error", "mensaje": f"Stock insuficiente. Solo hay {producto_objetivo.stock} de {producto_objetivo.nombre}."}
