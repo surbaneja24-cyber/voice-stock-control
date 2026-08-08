@@ -1,6 +1,6 @@
 import os
 import html
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Literal
 from pydantic import BaseModel, Field, EmailStr, field_validator
 from fastapi import FastAPI, HTTPException, Depends, status, Request, Response
@@ -79,15 +79,25 @@ if not SECRET_KEY:
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7
 
-# --- EMAIL TRANSACCIONAL (confirmación de solicitud al programa piloto) ---
+# --- EMAIL TRANSACCIONAL (aviso interno de nuevo lead del programa piloto) ---
+# NOTA: con el remitente de pruebas "onboarding@resend.dev", Resend solo deja
+# enviar a la propia dirección con la que os registrasteis en Resend. Por eso
+# el email ya NO se manda al lead (fallaría con 403 salvo que sea vuestra
+# propia cuenta) sino a ADMIN_NOTIFICATION_EMAIL, como aviso interno. Los
+# leads se ven todos en /admin. Para confirmar por correo al propio lead hará
+# falta verificar un dominio propio en resend.com/domains.
 RESEND_API_KEY = os.getenv("RESEND_API_KEY")
+ADMIN_NOTIFICATION_EMAIL = os.getenv("ADMIN_NOTIFICATION_EMAIL")
 if RESEND_API_KEY:
     resend.api_key = RESEND_API_KEY
 
-def _plantilla_email_confirmacion_piloto(nombre: str) -> str:
-    # html.escape evita inyección de HTML/markup: "nombre" lo escribe el
-    # usuario en el formulario público y se interpola directo en el email.
-    nombre_seguro = html.escape(nombre)
+def _plantilla_email_notificacion_lead(lead: "LeadCreate") -> str:
+    # html.escape evita inyección de HTML/markup: estos campos los escribe
+    # el usuario en el formulario público y se interpolan directo en el email.
+    nombre_seguro = html.escape(lead.nombre)
+    empresa_segura = html.escape(lead.empresa)
+    email_seguro = html.escape(lead.email)
+    volumen_seguro = html.escape(lead.volumen)
     anio = datetime.utcnow().year
     return f"""\
 <div style="font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; max-width: 560px; margin: 0 auto; color: #1e293b;">
@@ -95,48 +105,43 @@ def _plantilla_email_confirmacion_piloto(nombre: str) -> str:
     <span style="color: #ffffff; font-size: 20px; font-weight: 800; letter-spacing: 0.5px;">MY<span style="color: #bfdbfe;">STOCK</span></span>
   </div>
   <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-top: none; padding: 32px; border-radius: 0 0 12px 12px;">
-    <h1 style="font-size: 18px; margin: 0 0 16px;">Hola {nombre_seguro},</h1>
-    <p style="font-size: 14px; line-height: 1.6; color: #334155; margin: 0 0 16px;">
-      Hemos recibido tu solicitud para unirte al <strong>programa piloto de MyStock</strong>.
-      Nuestro equipo la revisará y se pondrá en contacto contigo en los próximos días
-      hábiles a través de este mismo correo.
-    </p>
-    <p style="font-size: 14px; line-height: 1.6; color: #334155; margin: 0 0 24px;">
-      Mientras tanto, si tienes cualquier pregunta puedes responder directamente a
-      este correo.
-    </p>
-    <p style="font-size: 14px; line-height: 1.6; color: #334155; margin: 0;">
-      — El equipo de MyStock
+    <h1 style="font-size: 18px; margin: 0 0 16px;">Nuevo lead del programa piloto</h1>
+    <table style="width: 100%; font-size: 14px; color: #334155; border-collapse: collapse;">
+      <tr><td style="padding: 6px 0; color: #64748b;">Nombre</td><td style="padding: 6px 0; font-weight: 600;">{nombre_seguro}</td></tr>
+      <tr><td style="padding: 6px 0; color: #64748b;">Empresa</td><td style="padding: 6px 0; font-weight: 600;">{empresa_segura}</td></tr>
+      <tr><td style="padding: 6px 0; color: #64748b;">Email</td><td style="padding: 6px 0; font-weight: 600;">{email_seguro}</td></tr>
+      <tr><td style="padding: 6px 0; color: #64748b;">Volumen</td><td style="padding: 6px 0; font-weight: 600;">{volumen_seguro}</td></tr>
+    </table>
+    <p style="font-size: 13px; line-height: 1.6; color: #64748b; margin: 24px 0 0;">
+      Consulta el listado completo en el panel de administración.
     </p>
   </div>
   <div style="padding: 20px 8px; text-align: center;">
     <p style="font-size: 11px; color: #94a3b8; line-height: 1.6; margin: 0;">
-      © {anio} MyStock. Todos los derechos reservados.<br>
-      Recibes este correo porque solicitaste información sobre el programa piloto
-      de MyStock a través de nuestro sitio web.
+      © {anio} MyStock. Aviso interno automático.
     </p>
   </div>
 </div>"""
 
-def enviar_email_confirmacion_piloto(destinatario: str, nombre: str) -> None:
-    if not RESEND_API_KEY:
+def enviar_notificacion_nuevo_lead(lead: "LeadCreate") -> None:
+    if not RESEND_API_KEY or not ADMIN_NOTIFICATION_EMAIL:
         # No es un error fatal: el lead ya quedó guardado en la base de datos,
-        # el correo es un plus. Sin la key configurada, simplemente se omite
-        # (útil en desarrollo local, donde no hace falta tener Resend a mano).
-        print("[AVISO] RESEND_API_KEY no configurada, se omite el email de confirmación.")
+        # el correo es un plus. Sin la key o el destinatario configurados,
+        # simplemente se omite (útil en desarrollo local).
+        print("[AVISO] RESEND_API_KEY o ADMIN_NOTIFICATION_EMAIL no configurados, se omite el aviso de nuevo lead.")
         return
     try:
         resend.Emails.send({
-            "from": "Equipo de MyStock <onboarding@resend.dev>",
-            "to": [destinatario],
-            "subject": "Hemos recibido tu solicitud para el piloto de MyStock",
-            "html": _plantilla_email_confirmacion_piloto(nombre),
+            "from": "MyStock <onboarding@resend.dev>",
+            "to": [ADMIN_NOTIFICATION_EMAIL],
+            "subject": f"Nuevo lead del piloto: {lead.empresa}",
+            "html": _plantilla_email_notificacion_lead(lead),
         })
     except Exception as e:
         # Un fallo al enviar el correo no debe tumbar el registro del lead: los
         # datos ya están guardados, el email es un aviso adicional, no un
         # requisito para que el registro cuente como éxito.
-        print(f"[ERROR EMAIL CONFIRMACIÓN PILOTO]: {str(e)}")
+        print(f"[ERROR EMAIL AVISO NUEVO LEAD]: {str(e)}")
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -301,6 +306,11 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
         raise credentials_exception
     return user
 
+def get_admin_user(current_user: Usuario = Depends(get_current_user)) -> Usuario:
+    if current_user.rol != "admin":
+        raise HTTPException(status_code=403, detail="Acceso restringido a administradores.")
+    return current_user
+
 # --- SEMILLA DE CATÁLOGO ---
 def sembrar_catalogo_para_usuario(db: Session, usuario_id: int):
     productos_seed = [
@@ -354,7 +364,10 @@ def login_usuario(request: Request, user: UsuarioLogin, response: Response, db: 
     db_user = db.query(Usuario).filter(Usuario.email == user.email).first()
     if not db_user or not verificar_password(user.password, db_user.password_hash):
         raise HTTPException(status_code=400, detail="Credenciales incorrectas. Verifique correo y contraseña.")
-    
+
+    db_user.last_login = datetime.now(timezone.utc)
+    db.commit()
+
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = crear_token_acceso(data={"sub": db_user.email}, expires_delta=access_token_expires)
     
@@ -425,9 +438,38 @@ def registrar_lead_piloto(request: Request, lead: LeadCreate, db: Session = Depe
         db.rollback()
         raise HTTPException(status_code=500, detail="Error interno al guardar prospecto.")
 
-    enviar_email_confirmacion_piloto(lead.email, lead.nombre)
+    enviar_notificacion_nuevo_lead(lead)
 
     return {"status": "success", "mensaje": "Solicitud procesada correctamente."}
+
+@app.get("/api/admin/leads")
+def obtener_leads_piloto(db: Session = Depends(get_db), admin: Usuario = Depends(get_admin_user)):
+    return db.query(LeadPiloto).order_by(LeadPiloto.fecha_registro.desc()).all()
+
+@app.get("/api/admin/stats")
+def obtener_estadisticas_admin(db: Session = Depends(get_db), admin: Usuario = Depends(get_admin_user)):
+    total_usuarios = db.query(func.count(Usuario.id)).scalar()
+
+    filas_por_plan = db.query(Usuario.plan, func.count(Usuario.id)).group_by(Usuario.plan).all()
+    usuarios_por_plan = {plan: cantidad for plan, cantidad in filas_por_plan}
+
+    # "Activo" = ha iniciado sesión en los últimos 7 días (Usuario.last_login,
+    # que se actualiza en cada /api/login). Los usuarios que no han vuelto a
+    # loguear desde que se añadió la columna cuentan como inactivos hasta
+    # su próximo login.
+    limite_actividad = datetime.now(timezone.utc) - timedelta(days=7)
+    usuarios_activos_7d = db.query(func.count(Usuario.id)).filter(
+        Usuario.last_login >= limite_actividad
+    ).scalar()
+
+    total_leads_piloto = db.query(func.count(LeadPiloto.id)).scalar()
+
+    return {
+        "total_usuarios": total_usuarios,
+        "usuarios_por_plan": usuarios_por_plan,
+        "usuarios_activos_7d": usuarios_activos_7d,
+        "total_leads_piloto": total_leads_piloto,
+    }
 
 @app.get("/api/pricing")
 def obtener_planes_monetizacion():

@@ -15,9 +15,12 @@ class Usuario(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     password_hash = Column(String, nullable=False)
     rol = Column(String, default="operario")
-    
+
     # NUEVO: Control de cuotas de monetización (lite, pro, industrial)
     plan = Column(String, default="lite", nullable=False)
+
+    # Nullable: los usuarios existentes no tienen valor hasta su próximo login.
+    last_login = Column(DateTime(timezone=True), nullable=True)
 
     # Relaciones
     productos = relationship("Producto", back_populates="dueno", cascade="all, delete-orphan")

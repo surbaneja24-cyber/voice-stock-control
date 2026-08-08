@@ -1,4 +1,4 @@
-import { LayoutDashboard, Mic, Clock, Settings, Menu, ChevronLeft, X } from "lucide-react";
+import { LayoutDashboard, Mic, Clock, Settings, Menu, ChevronLeft, X, ShieldCheck } from "lucide-react";
 import { Link, useLocation } from "react-router-dom"; 
 import { useThemeStore } from "../store/themeStore";
 import { useAuthStore } from "../store/authStore";
@@ -82,6 +82,12 @@ const Sidebar = ({ isOpen = false, setIsOpen = () => {} }) => {
                 <Settings size={24} className="shrink-0" />
                 <span className="tracking-wide text-lg">{t.settings || "Ajustes"}</span>
               </Link>
+              {usuario?.rol === "admin" && (
+                <Link to="/admin" onClick={handleMobileNav} className={`${baseLinkClass} ${rutaActual === "/admin" ? activeClass : inactiveClass}`}>
+                  <ShieldCheck size={24} className="shrink-0" />
+                  <span className="tracking-wide text-lg">{t.admin || "Panel Admin"}</span>
+                </Link>
+              )}
             </nav>
           </div>
 
@@ -138,6 +144,13 @@ const Sidebar = ({ isOpen = false, setIsOpen = () => {} }) => {
               <Settings size={22} className="shrink-0" />
               {isOpen && <span className="tracking-wide whitespace-nowrap">{t.settings || "Ajustes"}</span>}
             </Link>
+
+            {usuario?.rol === "admin" && (
+              <Link to="/admin" className={`flex items-center ${isOpen ? "gap-3 px-4" : "justify-center px-0 w-12"} py-3 rounded-lg transition-all duration-300 ${rutaActual === "/admin" ? activeClass : inactiveClass}`}>
+                <ShieldCheck size={22} className="shrink-0" />
+                {isOpen && <span className="tracking-wide whitespace-nowrap">{t.admin || "Panel Admin"}</span>}
+              </Link>
+            )}
           </nav>
         </div>
 
