@@ -17,3 +17,12 @@ frontend/.vite/
 # Archivos residuales del Sistema Operativo
 .DS_Store
 Thumbs.db
+
+# Bases de datos locales de desarrollo (la producción usa Neon/Postgres)
+instance/
+*.db
+*.sqlite
+*.sqlite3
+
+# Dependencias en la raíz (el proyecto vive en frontend/ y backend/)
+/node_modules/

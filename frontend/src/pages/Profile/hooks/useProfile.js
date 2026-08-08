@@ -46,6 +46,7 @@ export const useProfile = () => {
     }, [usuarioAuth]);
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- carga el perfil al montar; se reescribe en la Fase 3 (perfil real)
         loadProfile();
     }, [loadProfile]);
 

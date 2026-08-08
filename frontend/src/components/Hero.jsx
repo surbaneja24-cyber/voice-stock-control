@@ -4,7 +4,7 @@ import BlurText from "./BlurText";
 import { useLanguageStore } from "../store/languageStore";
 import { translations } from "../utils/translations";
 
-function Hero({ isDarkMode }) {
+function Hero() {
   const navigate = useNavigate();
   
   // 1. Extraemos el idioma activo desde Zustand

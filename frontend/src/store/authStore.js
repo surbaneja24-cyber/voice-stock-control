@@ -6,7 +6,7 @@ const BASE_API_URL = getApiBaseUrl();
 
 export const useAuthStore = create(
   persist(
-    (set, get) => ({
+    (set) => ({
       usuario: null,
       estaAutenticado: false,
 

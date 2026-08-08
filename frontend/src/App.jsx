@@ -41,7 +41,6 @@ function ProtectedLayout() {
   );
 }
 
-// ESTA ES LA LÍNEA QUE BORRASTE POR ERROR:
 export default function App() {
   return (
     <Routes>

@@ -80,37 +80,24 @@ export default function Terminal() {
 
   useEffect(() => {
     if (!mostrarModalSectores) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- fetchCatalogo es async, el setState real ocurre tras el await
       fetchCatalogo();
     }
   }, [fetchCatalogo, mostrarModalSectores]);
 
-  useEffect(() => {
-    if (transcript && !isProcessing) {
-      procesarComandoIA(transcript);
-    }
-  }, [transcript]);
-
-  const handleSubmitTexto = (e) => {
-    e.preventDefault();
-    if (textoManual.trim() && !isProcessing) {
-      procesarComandoIA(textoManual);
-      setTextoManual("");
-    }
-  };
-
-  const procesarComandoIA = async (textoComando) => {
-    if (isProcessing) return; 
+  const procesarComandoIA = useCallback(async (textoComando) => {
+    if (isProcessing) return;
     setIsProcessing(true);
 
     setRespuestaIA({ transcripcion: textoComando, mensaje: "Procesando intención con IA...", estado: "idle" });
 
     try {
       // REFACTOR: Uso de authenticatedFetch
-      const respuesta = await authenticatedFetch(`${baseApiUrl}/api/procesar-comando`, { 
-        method: "POST", 
-        body: JSON.stringify({ comando: textoComando, sector: sectorActivo }) 
+      const respuesta = await authenticatedFetch(`${baseApiUrl}/api/procesar-comando`, {
+        method: "POST",
+        body: JSON.stringify({ comando: textoComando, sector: sectorActivo })
       });
-      
+
       const datos = await respuesta.json();
 
       if (respuesta.ok) {
@@ -118,7 +105,7 @@ export default function Terminal() {
         if (datos.estado === "completado") {
           addMovimiento({
             dateTime: new Date().toISOString(),
-            user: usuario?.nombre || "Operario Anónimo", 
+            user: usuario?.nombre || "Operario Anónimo",
             action: datos.accion,
             product: datos.producto,
             quantity: datos.cantidad,
@@ -130,14 +117,29 @@ export default function Terminal() {
       } else {
         setRespuestaIA({ transcripcion: textoComando, mensaje: "Fallo del motor: " + (datos.detail || datos.error), estado: "error" });
       }
-    } catch (error) {
+    } catch {
       setRespuestaIA({ transcripcion: "Fallo de red o sesión expirada.", mensaje: "Error Critico: Acción denegada.", estado: "error" });
     } finally {
-      setIsProcessing(false); 
+      setIsProcessing(false);
+    }
+  }, [isProcessing, authenticatedFetch, baseApiUrl, sectorActivo, addMovimiento, usuario, modoTexto, fetchCatalogo]);
+
+  useEffect(() => {
+    if (transcript && !isProcessing) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- procesarComandoIA es async, el setState real ocurre tras el await
+      procesarComandoIA(transcript);
+    }
+  }, [transcript, isProcessing, procesarComandoIA]);
+
+  const handleSubmitTexto = (e) => {
+    e.preventDefault();
+    if (textoManual.trim() && !isProcessing) {
+      procesarComandoIA(textoManual);
+      setTextoManual("");
     }
   };
 
-  const handleApproveProducto = async (e) => { 
+  const handleApproveProducto = async (e) => {
     e.preventDefault();
     if (!nuevoItemNombre.trim()) return;
     const payload = { nombre: nuevoItemNombre, stock: parseInt(nuevoItemStock) || 0, sector: sectorActivo };

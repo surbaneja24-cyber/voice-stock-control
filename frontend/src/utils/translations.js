@@ -26,16 +26,6 @@ export const translations = {
       btnLoading: "Autenticando...",
       back: "Volver al inicio"
     },
-    register: {
-      title: "Registrar Operario",
-      subtitle: "Crea una credencial nueva para el acceso al WMS.",
-      nameLabel: "Nombre Completo",
-      emailLabel: "Correo Corporativo",
-      passLabel: "Contraseña de Acceso",
-      confirmLabel: "Confirmar Contraseña",
-      btnSubmit: "Confirmar Registro",
-      btnLoading: "Creando cuenta..."
-    },
     manual: {
       title: "Guía de Operación y Control de Errores",
       subtitle: "Manual técnico para operarios y administradores del motor de voz MyStock.",
@@ -256,16 +246,6 @@ export const translations = {
       btnLoading: "Authenticating...",
       back: "Back to home"
     },
-    register: {
-      title: "Register Operator",
-      subtitle: "Create a new credential to access the WMS.",
-      nameLabel: "Full Name",
-      emailLabel: "Corporate Email",
-      passLabel: "Access Password",
-      confirmLabel: "Confirm Password",
-      btnSubmit: "Confirm Registration",
-      btnLoading: "Creating account..."
-    },
     manual: {
       title: "Operation and Error Control Guide",
       subtitle: "Technical manual for operators and administrators of the MyStock voice engine.",
@@ -485,16 +465,6 @@ export const translations = {
       btnSubmit: "进入仓库",
       btnLoading: "正在验证...",
       back: "返回首页"
-    },
-    register: {
-      title: "注册操作员",
-      subtitle: "创建新凭证以访问 WMS 仓库管理系统。",
-      nameLabel: "全名",
-      emailLabel: "公司邮箱",
-      passLabel: "访问密码",
-      confirmLabel: "确认密码",
-      btnSubmit: "确认注册",
-      btnLoading: "正在创建账户..."
     },
     manual: {
       title: "操作与错误控制指南",

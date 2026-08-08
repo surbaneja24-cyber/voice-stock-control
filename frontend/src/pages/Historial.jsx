@@ -31,6 +31,7 @@ export default function Historial() {
     }
 
     let isMounted = true;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- loading flag para el fetch que arranca justo debajo, patrón estándar de React
     setCargando(true);
 
     const baseApiUrl = getApiBaseUrl();
