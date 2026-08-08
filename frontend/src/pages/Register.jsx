@@ -50,7 +50,7 @@ export default function Register() {
       return;
     }
 
-    if (formData.password.length < 6) {
+    if (formData.password.length < 8) {
       setError(t.errors.length);
       return;
     }

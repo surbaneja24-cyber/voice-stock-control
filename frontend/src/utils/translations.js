@@ -199,7 +199,7 @@ export const translations = {
       namePlaceholder: "Ej. Juan Pérez",
       emailLabel: "Correo Corporativo",
       passLabel: "Contraseña de Acceso",
-      passPlaceholder: "Mínimo 6 caracteres",
+      passPlaceholder: "Mínimo 8 caracteres",
       confirmLabel: "Confirmar Contraseña",
       confirmPlaceholder: "Repite la contraseña",
       strengthLabel: "Fuerza de la contraseña",
@@ -211,7 +211,7 @@ export const translations = {
       errors: {
         required: "Por favor, completa todos los campos requeridos.",
         match: "Las contraseñas no coinciden.",
-        length: "La contraseña debe tener al menos 6 caracteres.",
+        length: "La contraseña debe tener al menos 8 caracteres.",
         validation: "Error de validación en el formulario.",
         generic: "Error en el proceso de registro.",
         unreachable: "Error crítico: Servidor inalcanzable."
@@ -419,7 +419,7 @@ export const translations = {
       namePlaceholder: "e.g. John Doe",
       emailLabel: "Corporate Email",
       passLabel: "Access Password",
-      passPlaceholder: "Minimum 6 characters",
+      passPlaceholder: "Minimum 8 characters",
       confirmLabel: "Confirm Password",
       confirmPlaceholder: "Repeat password",
       strengthLabel: "Password Strength",
@@ -431,7 +431,7 @@ export const translations = {
       errors: {
         required: "Please fill in all required fields.",
         match: "Passwords do not match.",
-        length: "Password must be at least 6 characters.",
+        length: "Password must be at least 8 characters.",
         validation: "Form validation error.",
         generic: "Error during registration.",
         unreachable: "Critical error: Server unreachable."
@@ -639,7 +639,7 @@ export const translations = {
       namePlaceholder: "例如：张三",
       emailLabel: "企业电子邮箱",
       passLabel: "访问密码",
-      passPlaceholder: "至少 6 个字符",
+      passPlaceholder: "至少 8 个字符",
       confirmLabel: "确认密码",
       confirmPlaceholder: "请再次输入密码",
       strengthLabel: "密码强度",
@@ -651,7 +651,7 @@ export const translations = {
       errors: {
         required: "请填写所有必填字段。",
         match: "两次输入的密码不一致。",
-        length: "密码长度必须至少为 6 个字符。",
+        length: "密码长度必须至少为 8 个字符。",
         validation: "表单验证错误。",
         generic: "注册过程中发生错误。",
         unreachable: "关键错误：无法连接到服务器。"

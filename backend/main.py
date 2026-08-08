@@ -1,16 +1,19 @@
-import asyncio
 import os
 from datetime import datetime, timedelta
-from typing import Literal, List
-from pydantic import BaseModel, Field, EmailStr
+from typing import Literal
+from pydantic import BaseModel, Field, EmailStr, field_validator
 from fastapi import FastAPI, HTTPException, Depends, status, Request, Response
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 import re
 from thefuzz import process
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 from database import engine, Base, get_db
 from models import Producto, Movimiento, Usuario, LeadPiloto
@@ -19,6 +22,49 @@ from models import Producto, Movimiento, Usuario, LeadPiloto
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="MyStock IA Motor - Secure Edition")
+
+# --- RATE LIMITING (fuerza bruta en login/registro) ---
+def obtener_ip_cliente(request: Request) -> str:
+    # El frontend en Vercel actúa de proxy hacia este backend (ver vercel.json),
+    # así que la conexión TCP real siempre llega desde la IP de Vercel, no la
+    # del usuario. Sin esto, el límite se compartiría entre TODOS los usuarios
+    # de la app en vez de aplicarse por persona.
+    #
+    # Tomamos el ÚLTIMO valor de X-Forwarded-For, no el primero: los proxies
+    # AÑADEN al final de la cadena la IP que ellos observaron, así que el
+    # último valor es el que puso Vercel (el único hop en el que confiamos),
+    # no lo que un atacante haya podido escribir en la cabecera antes de que
+    # nos llegue. Con esto, alguien que llame directo al backend (sin pasar
+    # por Vercel) ya no puede rotar un X-Forwarded-For propio para saltarse
+    # el límite simplemente añadiendo un valor cualquiera delante.
+    #
+    # LIMITACIÓN CONOCIDA (residual, aceptada para el tamaño actual del
+    # proyecto): esto asume que Vercel efectivamente añade/establece su propio
+    # valor como último elemento de la cadena, cosa que no se ha podido
+    # verificar contra la infraestructura real desplegada. Y sigue sin cerrar
+    # del todo el caso de llamar directo a la URL pública de Render: ahí no
+    # hay ningún proxy de confianza en absoluto, así que cualquier valor que
+    # el propio atacante escriba en X-Forwarded-For pasaría como "el último".
+    # Cerrar esto de verdad requeriría bloquear el acceso directo a Render o
+    # validar un secreto compartido entre Vercel y el backend.
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[-1].strip()
+    return get_remote_address(request)
+
+limiter = Limiter(key_func=obtener_ip_cliente)
+app.state.limiter = limiter
+
+@app.exception_handler(RateLimitExceeded)
+async def manejador_limite_excedido(request: Request, exc: RateLimitExceeded):
+    # slowapi devuelve por defecto {"error": "..."} en vez de {"detail": "..."},
+    # inconsistente con el resto de la API (400/422/413 usan "detail"), lo que
+    # hacía que el frontend no supiera leer el motivo real del 429 y mostrara
+    # un mensaje genérico o incluso "Credenciales inválidas" en el login.
+    return JSONResponse(
+        status_code=429,
+        content={"detail": "Demasiados intentos. Espera un minuto e inténtalo de nuevo."},
+    )
 
 # --- CONFIGURACIÓN DE SEGURIDAD Y JWT ---
 SECRET_KEY = os.getenv("SECRET_KEY")
@@ -31,8 +77,6 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7 
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-# Mantenemos oauth2_scheme para compatibilidad con la documentación de Swagger, aunque usemos cookies
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/login", auto_error=False) 
 
 # REFACTOR: Soporte dual para producción y entorno de desarrollo local
 app.add_middleware(
@@ -41,36 +85,93 @@ app.add_middleware(
         "https://voice-stock-control.vercel.app",
         "http://localhost:5173",
         "http://127.0.0.1:5173"
-    ], 
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# --- LÍMITE DE TAMAÑO DE PAYLOAD (evita DoS de memoria con bodies enormes) ---
+MAX_BODY_SIZE_BYTES = 1 * 1024 * 1024  # 1 MB, de sobra para JSON de texto/comandos de voz
+
+@app.middleware("http")
+async def limitar_tamano_body(request: Request, call_next):
+    # Comprobar solo la cabecera Content-Length no basta: con
+    # Transfer-Encoding: chunked el cliente no manda esa cabecera y el body
+    # pasaría sin límite. Leemos el stream real byte a byte y cortamos en
+    # cuanto se supera el límite, sin depender de lo que el cliente declare.
+    cuerpo = bytearray()
+    async for chunk in request.stream():
+        cuerpo.extend(chunk)
+        if len(cuerpo) > MAX_BODY_SIZE_BYTES:
+            return JSONResponse(status_code=413, content={"detail": "Cuerpo de la petición demasiado grande."})
+    # Starlette cachea el body en request._body; si no lo dejamos ya puesto,
+    # el endpoint no podría releerlo porque el stream ya quedó consumido aquí.
+    request._body = bytes(cuerpo)
+    return await call_next(request)
+
+# --- CABECERAS DE SEGURIDAD HTTP ---
+RUTAS_SIN_CSP_ESTRICTA = {"/docs", "/redoc", "/openapi.json", "/docs/oauth2-redirect"}
+
+@app.middleware("http")
+async def anadir_cabeceras_seguridad(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "geolocation=(), camera=(), microphone=(self)"
+    response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
+    # Swagger UI (/docs) carga su JS/CSS desde cdn.jsdelivr.net y usa scripts
+    # inline: con "default-src 'none'" quedaría en blanco. Esta API no sirve
+    # HTML propio salvo esas rutas de documentación, así que ahí relajamos el
+    # CSP lo justo para que Swagger funcione; el resto de la API mantiene la
+    # política estricta (no sirve HTML, no hay nada que ejecutar de todas formas).
+    if request.url.path in RUTAS_SIN_CSP_ESTRICTA:
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+            "img-src 'self' data: https://cdn.jsdelivr.net; "
+            "connect-src 'self'; "
+            "frame-ancestors 'none'"
+        )
+    else:
+        response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'"
+    return response
+
 # --- VALIDACIONES PYDANTIC ---
 class UsuarioRegistro(BaseModel):
     nombre: str = Field(..., min_length=2, max_length=100)
     email: EmailStr
-    password: str = Field(..., min_length=6, max_length=72)
+    password: str = Field(..., min_length=8, max_length=72)
+
+    @field_validator("password")
+    @classmethod
+    def password_no_supera_limite_bcrypt(cls, v: str) -> str:
+        # bcrypt trunca en silencio a 72 BYTES, no caracteres: con acentos/emoji
+        # una contraseña de "72 caracteres" puede pesar más y perder entropía sin avisar.
+        if len(v.encode("utf-8")) > 72:
+            raise ValueError("La contraseña no puede exceder los 72 bytes (los acentos/emoji cuentan más de 1 byte).")
+        return v
 
 class UsuarioLogin(BaseModel):
-    email: str
-    password: str
+    email: EmailStr
+    password: str = Field(..., max_length=72)
 
 class NuevoProducto(BaseModel):
-    nombre: str
+    nombre: str = Field(..., min_length=1, max_length=150)
     stock: int = 0
-    sector: str
+    sector: str = Field(..., min_length=1, max_length=50)
 
 class LeadCreate(BaseModel):
-    nombre: str = Field(..., min_length=2)
-    empresa: str = Field(..., min_length=2)
-    email: str 
+    nombre: str = Field(..., min_length=2, max_length=100)
+    empresa: str = Field(..., min_length=2, max_length=100)
+    email: EmailStr
     volumen: Literal["0-50", "51-200", "201-500", "500+"]
 
 class ComandoPayload(BaseModel):
     comando: str = Field(..., max_length=200)
-    sector: str
+    sector: str = Field(..., min_length=1, max_length=50)
 
 # --- DICCIONARIO DE NÚMEROS ---
 MAPEO_NUMEROS = {
@@ -151,13 +252,11 @@ def sembrar_catalogo_para_usuario(db: Session, usuario_id: int):
 # ==========================================
 
 @app.post("/api/registro")
-def registrar_usuario(user: UsuarioRegistro, db: Session = Depends(get_db)):
-    if not user.password or len(user.password) > 72:
-        raise HTTPException(status_code=400, detail="La contraseña no puede exceder los 72 caracteres de seguridad.")
-
+@limiter.limit("5/minute")
+def registrar_usuario(request: Request, user: UsuarioRegistro, db: Session = Depends(get_db)):
     db_user = db.query(Usuario).filter(Usuario.email == user.email).first()
     if db_user:
-        raise HTTPException(status_code=400, detail="El correo electrónico ya está registrado.")
+        raise HTTPException(status_code=400, detail="No se pudo completar el registro con estos datos. Si ya tienes cuenta, inicia sesión.")
     
     try:
         nuevo_usuario = Usuario(
@@ -184,7 +283,8 @@ def registrar_usuario(user: UsuarioRegistro, db: Session = Depends(get_db)):
 
 # REFACTOR: Set-Cookie de alta seguridad
 @app.post("/api/login")
-def login_usuario(user: UsuarioLogin, response: Response, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+def login_usuario(request: Request, user: UsuarioLogin, response: Response, db: Session = Depends(get_db)):
     db_user = db.query(Usuario).filter(Usuario.email == user.email).first()
     if not db_user or not verificar_password(user.password, db_user.password_hash):
         raise HTTPException(status_code=400, detail="Credenciales incorrectas. Verifique correo y contraseña.")
@@ -276,9 +376,12 @@ def agregar_producto_personalizado(producto: NuevoProducto, db: Session = Depend
         if conteo_actual >= 50:
             raise HTTPException(status_code=400, detail="Límite del plan Lite alcanzado (Máx 50).")
 
+    # Comparación exacta insensible a mayúsculas, NO un patrón LIKE: con .ilike()
+    # un nombre que contuviera "%" o "_" se interpretaba como comodín SQL y
+    # daba falsos positivos de "producto duplicado" contra cualquier producto.
     producto_existente = db.query(Producto).filter(
         Producto.usuario_id == current_user.id,
-        Producto.nombre.ilike(producto.nombre)
+        func.lower(Producto.nombre) == producto.nombre.lower()
     ).first()
     
     if producto_existente:

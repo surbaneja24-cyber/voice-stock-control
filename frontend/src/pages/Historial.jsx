@@ -8,6 +8,14 @@ import { useThemeStore } from "../store/themeStore";
 import { useAuthStore } from "../store/authStore";
 import { getApiBaseUrl } from "../utils/apiBaseUrl";
 
+// Mitigación de CSV/Formula Injection (OWASP): si un nombre de producto/usuario
+// empieza por un carácter que Excel/LibreOffice interpretan como inicio de fórmula,
+// se antepone un apóstrofo para forzar que la celda se trate como texto plano.
+const sanitizarCeldaExcel = (valor) => {
+  if (typeof valor !== "string") return valor;
+  return /^[=+\-@\t\r]/.test(valor) ? `'${valor}` : valor;
+};
+
 export default function Historial() {
   const storeMovimientos = useHistoryStore((state) => state.movimientos);
   const setMovimientos = useHistoryStore((state) => state.setMovimientos);
@@ -79,10 +87,10 @@ export default function Historial() {
 
     const datosLimpios = movimientos.map(({ dateTime, user, product, quantity, method }) => ({
       "Fecha y Hora": dateTime ? new Date(dateTime).toLocaleString() : 'N/A',
-      "Usuario": user,
-      "Producto": product,
+      "Usuario": sanitizarCeldaExcel(user),
+      "Producto": sanitizarCeldaExcel(product),
       "Cantidad": quantity,
-      "Método": method
+      "Método": sanitizarCeldaExcel(method)
     }));
 
     const ws = XLSX.utils.json_to_sheet([]);
