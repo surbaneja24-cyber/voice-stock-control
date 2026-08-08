@@ -185,12 +185,25 @@ export const translations = {
       benefit2: "Soporte técnico prioritario directo con nuestros ingenieros.",
       benefit3: "Modelos acústicos personalizados adaptados al ruido de tu almacén.",
       formTitle: "Solicitar Acceso Piloto",
+      labelName: "Tu Nombre",
+      namePlaceholder: "Ej. Juan Pérez",
       labelCompany: "Nombre de la Empresa",
       labelEmail: "Correo Electrónico de Contacto",
-      labelWarehouse: "Tamaño del Almacén / Sector",
-      placeholderWarehouse: "Ej. Distribución de Bebidas, 1200m²",
+      labelVolumen: "Tamaño del Catálogo",
+      volumenOptions: {
+        "0-50": "Menos de 50 productos",
+        "51-200": "Entre 51 y 200 productos",
+        "201-500": "Entre 201 y 500 productos",
+        "500+": "Más de 500 productos"
+      },
       btnSubmit: "Enviar Solicitud",
-      successMsg: "¡Solicitud recibida! Nuestro equipo se pondrá en contacto pronto."
+      btnLoading: "Enviando...",
+      successMsg: "¡Solicitud recibida! Revisa tu correo para la confirmación.",
+      errors: {
+        duplicate: "Este correo ya está inscrito en el programa piloto.",
+        generic: "No se pudo enviar la solicitud. Inténtalo de nuevo.",
+        unreachable: "Error: el servidor es inalcanzable."
+      }
     },
     register: {
       title: "Registrar Operario",
@@ -405,12 +418,25 @@ export const translations = {
       benefit2: "Priority technical support directly with our engineers.",
       benefit3: "Custom acoustic models optimized for your warehouse background noise.",
       formTitle: "Apply for Pilot Access",
+      labelName: "Your Name",
+      namePlaceholder: "e.g., John Smith",
       labelCompany: "Company Name",
       labelEmail: "Contact Email",
-      labelWarehouse: "Warehouse Size / Sector",
-      placeholderWarehouse: "e.g., Beverage Distribution, 1200m²",
+      labelVolumen: "Catalog Size",
+      volumenOptions: {
+        "0-50": "Fewer than 50 products",
+        "51-200": "51 to 200 products",
+        "201-500": "201 to 500 products",
+        "500+": "More than 500 products"
+      },
       btnSubmit: "Submit Application",
-      successMsg: "Application received! Our team will get in touch shortly."
+      btnLoading: "Sending...",
+      successMsg: "Application received! Check your email for the confirmation.",
+      errors: {
+        duplicate: "This email is already registered in the pilot program.",
+        generic: "Could not send the application. Please try again.",
+        unreachable: "Error: the server is unreachable."
+      }
     },
     register: {
       title: "Register Operator",
@@ -625,12 +651,25 @@ export const translations = {
       benefit2: "与我们的核心研发工程师直接对接，享有最高优先级的技术支持。",
       benefit3: "针对您仓库的特定背景噪音，定制专属的声学识别模型。",
       formTitle: "申请试点入驻",
+      labelName: "您的姓名",
+      namePlaceholder: "例如：张三",
       labelCompany: "企业 / 公司名称",
       labelEmail: "业务联系邮箱",
-      labelWarehouse: "仓库规模 / 所属行业",
-      placeholderWarehouse: "例如：饮品物流仓储，1200平米",
+      labelVolumen: "商品目录规模",
+      volumenOptions: {
+        "0-50": "少于 50 件商品",
+        "51-200": "51 至 200 件商品",
+        "201-500": "201 至 500 件商品",
+        "500+": "超过 500 件商品"
+      },
       btnSubmit: "提交入驻申请",
-      successMsg: "申请已成功提交！我们的团队将尽快与您取得联系。"
+      btnLoading: "正在发送...",
+      successMsg: "申请已成功提交！请查收确认邮件。",
+      errors: {
+        duplicate: "该邮箱已在试点计划中注册。",
+        generic: "申请发送失败，请重试。",
+        unreachable: "错误：无法连接到服务器。"
+      }
     },
     register: {
       title: "注册仓储操作员",

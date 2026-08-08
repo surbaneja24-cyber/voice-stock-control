@@ -1,4 +1,5 @@
 import os
+import html
 from datetime import datetime, timedelta
 from typing import Literal
 from pydantic import BaseModel, Field, EmailStr, field_validator
@@ -7,6 +8,7 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 import re
@@ -14,6 +16,7 @@ from thefuzz import process
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+import resend
 
 from database import engine, Base, get_db
 from models import Producto, Movimiento, Usuario, LeadPiloto
@@ -74,7 +77,66 @@ if not SECRET_KEY:
         "Nunca la hardcodees: cualquiera con acceso al repo podría forjar tokens válidos."
     )
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7 
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7
+
+# --- EMAIL TRANSACCIONAL (confirmación de solicitud al programa piloto) ---
+RESEND_API_KEY = os.getenv("RESEND_API_KEY")
+if RESEND_API_KEY:
+    resend.api_key = RESEND_API_KEY
+
+def _plantilla_email_confirmacion_piloto(nombre: str) -> str:
+    # html.escape evita inyección de HTML/markup: "nombre" lo escribe el
+    # usuario en el formulario público y se interpola directo en el email.
+    nombre_seguro = html.escape(nombre)
+    anio = datetime.utcnow().year
+    return f"""\
+<div style="font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; max-width: 560px; margin: 0 auto; color: #1e293b;">
+  <div style="background-color: #2563eb; padding: 24px 32px; border-radius: 12px 12px 0 0;">
+    <span style="color: #ffffff; font-size: 20px; font-weight: 800; letter-spacing: 0.5px;">MY<span style="color: #bfdbfe;">STOCK</span></span>
+  </div>
+  <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-top: none; padding: 32px; border-radius: 0 0 12px 12px;">
+    <h1 style="font-size: 18px; margin: 0 0 16px;">Hola {nombre_seguro},</h1>
+    <p style="font-size: 14px; line-height: 1.6; color: #334155; margin: 0 0 16px;">
+      Hemos recibido tu solicitud para unirte al <strong>programa piloto de MyStock</strong>.
+      Nuestro equipo la revisará y se pondrá en contacto contigo en los próximos días
+      hábiles a través de este mismo correo.
+    </p>
+    <p style="font-size: 14px; line-height: 1.6; color: #334155; margin: 0 0 24px;">
+      Mientras tanto, si tienes cualquier pregunta puedes responder directamente a
+      este correo.
+    </p>
+    <p style="font-size: 14px; line-height: 1.6; color: #334155; margin: 0;">
+      — El equipo de MyStock
+    </p>
+  </div>
+  <div style="padding: 20px 8px; text-align: center;">
+    <p style="font-size: 11px; color: #94a3b8; line-height: 1.6; margin: 0;">
+      © {anio} MyStock. Todos los derechos reservados.<br>
+      Recibes este correo porque solicitaste información sobre el programa piloto
+      de MyStock a través de nuestro sitio web.
+    </p>
+  </div>
+</div>"""
+
+def enviar_email_confirmacion_piloto(destinatario: str, nombre: str) -> None:
+    if not RESEND_API_KEY:
+        # No es un error fatal: el lead ya quedó guardado en la base de datos,
+        # el correo es un plus. Sin la key configurada, simplemente se omite
+        # (útil en desarrollo local, donde no hace falta tener Resend a mano).
+        print("[AVISO] RESEND_API_KEY no configurada, se omite el email de confirmación.")
+        return
+    try:
+        resend.Emails.send({
+            "from": "Equipo de MyStock <onboarding@resend.dev>",
+            "to": [destinatario],
+            "subject": "Hemos recibido tu solicitud para el piloto de MyStock",
+            "html": _plantilla_email_confirmacion_piloto(nombre),
+        })
+    except Exception as e:
+        # Un fallo al enviar el correo no debe tumbar el registro del lead: los
+        # datos ya están guardados, el email es un aviso adicional, no un
+        # requisito para que el registro cuente como éxito.
+        print(f"[ERROR EMAIL CONFIRMACIÓN PILOTO]: {str(e)}")
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -168,6 +230,10 @@ class LeadCreate(BaseModel):
     empresa: str = Field(..., min_length=2, max_length=100)
     email: EmailStr
     volumen: Literal["0-50", "51-200", "201-500", "500+"]
+    # Honeypot anti-spam: campo invisible para humanos en el formulario real.
+    # Los bots que rellenan todos los campos automáticamente lo completan;
+    # cualquier valor no vacío aquí descarta la petición como spam.
+    sitio_web: str = Field(default="", max_length=200)
 
 class ComandoPayload(BaseModel):
     comando: str = Field(..., max_length=200)
@@ -330,19 +396,38 @@ def logout_usuario(response: Response):
     return {"status": "success", "mensaje": "Sesión finalizada"}
 
 @app.post("/api/leads")
-def registrar_lead_piloto(lead: LeadCreate, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def registrar_lead_piloto(request: Request, lead: LeadCreate, db: Session = Depends(get_db)):
+    if lead.sitio_web:
+        # Honeypot activado: casi seguro es un bot. Cualquier contenido cuenta,
+        # incluidos espacios en blanco — el campo es invisible e inalcanzable
+        # para un humano, así que no hay caso legítimo de "espacios accidentales"
+        # que tolerar. (Antes se usaba .strip(), que reducía "   " a "" y dejaba
+        # pasar exactamente el relleno más simple que probaría un bot.)
+        return {"status": "success", "mensaje": "Solicitud procesada correctamente."}
+
     existe_lead = db.query(LeadPiloto).filter(LeadPiloto.email == lead.email).first()
     if existe_lead:
         raise HTTPException(status_code=400, detail="Este correo ya se encuentra inscrito.")
-    
-    nuevo_lead = LeadPiloto(**lead.dict())
+
+    nuevo_lead = LeadPiloto(**lead.dict(exclude={"sitio_web"}))
     try:
         db.add(nuevo_lead)
         db.commit()
-        return {"status": "success", "mensaje": "Solicitud procesada correctamente."}
-    except Exception as e:
+    except IntegrityError:
+        # Dos solicitudes casi simultáneas con el mismo email pueden pasar
+        # ambas el chequeo de arriba (TOCTOU); el UNIQUE de la columna email
+        # frena la segunda aquí. La convertimos en el mismo 400 amigable en
+        # vez de dejar que caiga en el 500 genérico de abajo.
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Este correo ya se encuentra inscrito.")
+    except Exception:
         db.rollback()
         raise HTTPException(status_code=500, detail="Error interno al guardar prospecto.")
+
+    enviar_email_confirmacion_piloto(lead.email, lead.nombre)
+
+    return {"status": "success", "mensaje": "Solicitud procesada correctamente."}
 
 @app.get("/api/pricing")
 def obtener_planes_monetizacion():
