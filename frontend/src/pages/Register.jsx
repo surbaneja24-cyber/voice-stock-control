@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useThemeStore } from "../store/themeStore";
 import { useLanguageStore } from "../store/languageStore";
 import { translations } from "../utils/translations";
+import { getApiBaseUrl } from "../utils/apiBaseUrl";
 
 export default function Register() {
   const [formData, setFormData] = useState({ nombre: "", email: "", password: "", confirmPassword: "" });
@@ -57,12 +58,7 @@ export default function Register() {
     setLoading(true);
 
     try {
-      // Arquitectura profesional: Primero busca variable de entorno, luego hace fallback al hack de desarrollo
-      const baseApiUrl = import.meta.env.VITE_BACKEND_URL 
-        || (window.location.hostname === "localhost" 
-            ? "http://localhost:5001" 
-            : `${window.location.protocol}//${window.location.hostname.replace("-5173", "-5001")}`);
-      
+      const baseApiUrl = getApiBaseUrl();
       const backendUrl = `${baseApiUrl}/api/registro`;
 
       const res = await fetch(backendUrl, {

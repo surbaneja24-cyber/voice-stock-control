@@ -5,7 +5,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useHistoryStore } from "../store/historyStore";
 import { useThemeStore } from "../store/themeStore";
-import { useAuthStore } from "../store/authStore"; 
+import { useAuthStore } from "../store/authStore";
+import { getApiBaseUrl } from "../utils/apiBaseUrl";
 
 export default function Historial() {
   const storeMovimientos = useHistoryStore((state) => state.movimientos);
@@ -32,10 +33,7 @@ export default function Historial() {
     let isMounted = true;
     setCargando(true);
 
-    const baseApiUrl = import.meta.env.VITE_BACKEND_URL 
-      || (window.location.hostname === "localhost" 
-          ? "http://localhost:5001" 
-          : `${window.location.protocol}//${window.location.hostname.replace("-5173", "-5001")}`);
+    const baseApiUrl = getApiBaseUrl();
 
     // REFACTOR: Uso exclusivo de authenticatedFetch. Se eliminan interceptores 401 redundantes.
     authenticatedFetch(`${baseApiUrl}/api/history`)

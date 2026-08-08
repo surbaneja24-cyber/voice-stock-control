@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { getApiBaseUrl } from '../utils/apiBaseUrl';
 
-const BASE_API_URL = import.meta.env.VITE_BACKEND_URL 
-  || (window.location.hostname === "localhost" ? "http://localhost:5001" : "");
+const BASE_API_URL = getApiBaseUrl();
 
 export const useAuthStore = create(
   persist(

@@ -4,6 +4,7 @@ import { useAuthStore } from "../store/authStore";
 import { useLanguageStore } from "../store/languageStore";
 import { useThemeStore } from "../store/themeStore"; 
 import { translations } from "../utils/translations";
+import { getApiBaseUrl } from "../utils/apiBaseUrl";
 import { ArrowLeft } from "lucide-react";
 
 export default function Login() {
@@ -35,11 +36,8 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const baseApiUrl = import.meta.env.VITE_BACKEND_URL 
-        || (window.location.hostname === "localhost" 
-            ? "http://localhost:5001" 
-            : `${window.location.protocol}//${window.location.hostname.replace("-5173", "-5001")}`);
-            
+      const baseApiUrl = getApiBaseUrl();
+
       const res = await fetch(`${baseApiUrl}/api/login`, {
         method: "POST",
         credentials: "include", 

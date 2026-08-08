@@ -1,4 +1,5 @@
 import asyncio
+import os
 from datetime import datetime, timedelta
 from typing import Literal, List
 from pydantic import BaseModel, Field, EmailStr
@@ -20,7 +21,12 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(title="MyStock IA Motor - Secure Edition")
 
 # --- CONFIGURACIÓN DE SEGURIDAD Y JWT ---
-SECRET_KEY = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7" # Mover a .env en producción
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError(
+        "No se encontró SECRET_KEY. Defínela en tu entorno (Render/Vercel) o en backend/.env. "
+        "Nunca la hardcodees: cualquiera con acceso al repo podría forjar tokens válidos."
+    )
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7 
 
@@ -191,8 +197,12 @@ def login_usuario(user: UsuarioLogin, response: Response, db: Session = Depends(
         key="access_token",
         value=access_token, # Envío del JWT crudo
         httponly=True,
-        secure=True,        # OBLIGATORIO para Vercel
-        samesite="none",    # OBLIGATORIO para peticiones entre distintos dominios
+        secure=True,
+        # Lax en vez de None: el frontend llama a /api/* en su propio origen
+        # (proxy de Vercel hacia este backend), por lo que ya no es cross-site.
+        # Con samesite=None, Safari (ITP) y varios WebViews de Android bloquean
+        # o purgan la cookie por considerarla de terceros.
+        samesite="lax",
         max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60
     )
     
@@ -214,7 +224,7 @@ def logout_usuario(response: Response):
     response.delete_cookie(
         key="access_token",
         secure=True,
-        samesite="none",
+        samesite="lax",
         httponly=True
     )
     return {"status": "success", "mensaje": "Sesión finalizada"}
