@@ -4,6 +4,7 @@ import { Check, Zap, Building2, User, Star, ArrowRight, Loader2 } from "lucide-r
 import { useThemeStore } from "../store/themeStore";
 import { useLanguageStore } from "../store/languageStore";
 import { translations } from "../utils/translations";
+import { getApiBaseUrl } from "../utils/apiBaseUrl";
 import Navbar from "../components/Navbar";
 
 export default function Pricing() {
@@ -27,10 +28,8 @@ export default function Pricing() {
   const iconTypes = ["user", "star", "building"];
 
   useEffect(() => {
-    const backendUrl = window.location.hostname === "localhost" 
-  ? "http://localhost:5001/api/registro"
-  : `${window.location.protocol}//${window.location.hostname.replace("-5173", "-5001")}/api/registro`;
-  
+    const backendUrl = `${getApiBaseUrl()}/api/registro`;
+
     fetch(backendUrl)
       .then((res) => {
         if (!res.ok) throw new Error("Fallo al obtener la matriz de precios del servidor.");

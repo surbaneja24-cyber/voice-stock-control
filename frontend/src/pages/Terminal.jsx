@@ -5,6 +5,7 @@ import { useHistoryStore } from "../store/historyStore";
 import { useThemeStore } from "../store/themeStore";
 import { useAuthStore } from "../store/authStore"; 
 import useVoiceCommand from "../utils/useVoiceCommand";
+import { getApiBaseUrl } from "../utils/apiBaseUrl";
 
 export default function Terminal() {
   const navigate = useNavigate();
@@ -17,10 +18,7 @@ export default function Terminal() {
   // INYECCIÓN DE SEGURIDAD: Traemos el fetch protegido
   const authenticatedFetch = useAuthStore((state) => state.authenticatedFetch);
 
-  const baseApiUrl = import.meta.env.VITE_BACKEND_URL 
-    || (window.location.hostname === "localhost" 
-        ? "http://localhost:5001" 
-        : `${window.location.protocol}//${window.location.hostname.replace("-5173", "-5001")}`);
+  const baseApiUrl = getApiBaseUrl();
 
   const getInitialSector = () => localStorage.getItem(`mystock_sector_${usuario?.id}`) || "universal";
   const getInitialOnboarding = () => !localStorage.getItem(`mystock_onboarding_${usuario?.id}`);

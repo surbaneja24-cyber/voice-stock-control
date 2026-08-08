@@ -2,7 +2,8 @@ import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useHistoryStore } from "../store/historyStore";
 import { useThemeStore } from "../store/themeStore";
-import { useAuthStore } from "../store/authStore"; 
+import { useAuthStore } from "../store/authStore";
+import { getApiBaseUrl } from "../utils/apiBaseUrl";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid
 } from "recharts";
@@ -104,10 +105,7 @@ export default function Dashboard() {
     let isMounted = true; 
     setCargando(true);
 
-    const baseApiUrl = import.meta.env.VITE_BACKEND_URL 
-      || (window.location.hostname === "localhost" 
-          ? "http://localhost:5001" 
-          : `${window.location.protocol}//${window.location.hostname.replace("-5173", "-5001")}`);
+    const baseApiUrl = getApiBaseUrl();
 
     authenticatedFetch(`${baseApiUrl}/api/history`)
       .then((res) => {

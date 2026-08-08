@@ -1,8 +1,7 @@
 import { useAuthStore } from '../store/authStore'; // Importamos el gestor de estado
+import { getApiBaseUrl } from '../../../utils/apiBaseUrl';
 
-// Usa la variable correcta según tu entorno de producción
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL 
-  || (window.location.hostname === "localhost" ? "http://localhost:5001" : "");
+const API_BASE_URL = getApiBaseUrl();
 
 const handleResponse = async (res) => {
     if (!res.ok) {
