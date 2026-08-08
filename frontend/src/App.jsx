@@ -17,6 +17,7 @@ import Pricing from './pages/Pricing';
 import Piloto from './pages/Piloto';
 import Faq from './pages/Faq';
 import Equipo from './pages/Equipo'
+import Admin from './pages/Admin'
 
 
 // COMPONENTE DE PROTECCIÓN
@@ -61,6 +62,7 @@ export default function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/admin" element={<Admin />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
